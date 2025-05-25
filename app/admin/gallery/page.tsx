@@ -330,7 +330,7 @@ export default function GalleryPage() {
               {/* Action Button */}
               <RoleBasedContent permissions={["upload_gallery"]}>
                 <Button
-                  variant={bulkSelectMode ? "default" : "outline"}
+                  variant={bulkSelectMode ? "default" : "outline-solid"}
                   onClick={() => setBulkSelectMode(!bulkSelectMode)}
                   className="w-full lg:w-auto"
                 >
@@ -486,14 +486,14 @@ export default function GalleryPage() {
             {filteredVisibleImages.map((image) => (
               <div
                 key={image.id}
-                className="group relative rounded-lg overflow-hidden border bg-white shadow-sm hover:shadow-md transition-shadow"
+                className="group relative rounded-lg overflow-hidden border bg-white shadow-xs hover:shadow-md transition-shadow"
               >
                 {bulkSelectMode && (
                   <div className="absolute top-2 right-2 z-10">
                     <Checkbox
                       checked={image.isSelected}
                       onCheckedChange={() => toggleImageSelection(image.id)}
-                      className="bg-white border-2 h-5 w-5 shadow-sm"
+                      className="bg-white border-2 h-5 w-5 shadow-xs"
                     />
                   </div>
                 )}
@@ -606,14 +606,14 @@ export default function GalleryPage() {
             {filteredHiddenImages.map((image) => (
               <div
                 key={image.id}
-                className="group relative rounded-lg overflow-hidden border bg-white opacity-60 shadow-sm hover:shadow-md transition-all"
+                className="group relative rounded-lg overflow-hidden border bg-white opacity-60 shadow-xs hover:shadow-md transition-all"
               >
                 {bulkSelectMode && (
                   <div className="absolute top-2 right-2 z-10">
                     <Checkbox
                       checked={image.isSelected}
                       onCheckedChange={() => toggleImageSelection(image.id)}
-                      className="bg-white border-2 h-5 w-5 shadow-sm"
+                      className="bg-white border-2 h-5 w-5 shadow-xs"
                     />
                   </div>
                 )}
@@ -720,7 +720,7 @@ export default function GalleryPage() {
                       {albumImages.map((image) => (
                         <div
                           key={image.id}
-                          className={`group relative rounded-lg overflow-hidden border bg-white shadow-sm hover:shadow-md transition-all ${!image.isVisible ? "opacity-60" : ""}`}
+                          className={`group relative rounded-lg overflow-hidden border bg-white shadow-xs hover:shadow-md transition-all ${!image.isVisible ? "opacity-60" : ""}`}
                         >
                           <div className="relative aspect-square">
                             <Image
@@ -781,7 +781,7 @@ export default function GalleryPage() {
               .map((image) => (
                 <div
                   key={image.id}
-                  className={`group relative rounded-lg overflow-hidden border bg-white shadow-sm hover:shadow-md transition-all ${!image.isVisible ? "opacity-60" : ""}`}
+                  className={`group relative rounded-lg overflow-hidden border bg-white shadow-xs hover:shadow-md transition-all ${!image.isVisible ? "opacity-60" : ""}`}
                 >
                   <div className="relative aspect-square">
                     <Image

@@ -110,7 +110,7 @@ export default function GalleryPage() {
   return (
     <div className="flex flex-col min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-red-600 to-red-900 text-white py-20 md:py-32 overflow-hidden">
+      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 md:py-32 overflow-hidden">
         {/* Background blur elements */}
         <motion.div
           className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
@@ -154,7 +154,7 @@ export default function GalleryPage() {
       </section>
 
       {/* Controls Section */}
-      <section className="py-8 bg-gradient-to-b from-white to-red-50 border-b border-red-100">
+      <section className="py-8 bg-linear-to-b from-white to-red-50 border-b border-red-100">
         <div className="container mx-auto px-4">
           {/* Search and View Controls */}
           <motion.div
@@ -211,7 +211,7 @@ export default function GalleryPage() {
 
           {/* Filters */}
           <motion.div
-            className="bg-white rounded-xl p-6 shadow-sm border border-red-100"
+            className="bg-white rounded-xl p-6 shadow-xs border border-red-100"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -251,7 +251,7 @@ export default function GalleryPage() {
                   whileTap={{ scale: prefersReducedMotion ? 1 : 0.95 }}
                 >
                   <Button
-                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                    variant={selectedTags.includes(tag) ? "default" : "outline-solid"}
                     size="sm"
                     onClick={() => toggleTag(tag)}
                     className={`${
@@ -323,7 +323,7 @@ export default function GalleryPage() {
       </section>
 
       {/* Gallery Section */}
-      <section className="py-12 bg-gradient-to-b from-red-50 to-white min-h-screen">
+      <section className="py-12 bg-linear-to-b from-red-50 to-white min-h-screen">
         <div className="container mx-auto px-4">
           {filteredImages.length === 0 ? (
             <motion.div
@@ -383,7 +383,7 @@ export default function GalleryPage() {
                       layoutId={`gallery-item-${image.id}`}
                     >
                       <div
-                        className={`relative ${index % 7 === 0 || index % 7 === 3 ? "aspect-[3/4]" : "aspect-square"}`}
+                        className={`relative ${index % 7 === 0 || index % 7 === 3 ? "aspect-3/4" : "aspect-square"}`}
                       >
                         <Image
                           src={image.src || "/placeholder.svg"}
@@ -396,7 +396,7 @@ export default function GalleryPage() {
                           blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjVmNWY1Ii8+PC9zdmc+"
                         />
                         {/* Gradient overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-red-900/80 via-red-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute inset-0 bg-linear-to-t from-red-900/80 via-red-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                         {/* Content overlay */}
                         <motion.div
@@ -410,7 +410,7 @@ export default function GalleryPage() {
                             {image.tags.slice(0, 2).map((tag) => (
                               <span
                                 key={tag}
-                                className="text-xs bg-white/20 px-2 py-0.5 rounded-full text-white backdrop-blur-sm"
+                                className="text-xs bg-white/20 px-2 py-0.5 rounded-full text-white backdrop-blur-xs"
                               >
                                 {tag}
                               </span>
@@ -440,7 +440,7 @@ export default function GalleryPage() {
                       layoutId={`gallery-item-${image.id}`}
                     >
                       <div className="relative w-full">
-                        <div className="relative aspect-[21/9] w-full overflow-hidden">
+                        <div className="relative aspect-21/9 w-full overflow-hidden">
                           <Image
                             src={image.src || "/placeholder.svg"}
                             alt={image.alt}
@@ -451,7 +451,7 @@ export default function GalleryPage() {
                           />
 
                           {/* Hover overlay with info */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                          <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/50 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
                             <motion.div
                               initial={{ opacity: 0, y: 20 }}
                               whileHover={{ opacity: 1, y: 0 }}
@@ -464,7 +464,7 @@ export default function GalleryPage() {
                                 {image.tags.map((tag) => (
                                   <span
                                     key={tag}
-                                    className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm cursor-pointer hover:bg-white/30 transition-colors"
+                                    className="px-3 py-1 bg-white/20 backdrop-blur-xs text-white rounded-full text-sm cursor-pointer hover:bg-white/30 transition-colors"
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       if (!selectedTags.includes(tag)) {

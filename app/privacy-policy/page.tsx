@@ -13,7 +13,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="flex flex-col min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-red-600 to-red-900 text-white py-20 overflow-hidden">
+      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 overflow-hidden">
         {/* Background blur elements */}
         <motion.div
           className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"

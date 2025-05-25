@@ -26,7 +26,7 @@ export default function ContactPage() {
   return (
     <div className="flex flex-col min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-red-600 to-red-900 text-white py-20 overflow-hidden">
+      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 overflow-hidden">
         {/* Background blur elements */}
         <motion.div
           className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
@@ -106,13 +106,13 @@ export default function ContactPage() {
                 ].map((contact, index) => (
                   <motion.div
                     key={index}
-                    className="flex items-start p-6 bg-gradient-to-br from-white to-red-50 rounded-xl shadow-md border border-red-100"
+                    className="flex items-start p-6 bg-linear-to-br from-white to-red-50 rounded-xl shadow-md border border-red-100"
                     variants={fadeInUp}
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.3 }}
                   >
                     <motion.div
-                      className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mr-4 shrink-0"
+                      className="w-12 h-12 bg-linear-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mr-4 shrink-0"
                       whileHover={{ rotate: 360 }}
                       transition={{ duration: 0.6 }}
                     >
@@ -347,7 +347,7 @@ export default function ContactPage() {
                         id="message"
                         rows={4}
                         placeholder="Your message"
-                        className="w-full rounded-md border border-red-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                        className="w-full rounded-md border border-red-200 p-3 text-sm focus:outline-hidden focus:ring-2 focus:ring-red-500"
                         required
                       ></textarea>
                     </motion.div>
@@ -355,7 +355,7 @@ export default function ContactPage() {
                     <motion.div variants={fadeInUp} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                        className="w-full bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
                       >
                         Send to WhatsApp
                         <Send className="ml-2 h-4 w-4" />

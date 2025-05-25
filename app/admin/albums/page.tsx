@@ -464,7 +464,7 @@ export default function AlbumsPage() {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center justify-between p-4 bg-linear-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
                         <div className="space-y-1">
                           <Label className="text-sm font-medium text-yellow-800">Featured Album</Label>
                           <p className="text-xs text-yellow-700">Display this album on the homepage</p>
@@ -484,14 +484,14 @@ export default function AlbumsPage() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-lg border border-red-200 p-6 space-y-4">
+                  <div className="bg-linear-to-br from-red-50 to-rose-50 rounded-lg border border-red-200 p-6 space-y-4">
                     <h3 className="text-lg font-semibold text-red-900">Album Statistics</h3>
                     <div className="grid grid-cols-1 gap-4">
-                      <div className="text-center p-4 bg-white rounded-lg shadow-sm border">
+                      <div className="text-center p-4 bg-white rounded-lg shadow-xs border">
                         <div className="text-3xl font-bold text-red-600">{editingAlbum.images.length}</div>
                         <div className="text-sm text-red-800 font-medium">Total Images</div>
                       </div>
-                      <div className="text-center p-4 bg-white rounded-lg shadow-sm border">
+                      <div className="text-center p-4 bg-white rounded-lg shadow-xs border">
                         <div
                           className={`text-3xl font-bold ${editingAlbum.featured ? "text-yellow-600" : "text-gray-400"}`}
                         >
@@ -513,7 +513,7 @@ export default function AlbumsPage() {
                       </h3>
                       <div className="flex space-x-3">
                         <Button
-                          variant={dragMode ? "default" : "outline"}
+                          variant={dragMode ? "default" : "outline-solid"}
                           size="sm"
                           onClick={() => setDragMode(!dragMode)}
                           className={dragMode ? "bg-red-600 hover:bg-red-700" : ""}

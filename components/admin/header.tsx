@@ -128,7 +128,7 @@ export default function AdminHeader() {
   return (
     <header
       className={`sticky top-0 z-30 w-full border-b transition-all duration-200 ${
-        scrolled ? "bg-white/95 backdrop-blur-sm shadow-sm" : "bg-white"
+        scrolled ? "bg-white/95 backdrop-blur-xs shadow-xs" : "bg-white"
       }`}
     >
       <div className="w-full h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 md:px-6">
@@ -198,7 +198,7 @@ export default function AdminHeader() {
                     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                     <Input
                       placeholder="Search commands, pages, and more..."
-                      className="flex h-9 w-full rounded-md border-0 bg-transparent py-3 text-sm outline-none placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-transparent"
+                      className="flex h-9 w-full rounded-md border-0 bg-transparent py-3 text-sm outline-hidden placeholder:text-slate-500 focus-visible:outline-hidden focus-visible:ring-0 focus-visible:ring-transparent"
                       autoFocus
                     />
                   </div>

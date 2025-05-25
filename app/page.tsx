@@ -31,7 +31,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section with Integrated Navbar */}
-      <section className="relative min-h-[90vh] bg-gradient-to-br from-red-600 to-red-900 text-white overflow-hidden">
+      <section className="relative min-h-[90vh] bg-linear-to-br from-red-600 to-red-900 text-white overflow-hidden">
         {/* Background blur elements */}
         <motion.div
           className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
@@ -67,7 +67,7 @@ export default function Home() {
             animate="animate"
           >
             <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white/90 text-sm font-medium mb-4"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-xs border border-white/20 rounded-full text-white/90 text-sm font-medium mb-4"
               variants={fadeInUp}
               whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
               transition={{ duration: 0.3 }}
@@ -116,13 +116,13 @@ export default function Home() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-white text-white bg-white/10 backdrop-blur-sm hover:bg-white/20 hover:border-red-200 transition-all duration-300"
+                  className="border-white text-white bg-white/10 backdrop-blur-xs hover:bg-white/20 hover:border-red-200 transition-all duration-300"
                 >
                   <span className="relative z-10 flex items-center">
                     Contact Us
                     <MessageSquare className="ml-2 h-4 w-4" />
                   </span>
-                  <span className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-md blur-sm"></span>
+                  <span className="absolute inset-0 bg-linear-to-r from-red-500/10 to-red-600/10 rounded-md blur-xs"></span>
                 </Button>
               </motion.div>
             </motion.div>
@@ -133,7 +133,7 @@ export default function Home() {
             initial="initial"
             animate="animate"
           >
-            <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden shadow-2xl">
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden shadow-2xl">
               <Image src="/wedding-photo-album.png" alt="G Album showcase" fill className="object-cover" priority />
             </div>
             {/* Glassmorphism effect */}
@@ -143,7 +143,7 @@ export default function Home() {
       </section>
 
       {/* Services Section */}
-      <section className="py-20 bg-gradient-to-b from-white to-red-50">
+      <section className="py-20 bg-linear-to-b from-white to-red-50">
         <div className="container mx-auto px-4">
           <motion.h2
             className="text-3xl md:text-4xl font-bold text-center mb-16 text-red-900"
@@ -190,7 +190,7 @@ export default function Home() {
                 transition={{ duration: 0.3 }}
               >
                 <motion.div
-                  className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+                  className="w-16 h-16 bg-linear-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
                   whileHover={{ rotate: 360 }}
                   transition={{ duration: 0.6 }}
                 >
@@ -241,7 +241,7 @@ export default function Home() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="relative overflow-hidden rounded-xl shadow-lg">
-                  <div className="relative aspect-[4/5]">
+                  <div className="relative aspect-4/5">
                     <Image
                       src={`/professional-team.png?height=600&width=500&query=professional ${album.title} album`}
                       alt={album.title}
@@ -250,7 +250,7 @@ export default function Home() {
                     />
                   </div>
                   {/* Glassmorphism overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-red-900/80 via-red-900/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-linear-to-t from-red-900/80 via-red-900/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <motion.div
                     className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300"
                     initial={{ y: 20, opacity: 0 }}
@@ -271,7 +271,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-gradient-to-br from-red-50 to-white relative overflow-hidden">
+      <section className="py-20 bg-linear-to-br from-red-50 to-white relative overflow-hidden">
         {/* Background blur elements */}
         <motion.div
           className="absolute top-20 right-20 w-72 h-72 rounded-full bg-red-200 opacity-30 blur-3xl"
@@ -406,7 +406,7 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <motion.div
-                      className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-sm"
+                      className="w-10 h-10 rounded-full bg-linear-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-sm"
                       whileHover={{ scale: 1.1 }}
                     >
                       {testimonial.name.charAt(0)}
@@ -516,7 +516,7 @@ export default function Home() {
               />
               <motion.button
                 type="submit"
-                className="flex-none rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-red-900 shadow-xs hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="flex-none rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-red-900 shadow-2xs hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >

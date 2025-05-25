@@ -92,7 +92,7 @@ export default function AboutPage() {
   return (
     <div className="flex flex-col min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-red-600 to-red-900 text-white py-20 md:py-32 overflow-hidden">
+      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 md:py-32 overflow-hidden">
         {/* Background blur elements */}
         <motion.div
           className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
@@ -199,7 +199,7 @@ export default function AboutPage() {
               </motion.div>
               {/* Decorative elements */}
               <motion.div
-                className="absolute -bottom-6 -left-6 w-48 h-48 bg-gradient-to-br from-red-200 to-red-300 rounded-lg -z-10"
+                className="absolute -bottom-6 -left-6 w-48 h-48 bg-linear-to-br from-red-200 to-red-300 rounded-lg -z-10"
                 initial={{ scale: 0 }}
                 whileInView={{ scale: 1 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
@@ -264,7 +264,7 @@ export default function AboutPage() {
                   </div>
                 </div>
               </div>
-              <div className="pointer-events-none absolute inset-px rounded-lg shadow-sm ring-1 ring-black/5 max-lg:rounded-t-4xl lg:rounded-tl-4xl" />
+              <div className="pointer-events-none absolute inset-px rounded-lg shadow-xs ring-1 ring-black/5 max-lg:rounded-t-4xl lg:rounded-tl-4xl" />
             </motion.div>
 
             {/* Other technology cards with similar animations */}
@@ -319,7 +319,7 @@ export default function AboutPage() {
                   </div>
                 </div>
                 <div
-                  className={`pointer-events-none absolute inset-px rounded-lg shadow-sm ring-1 ring-black/5 ${
+                  className={`pointer-events-none absolute inset-px rounded-lg shadow-xs ring-1 ring-black/5 ${
                     index === 0
                       ? "lg:rounded-tr-4xl"
                       : index === 1
@@ -408,13 +408,13 @@ export default function AboutPage() {
             ].map((feature, index) => (
               <motion.div
                 key={index}
-                className="bg-gradient-to-br from-white to-red-50 p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-red-100"
+                className="bg-linear-to-br from-white to-red-50 p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-red-100"
                 variants={fadeInUp}
                 whileHover={{ y: -5 }}
                 transition={{ duration: 0.3 }}
               >
                 <motion.div
-                  className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mb-6"
+                  className="w-16 h-16 bg-linear-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mb-6"
                   whileHover={{ rotate: 360 }}
                   transition={{ duration: 0.6 }}
                 >
@@ -429,7 +429,7 @@ export default function AboutPage() {
       </section>
 
       {/* Our Team */}
-      <section className="py-20 bg-gradient-to-b from-red-50 to-white">
+      <section className="py-20 bg-linear-to-b from-red-50 to-white">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <motion.div
             className="mx-auto max-w-2xl lg:mx-0"

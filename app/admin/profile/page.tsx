@@ -235,7 +235,7 @@ export default function ProfilePage() {
                         key={activity.id}
                         className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50"
                       >
-                        <div className="flex-shrink-0 mt-1">
+                        <div className="shrink-0 mt-1">
                           <div className="h-2 w-2 rounded-full bg-blue-500"></div>
                         </div>
                         <div className="flex-1 min-w-0">

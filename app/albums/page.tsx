@@ -86,7 +86,7 @@ export default function AlbumsPage() {
   return (
     <div className="flex flex-col min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-red-600 to-red-900 text-white py-20 overflow-hidden">
+      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 overflow-hidden">
         {/* Background blur elements */}
         <motion.div
           className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
@@ -149,7 +149,7 @@ export default function AlbumsPage() {
       </section>
 
       {/* Albums Grid */}
-      <section className="py-12 bg-gradient-to-b from-white to-red-50">
+      <section className="py-12 bg-linear-to-b from-white to-red-50">
         <div className="container mx-auto px-4">
           <motion.div
             className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
@@ -163,7 +163,7 @@ export default function AlbumsPage() {
                 <Link href={`/albums/${album.id}`} className="group">
                   <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col">
                     <div className="relative">
-                      <div className="relative aspect-[4/3] overflow-hidden">
+                      <div className="relative aspect-4/3 overflow-hidden">
                         <Image
                           src={album.coverImage || "/placeholder.svg"}
                           alt={album.title}
@@ -178,12 +178,12 @@ export default function AlbumsPage() {
                         whileInView={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.1 }}
                       >
-                        <span className="px-3 py-1 bg-red-600/90 text-white text-sm rounded-full backdrop-blur-sm">
+                        <span className="px-3 py-1 bg-red-600/90 text-white text-sm rounded-full backdrop-blur-xs">
                           {album.category}
                         </span>
                       </motion.div>
                       {/* Gradient overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </div>
                     <div className="p-6 flex-1 flex flex-col">
                       <h3 className="text-xl font-bold text-red-900 mb-2 group-hover:text-red-700 transition-colors">
@@ -191,7 +191,7 @@ export default function AlbumsPage() {
                       </h3>
                       <p className="text-slate-600 mb-4 flex-1">{album.description}</p>
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button className="w-full mt-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">
+                        <Button className="w-full mt-auto bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">
                           View Album
                         </Button>
                       </motion.div>

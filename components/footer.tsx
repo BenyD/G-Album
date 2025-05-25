@@ -62,7 +62,7 @@ export default function Footer() {
             <div className="mt-8 flex justify-center">
               <Link
                 href="/contact"
-                className="rounded-md bg-red-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                className="rounded-md bg-red-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-2xs hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
               >
                 Get started
               </Link>
@@ -72,7 +72,7 @@ export default function Footer() {
       </div>
 
       {/* Footer Section with Red Gradient Background */}
-      <div className="bg-gradient-to-br from-red-800 to-red-950">
+      <div className="bg-linear-to-br from-red-800 to-red-950">
         <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
           <div className="xl:grid xl:grid-cols-12 xl:gap-8">
             <div className="space-y-4 xl:col-span-4">
@@ -131,7 +131,7 @@ export default function Footer() {
                     autoComplete="email"
                     className="w-full min-w-0 bg-white/10 border-white/20 text-white placeholder:text-red-200 focus:bg-white/20 focus:border-white/40"
                   />
-                  <div className="mt-4 sm:ml-4 sm:mt-0 sm:flex-shrink-0">
+                  <div className="mt-4 sm:ml-4 sm:mt-0 sm:shrink-0">
                     <Button type="submit" className="w-full bg-white text-red-900 hover:bg-red-50 font-semibold">
                       Subscribe
                     </Button>

@@ -37,7 +37,7 @@ export default function Header() {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-white/95" : "bg-gradient-to-r from-red-600 to-red-800"
+        scrolled ? "bg-white/95" : "bg-linear-to-r from-red-600 to-red-800"
       }`}
     >
       <nav className="container mx-auto px-4 flex items-center justify-between py-4">
@@ -75,7 +75,7 @@ export default function Header() {
             >
               {item.name}
               <span
-                className={`absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-red-500 to-red-700 transition-all duration-300 ${
+                className={`absolute -bottom-1 left-0 h-0.5 bg-linear-to-r from-red-500 to-red-700 transition-all duration-300 ${
                   pathname === item.href ? "w-full" : "w-0 group-hover:w-full"
                 }`}
               ></span>
@@ -85,7 +85,7 @@ export default function Header() {
             asChild
             className={`relative overflow-hidden transition-all duration-300 ${
               scrolled
-                ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                ? "bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
                 : "bg-white text-red-600 hover:bg-red-50"
             }`}
           >
@@ -114,9 +114,9 @@ export default function Header() {
       </nav>
 
       {/* Scroll Progress Bar */}
-      <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-red-200/30 to-red-300/30">
+      <div className="absolute bottom-0 left-0 w-full h-1 bg-linear-to-r from-red-200/30 to-red-300/30">
         <div
-          className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 transition-all duration-150 ease-out"
+          className="h-full bg-linear-to-r from-red-500 via-red-600 to-red-700 transition-all duration-150 ease-out"
           style={{ width: `${scrollProgress}%` }}
         ></div>
       </div>
@@ -140,7 +140,7 @@ export default function Header() {
             <div className="pt-2">
               <Button
                 asChild
-                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                className="w-full bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
               >
                 <Link href="/contact" onClick={() => setMobileMenuOpen(false)}>
                   Get in Touch

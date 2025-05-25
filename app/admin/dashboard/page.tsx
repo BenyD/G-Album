@@ -312,7 +312,7 @@ export default function DashboardPage() {
                               : order.status === "Finished"
                                 ? "secondary"
                                 : order.status === "In Progress"
-                                  ? "outline"
+                                  ? "outline-solid"
                                   : "destructive"
                           }
                         >

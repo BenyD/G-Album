@@ -141,7 +141,7 @@ export default function AlbumPage({ params }: { params: { albumId: string } }) {
   return (
     <div className="flex flex-col min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-red-600 to-red-900 text-white overflow-hidden">
+      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white overflow-hidden">
         <div className="absolute inset-0">
           <Image
             src={album.coverImage || "/placeholder.svg"}
@@ -149,7 +149,7 @@ export default function AlbumPage({ params }: { params: { albumId: string } }) {
             fill
             className="object-cover opacity-30"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-red-900/90 via-red-800/70 to-red-700/60"></div>
+          <div className="absolute inset-0 bg-linear-to-t from-red-900/90 via-red-800/70 to-red-700/60"></div>
         </div>
 
         <div className="container mx-auto px-4 py-20 relative z-10">
@@ -174,7 +174,7 @@ export default function AlbumPage({ params }: { params: { albumId: string } }) {
                   gridRow: image.height === 2 ? "span 2" : "auto",
                 }}
               >
-                <div className={`relative ${image.height === 2 ? "aspect-[3/4]" : "aspect-square"}`}>
+                <div className={`relative ${image.height === 2 ? "aspect-3/4" : "aspect-square"}`}>
                   <Image
                     src={image.src || "/placeholder.svg"}
                     alt={image.alt}
@@ -182,8 +182,8 @@ export default function AlbumPage({ params }: { params: { albumId: string } }) {
                     className="object-cover hover:scale-105 transition-transform duration-500"
                   />
                   {/* Glassmorphism hover effect */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-red-900/70 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-end">
-                    <div className="p-4 w-full backdrop-blur-sm bg-white/10">
+                  <div className="absolute inset-0 bg-linear-to-t from-red-900/70 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-end">
+                    <div className="p-4 w-full backdrop-blur-xs bg-white/10">
                       <p className="text-white text-sm">{image.alt}</p>
                     </div>
                   </div>
@@ -195,7 +195,7 @@ export default function AlbumPage({ params }: { params: { albumId: string } }) {
       </section>
 
       {/* Navigation Buttons */}
-      <section className="py-8 bg-gradient-to-t from-red-50 to-white">
+      <section className="py-8 bg-linear-to-t from-red-50 to-white">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center">
             <Button asChild variant="outline" className="border-red-200 text-red-700 hover:bg-red-50">
