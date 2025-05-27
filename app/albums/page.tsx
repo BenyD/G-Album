@@ -5,20 +5,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, ArrowRight } from "lucide-react";
 import PageHero from "@/components/page-hero";
 
-// Animation variants
+// Optimized animation variants
 const fadeInUp = {
-  initial: { opacity: 0, y: 60 },
+  initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: "easeOut" },
+  transition: { duration: 0.4, ease: "easeOut" },
 };
 
 const staggerContainer = {
   animate: {
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.05,
     },
   },
 };
@@ -31,7 +31,6 @@ const albums = [
     description: "Elegant albums to preserve your special day",
     coverImage:
       "/placeholder.svg?height=600&width=500&query=wedding album cover",
-    category: "Wedding",
   },
   {
     id: "family-portraits",
@@ -39,7 +38,6 @@ const albums = [
     description: "Timeless family memories in premium albums",
     coverImage:
       "/placeholder.svg?height=600&width=500&query=family portrait album cover",
-    category: "Family",
   },
   {
     id: "anniversary-special",
@@ -47,14 +45,12 @@ const albums = [
     description: "Celebrate your love story with our special albums",
     coverImage:
       "/placeholder.svg?height=600&width=500&query=anniversary album cover",
-    category: "Anniversary",
   },
   {
     id: "baby-photoshoots",
     title: "Baby Photoshoots",
     description: "Capture those precious early moments",
     coverImage: "/placeholder.svg?height=600&width=500&query=baby album cover",
-    category: "Baby",
   },
   {
     id: "birthday-celebrations",
@@ -62,7 +58,6 @@ const albums = [
     description: "Make birthday memories last forever",
     coverImage:
       "/placeholder.svg?height=600&width=500&query=birthday album cover",
-    category: "Birthday",
   },
   {
     id: "travel-memories",
@@ -70,7 +65,6 @@ const albums = [
     description: "Beautiful albums for your travel adventures",
     coverImage:
       "/placeholder.svg?height=600&width=500&query=travel album cover",
-    category: "Travel",
   },
   {
     id: "graduation-albums",
@@ -78,7 +72,6 @@ const albums = [
     description: "Commemorate academic achievements",
     coverImage:
       "/placeholder.svg?height=600&width=500&query=graduation album cover",
-    category: "Graduation",
   },
   {
     id: "corporate-events",
@@ -86,7 +79,6 @@ const albums = [
     description: "Professional albums for business events",
     coverImage:
       "/placeholder.svg?height=600&width=500&query=corporate event album cover",
-    category: "Corporate",
   },
 ];
 
@@ -104,9 +96,9 @@ export default function AlbumsPage() {
         <div className="container mx-auto px-4">
           <motion.div
             className="max-w-md mx-auto"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: 0.4 }}
           >
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -128,55 +120,44 @@ export default function AlbumsPage() {
             variants={staggerContainer}
             initial="initial"
             whileInView="animate"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
-            {albums.map((album, index) => (
+            {albums.map((album) => (
               <motion.div
                 key={album.id}
                 variants={fadeInUp}
-                whileHover={{ y: -10 }}
-                transition={{ duration: 0.3 }}
+                whileHover={{ y: -5 }}
+                transition={{ duration: 0.2 }}
               >
-                <Link href={`/albums/${album.id}`} className="group">
-                  <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+                <Link href={`/albums/${album.id}`} className="group block">
+                  <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 h-full flex flex-col relative isolate">
                     <div className="relative">
                       <div className="relative aspect-4/3 overflow-hidden">
                         <Image
                           src={album.coverImage || "/placeholder.svg"}
                           alt={album.title}
                           fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-110"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
+                        {/* Enhanced gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-red-950/80 via-red-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
                       </div>
-                      {/* Category badge */}
-                      <motion.div
-                        className="absolute top-4 right-4"
-                        initial={{ opacity: 0, scale: 0 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.1 }}
-                      >
-                        <span className="px-3 py-1 bg-red-600/90 text-white text-sm rounded-full backdrop-blur-xs">
-                          {album.category}
-                        </span>
-                      </motion.div>
-                      {/* Gradient overlay */}
-                      <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      {/* Card glow effect */}
+                      <div className="absolute -inset-x-4 -inset-y-4 z-[-1] bg-red-500/20 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
                     </div>
-                    <div className="p-6 flex-1 flex flex-col">
+                    <div className="p-6 flex-1 flex flex-col relative z-10">
                       <h3 className="text-xl font-bold text-red-900 mb-2 group-hover:text-red-700 transition-colors">
                         {album.title}
                       </h3>
                       <p className="text-slate-600 mb-4 flex-1">
                         {album.description}
                       </p>
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Button className="w-full mt-auto bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">
+                      <div className="mt-auto">
+                        <Button className="w-full bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 group/btn">
                           View Album
+                          <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
                         </Button>
-                      </motion.div>
+                      </div>
                     </div>
                   </div>
                 </Link>
