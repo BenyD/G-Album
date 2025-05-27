@@ -1,32 +1,35 @@
-"use client"
+"use client";
 
-import { useState, useMemo, useEffect } from "react"
-import { motion } from "framer-motion"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search, Filter, X, Grid3X3, List, Calendar, Tag } from "lucide-react"
+import { useState, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Filter, X, Grid3X3, List, Calendar, Tag } from "lucide-react";
+import PageHero from "@/components/page-hero";
 
 // Animation variants
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.6, ease: "easeOut" },
-}
+};
 
 // Optimize animations based on device performance
 const prefersReducedMotion =
-  typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false
+  typeof window !== "undefined"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
 
 // Simplified animation variants for reduced motion
 const simplifiedFadeIn = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
   transition: { duration: 0.4 },
-}
+};
 
 // Use appropriate animation variants based on user preference
-const animationVariant = prefersReducedMotion ? simplifiedFadeIn : fadeInUp
+const animationVariant = prefersReducedMotion ? simplifiedFadeIn : fadeInUp;
 
 const staggerContainer = {
   animate: {
@@ -34,10 +37,19 @@ const staggerContainer = {
       staggerChildren: 0.05,
     },
   },
-}
+};
 
 // Sample tags for filtering
-const allTags = ["Wedding", "Birthday", "Anniversary", "Family", "Baby", "Travel", "Corporate", "Graduation"]
+const allTags = [
+  "Wedding",
+  "Birthday",
+  "Anniversary",
+  "Family",
+  "Baby",
+  "Travel",
+  "Corporate",
+  "Graduation",
+];
 
 // Sample gallery images with tags and metadata
 const allGalleryImages = Array.from({ length: 24 }, (_, i) => ({
@@ -45,17 +57,23 @@ const allGalleryImages = Array.from({ length: 24 }, (_, i) => ({
   src: `/placeholder.svg?height=600&width=600&query=photo album page ${i + 1}`,
   alt: `Gallery image ${i + 1}`,
   tags: allTags.filter(() => Math.random() > 0.5),
-  date: new Date(2023, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toLocaleDateString(),
+  date: new Date(
+    2023,
+    Math.floor(Math.random() * 12),
+    Math.floor(Math.random() * 28) + 1
+  ).toLocaleDateString(),
   title: `Album Collection ${i + 1}`,
-  description: `Beautiful memories captured in this stunning photo album featuring ${allTags[Math.floor(Math.random() * allTags.length)].toLowerCase()} moments.`,
-}))
+  description: `Beautiful memories captured in this stunning photo album featuring ${allTags[
+    Math.floor(Math.random() * allTags.length)
+  ].toLowerCase()} moments.`,
+}));
 
 export default function GalleryPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [viewMode, setViewMode] = useState<"masonry" | "list">("masonry")
-  const [visibleItems, setVisibleItems] = useState(12)
-  const itemsPerPage = 12
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"masonry" | "list">("masonry");
+  const [visibleItems, setVisibleItems] = useState(12);
+  const itemsPerPage = 12;
 
   // Memoize filtered images to prevent unnecessary recalculations
   const filteredImages = useMemo(() => {
@@ -64,94 +82,59 @@ export default function GalleryPage() {
         searchQuery === "" ||
         image.alt.toLowerCase().includes(searchQuery.toLowerCase()) ||
         image.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        image.description.toLowerCase().includes(searchQuery.toLowerCase())
+        image.description.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesTags = selectedTags.length === 0 || selectedTags.some((tag) => image.tags.includes(tag))
+      const matchesTags =
+        selectedTags.length === 0 ||
+        selectedTags.some((tag) => image.tags.includes(tag));
 
-      return matchesSearch && matchesTags
-    })
-  }, [searchQuery, selectedTags])
+      return matchesSearch && matchesTags;
+    });
+  }, [searchQuery, selectedTags]);
 
   // Load more items when user scrolls to bottom
   useEffect(() => {
     const handleScroll = () => {
       if (
-        window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 1000 &&
+        window.innerHeight + document.documentElement.scrollTop >=
+          document.documentElement.offsetHeight - 1000 &&
         visibleItems < filteredImages.length
       ) {
-        setVisibleItems((prev) => Math.min(prev + 12, filteredImages.length))
+        setVisibleItems((prev) => Math.min(prev + 12, filteredImages.length));
       }
-    }
+    };
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [filteredImages.length, visibleItems])
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [filteredImages.length, visibleItems]);
 
   // Reset visible items when filters change
   useEffect(() => {
-    setVisibleItems(12)
-  }, [searchQuery, selectedTags])
+    setVisibleItems(12);
+  }, [searchQuery, selectedTags]);
 
   // Toggle tag selection
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter((t) => t !== tag))
+      setSelectedTags(selectedTags.filter((t) => t !== tag));
     } else {
-      setSelectedTags([...selectedTags, tag])
+      setSelectedTags([...selectedTags, tag]);
     }
-  }
+  };
 
   // Clear all filters
   const clearFilters = () => {
-    setSearchQuery("")
-    setSelectedTags([])
-  }
+    setSearchQuery("");
+    setSelectedTags([]);
+  };
 
   return (
     <div className="flex flex-col min-h-screen pt-16">
-      {/* Hero Section */}
-      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 md:py-32 overflow-hidden">
-        {/* Background blur elements */}
-        <motion.div
-          className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div
-          className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-red-300 opacity-20 blur-3xl"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.2, 0.4, 0.2],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-            delay: 2,
-          }}
-        />
-
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            className="max-w-3xl mx-auto text-center"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">Our Gallery</h1>
-            <p className="text-xl text-red-100">
-              Explore our collection of beautifully crafted photo albums showcasing precious memories
-            </p>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        title="Our Gallery"
+        subtitle="Explore our collection of beautifully crafted photo albums showcasing precious memories"
+        className="py-20 md:py-32"
+      />
 
       {/* Controls Section */}
       <section className="py-8 bg-linear-to-b from-white to-red-50 border-b border-red-100">
@@ -219,11 +202,16 @@ export default function GalleryPage() {
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Filter className="h-5 w-5 text-red-600" />
-                <span className="font-medium text-slate-700">Filter by Category:</span>
+                <span className="font-medium text-slate-700">
+                  Filter by Category:
+                </span>
               </div>
 
               {(searchQuery || selectedTags.length > 0) && (
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <Button
                     variant="outline"
                     size="sm"
@@ -251,7 +239,9 @@ export default function GalleryPage() {
                   whileTap={{ scale: prefersReducedMotion ? 1 : 0.95 }}
                 >
                   <Button
-                    variant={selectedTags.includes(tag) ? "default" : "outline-solid"}
+                    variant={
+                      selectedTags.includes(tag) ? "default" : "outline-solid"
+                    }
                     size="sm"
                     onClick={() => toggleTag(tag)}
                     className={`${
@@ -276,7 +266,9 @@ export default function GalleryPage() {
                 transition={{ duration: 0.3 }}
               >
                 <div className="flex flex-wrap gap-2 items-center">
-                  <span className="text-sm text-slate-600">Active filters:</span>
+                  <span className="text-sm text-slate-600">
+                    Active filters:
+                  </span>
                   {searchQuery && (
                     <motion.span
                       className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs flex items-center gap-1"
@@ -284,7 +276,10 @@ export default function GalleryPage() {
                       animate={{ opacity: 1, scale: 1 }}
                     >
                       Search: "{searchQuery}"
-                      <button onClick={() => setSearchQuery("")} className="hover:text-red-900">
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="hover:text-red-900"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </motion.span>
@@ -297,7 +292,10 @@ export default function GalleryPage() {
                       animate={{ opacity: 1, scale: 1 }}
                     >
                       {tag}
-                      <button onClick={() => toggleTag(tag)} className="hover:text-red-900">
+                      <button
+                        onClick={() => toggleTag(tag)}
+                        className="hover:text-red-900"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </motion.span>
@@ -315,8 +313,13 @@ export default function GalleryPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
           >
             <p className="text-slate-600">
-              Showing <span className="font-semibold text-red-600">{filteredImages.length}</span> of{" "}
-              <span className="font-semibold">{allGalleryImages.length}</span> albums
+              Showing{" "}
+              <span className="font-semibold text-red-600">
+                {filteredImages.length}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold">{allGalleryImages.length}</span>{" "}
+              albums
             </p>
           </motion.div>
         </div>
@@ -346,11 +349,17 @@ export default function GalleryPage() {
               >
                 <Search className="h-12 w-12 text-red-400" />
               </motion.div>
-              <h3 className="text-2xl font-semibold text-slate-700 mb-2">No albums found</h3>
+              <h3 className="text-2xl font-semibold text-slate-700 mb-2">
+                No albums found
+              </h3>
               <p className="text-slate-500 mb-6 text-center max-w-md">
-                We couldn't find any albums matching your search criteria. Try adjusting your filters or search terms.
+                We couldn't find any albums matching your search criteria. Try
+                adjusting your filters or search terms.
               </p>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
                 <Button
                   variant="outline"
                   onClick={clearFilters}
@@ -383,7 +392,11 @@ export default function GalleryPage() {
                       layoutId={`gallery-item-${image.id}`}
                     >
                       <div
-                        className={`relative ${index % 7 === 0 || index % 7 === 3 ? "aspect-3/4" : "aspect-square"}`}
+                        className={`relative ${
+                          index % 7 === 0 || index % 7 === 3
+                            ? "aspect-3/4"
+                            : "aspect-square"
+                        }`}
                       >
                         <Image
                           src={image.src || "/placeholder.svg"}
@@ -405,7 +418,9 @@ export default function GalleryPage() {
                           whileInView={{ y: 0, opacity: 1 }}
                           transition={{ delay: index * 0.05 }}
                         >
-                          <h3 className="text-white font-semibold mb-1">{image.title}</h3>
+                          <h3 className="text-white font-semibold mb-1">
+                            {image.title}
+                          </h3>
                           <div className="flex flex-wrap gap-1 mb-2">
                             {image.tags.slice(0, 2).map((tag) => (
                               <span
@@ -429,7 +444,12 @@ export default function GalleryPage() {
 
               {/* List View */}
               {viewMode === "list" && (
-                <motion.div className="space-y-6" variants={staggerContainer} initial="initial" animate="animate">
+                <motion.div
+                  className="space-y-6"
+                  variants={staggerContainer}
+                  initial="initial"
+                  animate="animate"
+                >
                   {filteredImages.slice(0, visibleItems).map((image, index) => (
                     <motion.div
                       key={image.id}
@@ -457,8 +477,12 @@ export default function GalleryPage() {
                               whileHover={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.3 }}
                             >
-                              <h3 className="text-2xl font-semibold text-white mb-2">{image.title}</h3>
-                              <p className="text-white/90 mb-4 max-w-3xl">{image.description}</p>
+                              <h3 className="text-2xl font-semibold text-white mb-2">
+                                {image.title}
+                              </h3>
+                              <p className="text-white/90 mb-4 max-w-3xl">
+                                {image.description}
+                              </p>
 
                               <div className="flex flex-wrap gap-2 mb-4">
                                 {image.tags.map((tag) => (
@@ -466,9 +490,9 @@ export default function GalleryPage() {
                                     key={tag}
                                     className="px-3 py-1 bg-white/20 backdrop-blur-xs text-white rounded-full text-sm cursor-pointer hover:bg-white/30 transition-colors"
                                     onClick={(e) => {
-                                      e.stopPropagation()
+                                      e.stopPropagation();
                                       if (!selectedTags.includes(tag)) {
-                                        setSelectedTags([...selectedTags, tag])
+                                        setSelectedTags([...selectedTags, tag]);
                                       }
                                     }}
                                   >
@@ -482,7 +506,10 @@ export default function GalleryPage() {
                                   <Calendar className="h-4 w-4 mr-2" />
                                   {image.date}
                                 </div>
-                                <Button size="sm" className="bg-red-600 hover:bg-red-700">
+                                <Button
+                                  size="sm"
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
                                   View Album
                                 </Button>
                               </div>
@@ -505,7 +532,11 @@ export default function GalleryPage() {
               transition={{ duration: 0.4 }}
             >
               <Button
-                onClick={() => setVisibleItems((prev) => Math.min(prev + itemsPerPage, filteredImages.length))}
+                onClick={() =>
+                  setVisibleItems((prev) =>
+                    Math.min(prev + itemsPerPage, filteredImages.length)
+                  )
+                }
                 className="bg-red-600 hover:bg-red-700"
                 size="lg"
               >
@@ -516,5 +547,5 @@ export default function GalleryPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

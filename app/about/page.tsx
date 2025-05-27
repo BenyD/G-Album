@@ -1,15 +1,16 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import Image from "next/image"
-import { Truck, Camera, Clock, MessageSquare } from "lucide-react"
+import { motion } from "framer-motion";
+import Image from "next/image";
+import { Truck, Camera, Clock, MessageSquare } from "lucide-react";
+import PageHero from "@/components/page-hero";
 
 // Animation variants
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.6, ease: "easeOut" },
-}
+};
 
 const staggerContainer = {
   animate: {
@@ -17,13 +18,13 @@ const staggerContainer = {
       staggerChildren: 0.1,
     },
   },
-}
+};
 
 const scaleIn = {
   initial: { opacity: 0, scale: 0.8 },
   animate: { opacity: 1, scale: 1 },
   transition: { duration: 0.5, ease: "easeOut" },
-}
+};
 
 export default function AboutPage() {
   // Sample team members
@@ -52,7 +53,7 @@ export default function AboutPage() {
       image: "/placeholder-aldzd.png",
       bio: "Ananya is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
     },
-  ]
+  ];
 
   // Sample technology/machines for bento grid
   const technologies = [
@@ -67,7 +68,8 @@ export default function AboutPage() {
     {
       name: "Automatic Binding Machine",
       title: "Precision Binding",
-      description: "Advanced binding equipment ensuring durability and perfect finishing for every album we create.",
+      description:
+        "Advanced binding equipment ensuring durability and perfect finishing for every album we create.",
       image: "/placeholder-8i1yi.png",
       tags: ["Durability", "Precision", "Quality Finish"],
     },
@@ -84,54 +86,19 @@ export default function AboutPage() {
       title: "Custom Designs",
       description:
         "Precision cutting technology for custom album covers and intricate design elements that make each album unique.",
-      image: "/placeholder.svg?height=600&width=800&query=laser cutting machine for albums",
+      image:
+        "/placeholder.svg?height=600&width=800&query=laser cutting machine for albums",
       tags: ["Precision", "Customization", "Innovation"],
     },
-  ]
+  ];
 
   return (
     <div className="flex flex-col min-h-screen pt-16">
-      {/* Hero Section */}
-      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 md:py-32 overflow-hidden">
-        {/* Background blur elements */}
-        <motion.div
-          className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div
-          className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-red-300 opacity-20 blur-3xl"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.2, 0.4, 0.2],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-            delay: 2,
-          }}
-        />
-
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            className="max-w-3xl mx-auto text-center"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">About G Album</h1>
-            <p className="text-xl text-red-100">Crafting memories into beautiful albums since 2018</p>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        title="About G Album"
+        subtitle="Crafting memories into beautiful albums since 2018"
+        className="py-20 md:py-32"
+      />
 
       {/* About Us and History */}
       <section className="py-20">
@@ -143,7 +110,9 @@ export default function AboutPage() {
               transition={{ duration: 0.8 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-red-900">Our Story</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-red-900">
+                Our Story
+              </h2>
               <div className="space-y-4 text-slate-700">
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
@@ -151,9 +120,10 @@ export default function AboutPage() {
                   transition={{ duration: 0.6, delay: 0.2 }}
                   viewport={{ once: true }}
                 >
-                  Since 2018, G Album has been crafting affordable, professional photo albums, striving consistently to
-                  meet and exceed the expectations of our customers. Our photo albums spark a vibrant sense of
-                  creativity with a professional touch.
+                  Since 2018, G Album has been crafting affordable, professional
+                  photo albums, striving consistently to meet and exceed the
+                  expectations of our customers. Our photo albums spark a
+                  vibrant sense of creativity with a professional touch.
                 </motion.p>
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
@@ -161,9 +131,10 @@ export default function AboutPage() {
                   transition={{ duration: 0.6, delay: 0.4 }}
                   viewport={{ once: true }}
                 >
-                  Our primary focus has always been ensuring our clients experience top-tier quality and contentment
-                  from our offerings. We believe that every memory deserves to be preserved in the most beautiful way
-                  possible.
+                  Our primary focus has always been ensuring our clients
+                  experience top-tier quality and contentment from our
+                  offerings. We believe that every memory deserves to be
+                  preserved in the most beautiful way possible.
                 </motion.p>
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
@@ -171,9 +142,10 @@ export default function AboutPage() {
                   transition={{ duration: 0.6, delay: 0.6 }}
                   viewport={{ once: true }}
                 >
-                  Additionally, we consistently leverage advanced, modern technology to fulfill the diverse requirements
-                  of our customers. This commitment to innovation has allowed us to stay at the forefront of the photo
-                  album industry.
+                  Additionally, we consistently leverage advanced, modern
+                  technology to fulfill the diverse requirements of our
+                  customers. This commitment to innovation has allowed us to
+                  stay at the forefront of the photo album industry.
                 </motion.p>
               </div>
             </motion.div>
@@ -219,7 +191,9 @@ export default function AboutPage() {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-base/7 font-semibold text-red-600">Advanced Technology</h2>
+            <h2 className="text-base/7 font-semibold text-red-600">
+              Advanced Technology
+            </h2>
             <p className="mt-2 max-w-lg text-4xl font-semibold tracking-tight text-pretty text-gray-950 sm:text-5xl">
               Everything we use to craft perfect albums
             </p>
@@ -246,9 +220,15 @@ export default function AboutPage() {
                   className="h-80 object-cover object-center"
                 />
                 <div className="p-10 pt-4">
-                  <h3 className="text-sm/4 font-semibold text-red-600">{technologies[0].name}</h3>
-                  <p className="mt-2 text-lg font-medium tracking-tight text-gray-950">{technologies[0].title}</p>
-                  <p className="mt-2 max-w-lg text-sm/6 text-gray-600">{technologies[0].description}</p>
+                  <h3 className="text-sm/4 font-semibold text-red-600">
+                    {technologies[0].name}
+                  </h3>
+                  <p className="mt-2 text-lg font-medium tracking-tight text-gray-950">
+                    {technologies[0].title}
+                  </p>
+                  <p className="mt-2 max-w-lg text-sm/6 text-gray-600">
+                    {technologies[0].description}
+                  </p>
                   <div className="flex flex-wrap gap-2 mt-4">
                     {technologies[0].tags.map((tag, i) => (
                       <motion.span
@@ -271,7 +251,13 @@ export default function AboutPage() {
             {technologies.slice(1).map((tech, index) => (
               <motion.div
                 key={index}
-                className={`relative ${index === 0 ? "lg:col-span-2" : index === 1 ? "lg:col-span-2" : "lg:col-span-4"}`}
+                className={`relative ${
+                  index === 0
+                    ? "lg:col-span-2"
+                    : index === 1
+                    ? "lg:col-span-2"
+                    : "lg:col-span-4"
+                }`}
                 variants={fadeInUp}
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.3 }}
@@ -281,8 +267,8 @@ export default function AboutPage() {
                     index === 0
                       ? "lg:rounded-tr-4xl"
                       : index === 1
-                        ? "lg:rounded-bl-4xl"
-                        : "max-lg:rounded-b-4xl lg:rounded-br-4xl"
+                      ? "lg:rounded-bl-4xl"
+                      : "max-lg:rounded-b-4xl lg:rounded-br-4xl"
                   }`}
                 />
                 <div
@@ -290,8 +276,8 @@ export default function AboutPage() {
                     index === 0
                       ? "lg:rounded-tr-[calc(2rem+1px)]"
                       : index === 1
-                        ? "lg:rounded-bl-[calc(2rem+1px)]"
-                        : "max-lg:rounded-b-[calc(2rem+1px)] lg:rounded-br-[calc(2rem+1px)]"
+                      ? "lg:rounded-bl-[calc(2rem+1px)]"
+                      : "max-lg:rounded-b-[calc(2rem+1px)] lg:rounded-br-[calc(2rem+1px)]"
                   }`}
                 >
                   <img
@@ -300,9 +286,15 @@ export default function AboutPage() {
                     className="h-80 object-cover object-center"
                   />
                   <div className="p-10 pt-4">
-                    <h3 className="text-sm/4 font-semibold text-red-600">{tech.name}</h3>
-                    <p className="mt-2 text-lg font-medium tracking-tight text-gray-950">{tech.title}</p>
-                    <p className="mt-2 max-w-lg text-sm/6 text-gray-600">{tech.description}</p>
+                    <h3 className="text-sm/4 font-semibold text-red-600">
+                      {tech.name}
+                    </h3>
+                    <p className="mt-2 text-lg font-medium tracking-tight text-gray-950">
+                      {tech.title}
+                    </p>
+                    <p className="mt-2 max-w-lg text-sm/6 text-gray-600">
+                      {tech.description}
+                    </p>
                     <div className="flex flex-wrap gap-2 mt-4">
                       {tech.tags.map((tag, i) => (
                         <motion.span
@@ -323,8 +315,8 @@ export default function AboutPage() {
                     index === 0
                       ? "lg:rounded-tr-4xl"
                       : index === 1
-                        ? "lg:rounded-bl-4xl"
-                        : "max-lg:rounded-b-4xl lg:rounded-br-4xl"
+                      ? "lg:rounded-bl-4xl"
+                      : "max-lg:rounded-b-4xl lg:rounded-br-4xl"
                   }`}
                 />
               </motion.div>
@@ -420,7 +412,9 @@ export default function AboutPage() {
                 >
                   <feature.icon className="h-8 w-8 text-white" />
                 </motion.div>
-                <h3 className="text-xl font-semibold mb-3 text-red-900">{feature.title}</h3>
+                <h3 className="text-xl font-semibold mb-3 text-red-900">
+                  {feature.title}
+                </h3>
                 <p className="text-slate-600">{feature.description}</p>
               </motion.div>
             ))}
@@ -442,8 +436,9 @@ export default function AboutPage() {
               Meet Our Team
             </h2>
             <p className="mt-6 text-lg/8 text-slate-600">
-              We're a passionate group of professionals dedicated to crafting the perfect photo albums that preserve
-              your most cherished memories with exceptional quality and attention to detail.
+              We're a passionate group of professionals dedicated to crafting
+              the perfect photo albums that preserve your most cherished
+              memories with exceptional quality and attention to detail.
             </p>
           </motion.div>
           <motion.ul
@@ -456,14 +451,20 @@ export default function AboutPage() {
           >
             {teamMembers.map((member, index) => (
               <motion.li key={member.name} variants={fadeInUp}>
-                <motion.div className="mx-auto" whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }}>
+                <motion.div
+                  className="mx-auto"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.3 }}
+                >
                   <img
                     src={member.image || "/placeholder.svg"}
                     alt={member.name}
                     className="mx-auto size-32 rounded-full object-cover border-2 border-red-100"
                   />
                 </motion.div>
-                <h3 className="mt-6 text-base/7 font-semibold tracking-tight text-red-900">{member.name}</h3>
+                <h3 className="mt-6 text-base/7 font-semibold tracking-tight text-red-900">
+                  {member.name}
+                </h3>
                 <p className="text-sm/6 text-red-600">{member.role}</p>
               </motion.li>
             ))}
@@ -471,5 +472,5 @@ export default function AboutPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

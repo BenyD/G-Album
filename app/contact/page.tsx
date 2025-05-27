@@ -1,18 +1,19 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Mail, MapPin, Phone, Send } from "lucide-react"
-import Image from "next/image"
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Mail, MapPin, Phone, Send } from "lucide-react";
+import Image from "next/image";
+import PageHero from "@/components/page-hero";
 
 // Animation variants
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.6, ease: "easeOut" },
-}
+};
 
 const staggerContainer = {
   animate: {
@@ -20,52 +21,16 @@ const staggerContainer = {
       staggerChildren: 0.1,
     },
   },
-}
+};
 
 export default function ContactPage() {
   return (
     <div className="flex flex-col min-h-screen pt-16">
-      {/* Hero Section */}
-      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 overflow-hidden">
-        {/* Background blur elements */}
-        <motion.div
-          className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div
-          className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-red-300 opacity-20 blur-3xl"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.2, 0.4, 0.2],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-            delay: 2,
-          }}
-        />
-
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            className="max-w-3xl mx-auto text-center"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">Contact Us</h1>
-            <p className="text-xl text-red-100">We'd love to hear from you. Get in touch with our team.</p>
-          </motion.div>
-        </div>
-      </section>
+      <PageHero
+        title="Contact Us"
+        subtitle="We'd love to hear from you. Get in touch with our team."
+        className="py-20"
+      />
 
       {/* Contact Information and Form */}
       <section className="py-16 bg-white">
@@ -77,7 +42,9 @@ export default function ContactPage() {
               transition={{ duration: 0.8 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-2xl md:text-3xl font-bold mb-6 text-red-900">Get In Touch</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-6 text-red-900">
+                Get In Touch
+              </h2>
 
               {/* Contact Info Cards */}
               <motion.div
@@ -119,7 +86,9 @@ export default function ContactPage() {
                       <contact.icon className="h-6 w-6 text-white" />
                     </motion.div>
                     <div>
-                      <h3 className="font-semibold text-lg text-red-900 mb-1">{contact.title}</h3>
+                      <h3 className="font-semibold text-lg text-red-900 mb-1">
+                        {contact.title}
+                      </h3>
                       {contact.details.map((detail, i) => (
                         <p key={i} className="text-slate-600">
                           {detail}
@@ -159,9 +128,12 @@ export default function ContactPage() {
                 transition={{ duration: 0.6 }}
                 viewport={{ once: true }}
               >
-                <h2 className="text-2xl md:text-3xl font-bold mb-4 text-red-900">Our Office</h2>
+                <h2 className="text-2xl md:text-3xl font-bold mb-4 text-red-900">
+                  Our Office
+                </h2>
                 <p className="text-slate-600 mb-6">
-                  Visit our creative studio where we design and craft beautiful photo albums.
+                  Visit our creative studio where we design and craft beautiful
+                  photo albums.
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <motion.div
@@ -234,7 +206,7 @@ export default function ContactPage() {
               transition={{ duration: 0.8 }}
               viewport={{ once: true }}
             >
-              <div className="bg-white rounded-xl shadow-lg p-8 border border-red-100 relative overflow-hidden sticky top-24">
+              <div className="bg-white rounded-xl shadow-lg p-8 border border-red-100 overflow-hidden sticky top-24">
                 {/* Glassmorphism effect */}
                 <motion.div
                   className="absolute -top-20 -right-20 w-40 h-40 bg-red-100 rounded-full opacity-50 blur-3xl"
@@ -279,8 +251,8 @@ export default function ContactPage() {
                     transition={{ duration: 0.6, delay: 0.2 }}
                     viewport={{ once: true }}
                   >
-                    Fill out the form below to get in touch with our team. We'll respond to your inquiry as soon as
-                    possible.
+                    Fill out the form below to get in touch with our team.
+                    We&apos;ll respond to your inquiry as soon as possible.
                   </motion.p>
 
                   <motion.form
@@ -290,7 +262,10 @@ export default function ContactPage() {
                     whileInView="animate"
                     viewport={{ once: true }}
                   >
-                    <motion.div className="grid grid-cols-1 sm:grid-cols-2 gap-4" variants={fadeInUp}>
+                    <motion.div
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                      variants={fadeInUp}
+                    >
                       <div className="space-y-2">
                         <Label htmlFor="name" className="text-slate-700">
                           Name
@@ -352,7 +327,11 @@ export default function ContactPage() {
                       ></textarea>
                     </motion.div>
 
-                    <motion.div variants={fadeInUp} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <motion.div
+                      variants={fadeInUp}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
                       <Button
                         type="submit"
                         className="w-full bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
@@ -369,5 +348,5 @@ export default function ContactPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

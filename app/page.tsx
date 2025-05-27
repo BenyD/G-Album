@@ -98,92 +98,173 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section - Optimized */}
-      <section className="relative min-h-[90vh] bg-linear-to-br from-red-600 to-red-900 text-white overflow-hidden">
-        {/* Reduced background animations */}
-        <div
-          className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl transition-transform duration-[20s] ease-in-out"
-          style={{
-            animation: "pulse 20s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-red-300 opacity-20 blur-3xl transition-transform duration-[20s] ease-in-out"
-          style={{
-            animation: "pulse 20s ease-in-out infinite 10s",
-          }}
-        />
+      {/* Hero Section - Enhanced & Responsive */}
+      <section className="relative min-h-screen bg-linear-to-br from-red-600 to-red-900 text-white overflow-hidden flex items-center">
+        {/* Improved background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-red-400/30 mix-blend-overlay blur-3xl animate-blob" />
+          <div className="absolute top-1/3 right-1/4 w-96 h-96 rounded-full bg-red-300/20 mix-blend-overlay blur-3xl animate-blob animation-delay-2000" />
+          <div className="absolute -bottom-8 left-1/2 w-96 h-96 rounded-full bg-red-500/20 mix-blend-overlay blur-3xl animate-blob animation-delay-4000" />
+          <div className="absolute inset-0 bg-red-900/20 backdrop-blur-[1px]" />
+        </div>
 
-        <div className="container mx-auto px-4 py-20 md:py-32 flex flex-col items-center gap-12 relative z-10">
-          <motion.div
-            className="text-center max-w-3xl mx-auto space-y-6"
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-          >
-            <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-xs border border-white/20 rounded-full text-white/90 text-sm font-medium mb-4"
-              variants={fadeInUp}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="w-2 h-2 bg-red-300 rounded-full opacity-70" />
-              <span>Premium Photo Albums Since 2018</span>
-              <div className="w-2 h-2 bg-red-300 rounded-full opacity-70" />
-            </motion.div>
-            <motion.h1
-              className="text-4xl md:text-6xl font-bold leading-tight"
-              variants={fadeInUp}
-            >
-              Crafting Memories Into{" "}
-              <span className="text-red-200">Beautiful Albums</span>
-            </motion.h1>
-            <motion.p
-              className="text-lg md:text-xl text-red-100 max-w-xl mx-auto"
-              variants={fadeInUp}
-            >
-              Since 2018, We&apos;ve been creating affordable, professional
-              photo albums that exceed expectations.
-            </motion.p>
-            <motion.div
-              className="flex flex-col sm:flex-row gap-4 pt-4 justify-center"
-              variants={fadeInUp}
-            >
-              <Button
-                size="lg"
-                className="bg-white text-red-600 hover:bg-red-50 transition-colors duration-200"
+        <div className="container mx-auto px-4 relative z-10 py-16 sm:py-20">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+              {/* Left Column - Content */}
+              <motion.div
+                className="lg:col-span-6 xl:col-span-5 text-center lg:text-left"
+                variants={staggerContainer}
+                initial="initial"
+                animate="animate"
               >
-                View Our Gallery
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white bg-white/10 backdrop-blur-xs hover:bg-white/20 hover:border-red-200 transition-all duration-200"
+                <motion.div
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white/90 text-xs font-medium mb-4 sm:mb-6"
+                  variants={fadeInUp}
+                >
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-300 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-300"></span>
+                  </span>
+                  <span className="leading-relaxed">
+                    Premium Photo Albums Since 2018
+                  </span>
+                </motion.div>
+
+                <div className="space-y-4 sm:space-y-6 mb-8 sm:mb-10">
+                  <motion.h1
+                    className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight"
+                    variants={fadeInUp}
+                  >
+                    <span className="block mb-1 sm:mb-2">G Album</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-100 block">
+                      Dream To Reality
+                    </span>
+                  </motion.h1>
+
+                  <motion.p
+                    className="text-base sm:text-lg text-red-100 leading-relaxed max-w-xl mx-auto lg:mx-0"
+                    variants={fadeInUp}
+                  >
+                    Transform your precious moments into exquisite, handcrafted
+                    photo albums that tell your unique story with unparalleled
+                    artistry.
+                  </motion.p>
+                </div>
+
+                <motion.div
+                  className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start mb-8 sm:mb-10"
+                  variants={fadeInUp}
+                >
+                  <Button
+                    size="lg"
+                    className="bg-white text-red-600 hover:bg-red-50 transition-all duration-300 hover:shadow-lg hover:shadow-white/20 group relative overflow-hidden h-11 sm:h-12 px-5 sm:px-6"
+                    asChild
+                  >
+                    <Link href="/contact">
+                      <span className="relative z-10 flex items-center justify-center font-medium text-base">
+                        Start Your Journey
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white to-red-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </Link>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white/30 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20 hover:border-white transition-all duration-300 group h-11 sm:h-12 px-5 sm:px-6"
+                    asChild
+                  >
+                    <Link href="/albums">
+                      <span className="relative z-10 flex items-center justify-center font-medium text-base">
+                        View Albums
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      </span>
+                    </Link>
+                  </Button>
+                </motion.div>
+
+                {/* Trust indicators */}
+                <motion.div
+                  className="grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto lg:mx-0"
+                  variants={fadeInUp}
+                >
+                  <div className="text-center lg:text-left">
+                    <span className="block text-xl sm:text-2xl font-bold text-white mb-0.5">
+                      5.0
+                    </span>
+                    <div className="flex items-center justify-center lg:justify-start gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-yellow-400 fill-yellow-400"
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[10px] sm:text-xs text-red-200 mt-0.5">
+                      Google Reviews
+                    </span>
+                  </div>
+                  <div className="text-center border-l border-r border-white/10 px-1 sm:px-2">
+                    <span className="block text-xl sm:text-2xl font-bold text-white mb-0.5">
+                      1000+
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-red-200">
+                      Happy Customers
+                    </span>
+                  </div>
+                  <div className="text-center lg:text-right">
+                    <span className="block text-xl sm:text-2xl font-bold text-white mb-0.5">
+                      100%
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-red-200">
+                      Satisfaction
+                    </span>
+                  </div>
+                </motion.div>
+              </motion.div>
+
+              {/* Right Column - Image */}
+              <motion.div
+                className="lg:col-span-6 xl:col-span-7 relative"
+                variants={scaleIn}
+                initial="initial"
+                animate="animate"
               >
-                <span className="relative z-10 flex items-center">
-                  Contact Us
-                  <MessageSquare className="ml-2 h-4 w-4" />
-                </span>
-              </Button>
-            </motion.div>
-          </motion.div>
-          <motion.div
-            className="relative w-full max-w-2xl mx-auto mt-8"
-            variants={scaleIn}
-            initial="initial"
-            animate="animate"
-          >
-            <div className="relative w-full aspect-video rounded-lg overflow-hidden shadow-2xl">
-              <Image
-                src="/wedding-photo-album.png"
-                alt="G Album showcase"
-                fill
-                className="object-cover"
-                priority
-              />
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl mx-auto max-w-2xl lg:max-w-none">
+                  <Image
+                    src="/wedding-photo-album.png"
+                    alt="G Album showcase"
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                  {/* Decorative elements */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-red-900/30 to-transparent" />
+                  <div className="absolute inset-0 bg-red-950/20" />
+                </div>
+
+                {/* Floating elements */}
+                <div className="absolute -bottom-6 -right-6 w-48 h-48 bg-white/10 backdrop-blur-md rounded-2xl -z-10 border border-white/20 hidden lg:block" />
+                <div className="absolute -top-6 -left-6 w-32 h-32 bg-red-500/10 backdrop-blur-md rounded-2xl -z-10 border border-red-500/20 hidden lg:block" />
+
+                {/* Stats card */}
+                <div className="absolute -bottom-4 left-4 lg:-left-4 bg-white/90 backdrop-blur-sm px-6 py-4 rounded-xl shadow-lg border border-white/40">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
+                      <Camera className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-red-900 font-semibold">
+                        Premium Quality
+                      </p>
+                      <p className="text-sm text-red-600">Handcrafted Albums</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-            <div className="absolute -bottom-6 -right-6 w-48 h-48 bg-white/20 backdrop-blur-md rounded-lg -z-10 border border-white/30" />
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -531,16 +612,32 @@ export default function Home() {
       </section>
 
       <style jsx global>{`
-        @keyframes pulse {
+        @keyframes blob {
           0%,
           100% {
-            transform: scale(1);
-            opacity: 0.3;
+            transform: translate(0, 0) scale(1);
+          }
+          25% {
+            transform: translate(20px, -30px) scale(1.1);
           }
           50% {
-            transform: scale(1.1);
-            opacity: 0.4;
+            transform: translate(-20px, 20px) scale(0.9);
           }
+          75% {
+            transform: translate(30px, 30px) scale(1.05);
+          }
+        }
+
+        .animate-blob {
+          animation: blob 20s infinite;
+        }
+
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+
+        .animation-delay-4000 {
+          animation-delay: 4s;
         }
       `}</style>
     </div>
