@@ -5,25 +5,25 @@ import Image from "next/image";
 import { Truck, Camera, Clock, MessageSquare } from "lucide-react";
 import PageHero from "@/components/page-hero";
 
-// Animation variants
+// Optimized animation variants
 const fadeInUp = {
-  initial: { opacity: 0, y: 60 },
+  initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: "easeOut" },
+  transition: { duration: 0.4, ease: "easeOut" },
 };
 
 const staggerContainer = {
   animate: {
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.05,
     },
   },
 };
 
 const scaleIn = {
-  initial: { opacity: 0, scale: 0.8 },
+  initial: { opacity: 0, scale: 0.95 },
   animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.5, ease: "easeOut" },
+  transition: { duration: 0.3, ease: "easeOut" },
 };
 
 export default function AboutPage() {
@@ -97,7 +97,7 @@ export default function AboutPage() {
       <PageHero
         title="About G Album"
         subtitle="Crafting memories into beautiful albums since 2018"
-        className="py-20 md:py-32"
+        className="py-20"
       />
 
       {/* About Us and History */}
@@ -105,61 +105,56 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <motion.div
-              initial={{ opacity: 0, x: -50 }}
+              initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              viewport={{ once: true, margin: "-50px" }}
             >
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-red-900">
                 Our Story
               </h2>
               <div className="space-y-4 text-slate-700">
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  viewport={{ once: true }}
+                {/* Optimize paragraph animations */}
+                <motion.div
+                  variants={staggerContainer}
+                  initial="initial"
+                  whileInView="animate"
+                  viewport={{ once: true, margin: "-50px" }}
+                  className="space-y-4"
                 >
-                  Since 2018, G Album has been crafting affordable, professional
-                  photo albums, striving consistently to meet and exceed the
-                  expectations of our customers. Our photo albums spark a
-                  vibrant sense of creativity with a professional touch.
-                </motion.p>
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.4 }}
-                  viewport={{ once: true }}
-                >
-                  Our primary focus has always been ensuring our clients
-                  experience top-tier quality and contentment from our
-                  offerings. We believe that every memory deserves to be
-                  preserved in the most beautiful way possible.
-                </motion.p>
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.6 }}
-                  viewport={{ once: true }}
-                >
-                  Additionally, we consistently leverage advanced, modern
-                  technology to fulfill the diverse requirements of our
-                  customers. This commitment to innovation has allowed us to
-                  stay at the forefront of the photo album industry.
-                </motion.p>
+                  <motion.p variants={fadeInUp}>
+                    Since 2018, G Album has been crafting affordable,
+                    professional photo albums, striving consistently to meet and
+                    exceed the expectations of our customers. Our photo albums
+                    spark a vibrant sense of creativity with a professional
+                    touch.
+                  </motion.p>
+                  <motion.p variants={fadeInUp}>
+                    Our primary focus has always been ensuring our clients
+                    experience top-tier quality and contentment from our
+                    offerings. We believe that every memory deserves to be
+                    preserved in the most beautiful way possible.
+                  </motion.p>
+                  <motion.p variants={fadeInUp}>
+                    Additionally, we consistently leverage advanced, modern
+                    technology to fulfill the diverse requirements of our
+                    customers. This commitment to innovation has allowed us to
+                    stay at the forefront of the photo album industry.
+                  </motion.p>
+                </motion.div>
               </div>
             </motion.div>
             <motion.div
               className="relative"
-              initial={{ opacity: 0, x: 50 }}
+              initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              viewport={{ once: true, margin: "-50px" }}
             >
               <motion.div
                 className="relative rounded-lg overflow-hidden shadow-xl"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.3 }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
               >
                 <Image
                   src="/placeholder.svg?height=600&width=800&query=photo album workshop with people working"
@@ -169,12 +164,12 @@ export default function AboutPage() {
                   className="w-full object-cover"
                 />
               </motion.div>
-              {/* Decorative elements */}
+              {/* Optimize decorative element animation */}
               <motion.div
                 className="absolute -bottom-6 -left-6 w-48 h-48 bg-linear-to-br from-red-200 to-red-300 rounded-lg -z-10"
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
+                initial={{ scale: 0.8, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
                 viewport={{ once: true }}
               />
             </motion.div>
@@ -183,13 +178,13 @@ export default function AboutPage() {
       </section>
 
       {/* Technology We Use - Bento Grid */}
-      <section className="bg-white py-24 sm:py-32">
+      <section className="bg-white py-24">
         <div className="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             <h2 className="text-base/7 font-semibold text-red-600">
               Advanced Technology
@@ -203,14 +198,14 @@ export default function AboutPage() {
             variants={staggerContainer}
             initial="initial"
             whileInView="animate"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
-            {/* HP Indigo Digital Press - Large card */}
+            {/* Technology cards with optimized animations */}
             <motion.div
               className="relative lg:col-span-4"
               variants={fadeInUp}
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.3 }}
+              whileHover={{ scale: 1.01 }}
+              transition={{ duration: 0.2 }}
             >
               <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-4xl lg:rounded-tl-4xl" />
               <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)] lg:rounded-tl-[calc(2rem+1px)]">
@@ -247,7 +242,7 @@ export default function AboutPage() {
               <div className="pointer-events-none absolute inset-px rounded-lg shadow-xs ring-1 ring-black/5 max-lg:rounded-t-4xl lg:rounded-tl-4xl" />
             </motion.div>
 
-            {/* Other technology cards with similar animations */}
+            {/* Other technology cards */}
             {technologies.slice(1).map((tech, index) => (
               <motion.div
                 key={index}
@@ -259,8 +254,8 @@ export default function AboutPage() {
                     : "lg:col-span-4"
                 }`}
                 variants={fadeInUp}
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.3 }}
+                whileHover={{ scale: 1.01 }}
+                transition={{ duration: 0.2 }}
               >
                 <div
                   className={`absolute inset-px rounded-lg bg-white ${
@@ -327,40 +322,40 @@ export default function AboutPage() {
 
       {/* Why Choose Us */}
       <section className="py-20 bg-white relative overflow-hidden">
-        {/* Background blur elements */}
+        {/* Optimize background animations */}
         <motion.div
           className="absolute top-20 right-20 w-72 h-72 rounded-full bg-red-100 opacity-30 blur-3xl"
           animate={{
-            x: [0, 30, 0],
-            y: [0, -20, 0],
+            x: [0, 20, 0],
+            y: [0, -15, 0],
           }}
           transition={{
-            duration: 10,
-            repeat: Number.POSITIVE_INFINITY,
+            duration: 12,
+            repeat: Infinity,
             ease: "easeInOut",
           }}
         />
         <motion.div
           className="absolute bottom-20 left-20 w-80 h-80 rounded-full bg-red-50 opacity-20 blur-3xl"
           animate={{
-            x: [0, -20, 0],
-            y: [0, 30, 0],
+            x: [0, -15, 0],
+            y: [0, 20, 0],
           }}
           transition={{
-            duration: 8,
-            repeat: Number.POSITIVE_INFINITY,
+            duration: 10,
+            repeat: Infinity,
             ease: "easeInOut",
-            delay: 3,
+            delay: 2,
           }}
         />
 
         <div className="container mx-auto px-4 relative z-10">
           <motion.h2
             className="text-3xl md:text-4xl font-bold text-center mb-16 text-red-900"
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             Why Choose Us
           </motion.h2>
@@ -370,8 +365,9 @@ export default function AboutPage() {
             variants={staggerContainer}
             initial="initial"
             whileInView="animate"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
+            {/* Feature cards with optimized animations */}
             {[
               {
                 icon: Truck,
@@ -402,13 +398,13 @@ export default function AboutPage() {
                 key={index}
                 className="bg-linear-to-br from-white to-red-50 p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-red-100"
                 variants={fadeInUp}
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.3 }}
+                whileHover={{ y: -3 }}
+                transition={{ duration: 0.2 }}
               >
                 <motion.div
                   className="w-16 h-16 bg-linear-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mb-6"
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6 }}
+                  whileHover={{ rotate: 180 }}
+                  transition={{ duration: 0.4 }}
                 >
                   <feature.icon className="h-8 w-8 text-white" />
                 </motion.div>
@@ -427,10 +423,10 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <motion.div
             className="mx-auto max-w-2xl lg:mx-0"
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             <h2 className="text-4xl font-semibold tracking-tight text-pretty text-red-900 sm:text-5xl">
               Meet Our Team
@@ -447,14 +443,14 @@ export default function AboutPage() {
             variants={staggerContainer}
             initial="initial"
             whileInView="animate"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             {teamMembers.map((member, index) => (
               <motion.li key={member.name} variants={fadeInUp}>
                 <motion.div
                   className="mx-auto"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.3 }}
+                  whileHover={{ scale: 1.03 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <img
                     src={member.image || "/placeholder.svg"}
