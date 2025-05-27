@@ -265,7 +265,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Albums Section - Optimized */}
+      {/* Featured Albums Section - Enhanced */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <motion.div
@@ -275,58 +275,90 @@ export default function Home() {
             transition={{ duration: 0.3 }}
             viewport={{ once: true, margin: "-100px" }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-red-900">
-              Featured Albums
-            </h2>
+            <div>
+              <motion.span
+                className="inline-block text-red-600 font-medium mb-2"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                viewport={{ once: true }}
+              >
+                Our Showcase
+              </motion.span>
+              <h2 className="text-3xl md:text-4xl font-bold text-red-900">
+                Featured Albums
+              </h2>
+            </div>
             <Link
               href="/albums"
-              className="text-red-600 hover:text-red-700 font-medium flex items-center mt-4 md:mt-0 transition-colors duration-200"
+              className="group text-red-600 hover:text-red-700 font-medium flex items-center mt-4 md:mt-0 transition-colors duration-200"
             >
               View All Albums
-              <ArrowRight className="ml-1 h-4 w-4" />
+              <ArrowRight className="ml-1 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { title: "Wedding Collection", desc: "Elegant wedding memories" },
-              { title: "Family Portraits", desc: "Timeless family moments" },
+              {
+                title: "Wedding Collection",
+                desc: "Elegant wedding memories captured in timeless albums",
+                image: "/rara.jpg",
+              },
+              {
+                title: "Family Portraits",
+                desc: "Beautiful family moments preserved forever",
+                image: "/birthday-album-cover.png",
+              },
               {
                 title: "Anniversary Special",
-                desc: "Celebrating love stories",
+                desc: "Celebrating love stories with premium albums",
+                image: "/anniversary-album-cover.png",
               },
             ].map((album, index) => (
               <motion.div
                 key={index}
-                className="group"
+                className="group relative isolate"
                 initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
                 viewport={{ once: true, margin: "-100px" }}
+                whileHover={{ y: -8 }}
               >
-                <div className="relative overflow-hidden rounded-xl shadow-lg">
+                <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:shadow-xl bg-white">
                   <div className="relative aspect-4/5">
                     <Image
-                      src={`/professional-team.png?height=600&width=500&query=professional ${album.title} album`}
+                      src={album.image}
                       alt={album.title}
                       fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
+                    {/* Enhanced gradient overlay - visible by default */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-red-900/50 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
+                    {/* Glow effect */}
+                    <div className="absolute -inset-x-2 bottom-0 h-1/2 bg-red-500/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   </div>
-                  <div className="absolute inset-0 bg-linear-to-t from-red-900/80 via-red-900/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                    <h3 className="text-xl font-bold text-white">
-                      {album.title}
-                    </h3>
-                    <p className="text-red-100 mb-4">{album.desc}</p>
-                    <Button
-                      size="sm"
-                      className="bg-white text-red-600 hover:bg-red-50 transition-colors duration-200"
-                    >
-                      View Album
-                    </Button>
+                  {/* Content visible by default */}
+                  <div className="absolute inset-0 flex flex-col justify-end p-6 transition-all duration-500">
+                    <div className="relative z-10">
+                      <h3 className="text-2xl font-bold text-white mb-2 translate-y-0 group-hover:translate-y-0 transition-transform duration-500">
+                        {album.title}
+                      </h3>
+                      <p className="text-red-100 mb-4 line-clamp-2 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
+                        {album.desc}
+                      </p>
+                      <Button
+                        size="sm"
+                        className="bg-white/90 backdrop-blur-sm text-red-600 hover:bg-white hover:text-red-700 transition-colors duration-200 group/btn translate-y-0 group-hover:translate-y-0 opacity-90 hover:opacity-100"
+                      >
+                        View Album
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
+                {/* Card glow effect */}
+                <div className="absolute -inset-x-4 -inset-y-4 z-[-1] bg-red-500/20 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
               </motion.div>
             ))}
           </div>
