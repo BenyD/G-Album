@@ -13,56 +13,104 @@ import {
   Calendar,
 } from "lucide-react";
 
-// Animation variants
+// Types for testimonials
+interface Testimonial {
+  name: string;
+  role: string;
+  stars: number;
+  quote: string;
+  date: string;
+}
+
+// Animation variants - Further simplified
 const fadeInUp = {
-  initial: { opacity: 0, y: 60 },
+  initial: { opacity: 0, y: 15 }, // Further reduced distance
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: "easeOut" },
+  transition: { duration: 0.3, ease: "easeOut" }, // Even faster animation
 };
 
 const staggerContainer = {
   animate: {
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.03, // Further reduced stagger time
     },
   },
 };
 
 const scaleIn = {
-  initial: { opacity: 0, scale: 0.8 },
+  initial: { opacity: 0, scale: 0.95 }, // More subtle scale
   animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.5, ease: "easeOut" },
+  transition: { duration: 0.3, ease: "easeOut" }, // Faster animation
 };
 
 export default function Home() {
+  // Testimonials data
+  const testimonials: Testimonial[] = [
+    {
+      name: "Priya & Rahul Sharma",
+      role: "Wedding Couple",
+      stars: 5,
+      quote:
+        "G Album created the most beautiful wedding album for us. The quality and attention to detail exceeded our expectations! Every page tells our story perfectly.",
+      date: "2 weeks ago",
+    },
+    {
+      name: "Ananya Patel",
+      role: "Family Portrait",
+      stars: 5,
+      quote:
+        "Our family portraits look amazing in the album. The team was professional and delivered exactly what we wanted.",
+      date: "1 month ago",
+    },
+    {
+      name: "Vikram Mehta",
+      role: "Anniversary Celebration",
+      stars: 5,
+      quote:
+        "The anniversary album was a perfect gift for my wife. The craftsmanship and design are truly exceptional. Highly recommend G Album!",
+      date: "3 weeks ago",
+    },
+    {
+      name: "Sneha Gupta",
+      role: "Baby Photoshoot",
+      stars: 5,
+      quote:
+        "They captured our baby's precious moments beautifully. The album quality is outstanding and will be treasured forever.",
+      date: "1 week ago",
+    },
+    {
+      name: "Rajesh Kumar",
+      role: "Corporate Event",
+      stars: 4,
+      quote:
+        "Professional service for our company event album. Great attention to detail and timely delivery.",
+      date: "2 months ago",
+    },
+    {
+      name: "Kavya & Arjun",
+      role: "Pre-wedding Shoot",
+      stars: 5,
+      quote:
+        "Amazing work on our pre-wedding album! The team understood our vision perfectly and delivered beyond expectations. The album design is simply stunning.",
+      date: "1 month ago",
+    },
+  ];
+
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section with Integrated Navbar */}
+      {/* Hero Section - Optimized */}
       <section className="relative min-h-[90vh] bg-linear-to-br from-red-600 to-red-900 text-white overflow-hidden">
-        {/* Background blur elements */}
-        <motion.div
-          className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
+        {/* Reduced background animations */}
+        <div
+          className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl transition-transform duration-[20s] ease-in-out"
+          style={{
+            animation: "pulse 20s ease-in-out infinite",
           }}
         />
-        <motion.div
-          className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-red-300 opacity-20 blur-3xl"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.2, 0.4, 0.2],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-            delay: 2,
+        <div
+          className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-red-300 opacity-20 blur-3xl transition-transform duration-[20s] ease-in-out"
+          style={{
+            animation: "pulse 20s ease-in-out infinite 10s",
           }}
         />
 
@@ -76,38 +124,11 @@ export default function Home() {
             <motion.div
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-xs border border-white/20 rounded-full text-white/90 text-sm font-medium mb-4"
               variants={fadeInUp}
-              whileHover={{
-                scale: 1.05,
-                backgroundColor: "rgba(255, 255, 255, 0.15)",
-              }}
               transition={{ duration: 0.3 }}
             >
-              <motion.div
-                className="w-2 h-2 bg-red-300 rounded-full"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.7, 1, 0.7],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Number.POSITIVE_INFINITY,
-                  ease: "easeInOut",
-                }}
-              />
+              <div className="w-2 h-2 bg-red-300 rounded-full opacity-70" />
               <span>Premium Photo Albums Since 2018</span>
-              <motion.div
-                className="w-2 h-2 bg-red-300 rounded-full"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.7, 1, 0.7],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Number.POSITIVE_INFINITY,
-                  ease: "easeInOut",
-                  delay: 1,
-                }}
-              />
+              <div className="w-2 h-2 bg-red-300 rounded-full opacity-70" />
             </motion.div>
             <motion.h1
               className="text-4xl md:text-6xl font-bold leading-tight"
@@ -127,34 +148,23 @@ export default function Home() {
               className="flex flex-col sm:flex-row gap-4 pt-4 justify-center"
               variants={fadeInUp}
             >
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <Button
+                size="lg"
+                className="bg-white text-red-600 hover:bg-red-50 transition-colors duration-200"
               >
-                <Button
-                  size="lg"
-                  className="bg-white text-red-600 hover:bg-red-50"
-                >
-                  View Our Gallery
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                View Our Gallery
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white bg-white/10 backdrop-blur-xs hover:bg-white/20 hover:border-red-200 transition-all duration-200"
               >
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white text-white bg-white/10 backdrop-blur-xs hover:bg-white/20 hover:border-red-200 transition-all duration-300"
-                >
-                  <span className="relative z-10 flex items-center">
-                    Contact Us
-                    <MessageSquare className="ml-2 h-4 w-4" />
-                  </span>
-                  <span className="absolute inset-0 bg-linear-to-r from-red-500/10 to-red-600/10 rounded-md blur-xs"></span>
-                </Button>
-              </motion.div>
+                <span className="relative z-10 flex items-center">
+                  Contact Us
+                  <MessageSquare className="ml-2 h-4 w-4" />
+                </span>
+              </Button>
             </motion.div>
           </motion.div>
           <motion.div
@@ -172,8 +182,7 @@ export default function Home() {
                 priority
               />
             </div>
-            {/* Glassmorphism effect */}
-            <div className="absolute -bottom-6 -right-6 w-48 h-48 bg-white/20 backdrop-blur-md rounded-lg -z-10 border border-white/30"></div>
+            <div className="absolute -bottom-6 -right-6 w-48 h-48 bg-white/20 backdrop-blur-md rounded-lg -z-10 border border-white/30" />
           </motion.div>
         </div>
       </section>
@@ -183,10 +192,10 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <motion.h2
             className="text-3xl md:text-4xl font-bold text-center mb-16 text-red-900"
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+            viewport={{ once: true, margin: "-100px" }}
           >
             Our Services
           </motion.h2>
@@ -196,7 +205,7 @@ export default function Home() {
             variants={staggerContainer}
             initial="initial"
             whileInView="animate"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-100px" }}
           >
             {[
               {
@@ -240,16 +249,12 @@ export default function Home() {
                 key={index}
                 className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-red-100 group"
                 variants={fadeInUp}
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.3 }}
+                whileHover={{ y: -3 }}
+                transition={{ duration: 0.2 }}
               >
-                <motion.div
-                  className="w-16 h-16 bg-linear-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6 }}
-                >
+                <div className="w-16 h-16 bg-linear-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-200">
                   <service.icon className="h-8 w-8 text-white" />
-                </motion.div>
+                </div>
                 <h3 className="text-xl font-semibold mb-3 text-red-900">
                   {service.title}
                 </h3>
@@ -260,35 +265,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Albums */}
+      {/* Featured Albums Section - Optimized */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <motion.div
             className="flex flex-col md:flex-row justify-between items-center mb-12"
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            transition={{ duration: 0.3 }}
+            viewport={{ once: true, margin: "-100px" }}
           >
             <h2 className="text-3xl md:text-4xl font-bold text-red-900">
               Featured Albums
             </h2>
             <Link
               href="/albums"
-              className="text-red-600 hover:text-red-700 font-medium flex items-center mt-4 md:mt-0"
+              className="text-red-600 hover:text-red-700 font-medium flex items-center mt-4 md:mt-0 transition-colors duration-200"
             >
               View All Albums
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </motion.div>
 
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { title: "Wedding Collection", desc: "Elegant wedding memories" },
               { title: "Family Portraits", desc: "Timeless family moments" },
@@ -300,9 +299,10 @@ export default function Home() {
               <motion.div
                 key={index}
                 className="group"
-                variants={fadeInUp}
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                viewport={{ once: true, margin: "-100px" }}
               >
                 <div className="relative overflow-hidden rounded-xl shadow-lg">
                   <div className="relative aspect-4/5">
@@ -310,71 +310,42 @@ export default function Home() {
                       src={`/professional-team.png?height=600&width=500&query=professional ${album.title} album`}
                       alt={album.title}
                       fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
-                  {/* Glassmorphism overlay */}
-                  <div className="absolute inset-0 bg-linear-to-t from-red-900/80 via-red-900/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <motion.div
-                    className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300"
-                    initial={{ y: 20, opacity: 0 }}
-                    whileInView={{ y: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
+                  <div className="absolute inset-0 bg-linear-to-t from-red-900/80 via-red-900/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
                     <h3 className="text-xl font-bold text-white">
                       {album.title}
                     </h3>
                     <p className="text-red-100 mb-4">{album.desc}</p>
                     <Button
                       size="sm"
-                      className="bg-white text-red-600 hover:bg-red-50"
+                      className="bg-white text-red-600 hover:bg-red-50 transition-colors duration-200"
                     >
                       View Album
                     </Button>
-                  </motion.div>
+                  </div>
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials - Further Optimized */}
       <section className="py-20 bg-linear-to-br from-red-50 to-white relative overflow-hidden">
-        {/* Background blur elements */}
-        <motion.div
-          className="absolute top-20 right-20 w-72 h-72 rounded-full bg-red-200 opacity-30 blur-3xl"
-          animate={{
-            x: [0, 30, 0],
-            y: [0, -20, 0],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div
-          className="absolute bottom-20 left-20 w-80 h-80 rounded-full bg-red-100 opacity-20 blur-3xl"
-          animate={{
-            x: [0, -20, 0],
-            y: [0, 30, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-            delay: 3,
-          }}
-        />
+        {/* Static background elements */}
+        <div className="absolute top-20 right-20 w-72 h-72 rounded-full bg-red-200 opacity-30 blur-3xl" />
+        <div className="absolute bottom-20 left-20 w-80 h-80 rounded-full bg-red-100 opacity-20 blur-3xl" />
 
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            transition={{ duration: 0.3 }}
+            viewport={{ once: true, margin: "-100px" }}
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-red-900">
               What Our Clients Say
@@ -384,94 +355,32 @@ export default function Home() {
             </p>
           </motion.div>
 
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-min"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
-            {[
-              {
-                name: "Priya & Rahul Sharma",
-                role: "Wedding Couple",
-                stars: 5,
-                quote:
-                  "G Album created the most beautiful wedding album for us. The quality and attention to detail exceeded our expectations! Every page tells our story perfectly.",
-                date: "2 weeks ago",
-              },
-              {
-                name: "Ananya Patel",
-                role: "Family Portrait",
-                stars: 5,
-                quote:
-                  "Our family portraits look amazing in the album. The team was professional and delivered exactly what we wanted.",
-                date: "1 month ago",
-              },
-              {
-                name: "Vikram Mehta",
-                role: "Anniversary Celebration",
-                stars: 5,
-                quote:
-                  "The anniversary album was a perfect gift for my wife. The craftsmanship and design are truly exceptional. Highly recommend G Album!",
-                date: "3 weeks ago",
-              },
-              {
-                name: "Sneha Gupta",
-                role: "Baby Photoshoot",
-                stars: 5,
-                quote:
-                  "They captured our baby's precious moments beautifully. The album quality is outstanding and will be treasured forever.",
-                date: "1 week ago",
-              },
-              {
-                name: "Rajesh Kumar",
-                role: "Corporate Event",
-                stars: 4,
-                quote:
-                  "Professional service for our company event album. Great attention to detail and timely delivery.",
-                date: "2 months ago",
-              },
-              {
-                name: "Kavya & Arjun",
-                role: "Pre-wedding Shoot",
-                stars: 5,
-                quote:
-                  "Amazing work on our pre-wedding album! The team understood our vision perfectly and delivered beyond expectations. The album design is simply stunning.",
-                date: "1 month ago",
-              },
-            ].map((testimonial, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-min">
+            {/* Testimonial cards with simplified animations */}
+            {testimonials.map((testimonial, index) => (
               <motion.div
                 key={index}
-                className={`bg-white p-6 rounded-xl shadow-lg border border-red-100 relative hover:shadow-xl transition-shadow ${
+                className={`bg-white p-6 rounded-xl shadow-lg border border-red-100 relative hover:shadow-xl transition-all duration-200 hover:-translate-y-1 ${
                   index === 0 || index === 3 ? "md:row-span-2" : ""
                 } ${index === 2 || index === 5 ? "lg:row-span-2" : ""}`}
-                variants={fadeInUp}
-                whileHover={{ y: -5 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                viewport={{ once: true, margin: "-100px" }}
               >
-                {/* Quote mark */}
                 <div className="absolute top-4 right-4 text-4xl text-red-100 font-serif">
                   &quot;
                 </div>
-
-                {/* Star Rating */}
                 <div className="flex items-center mb-4">
                   {[...Array(5)].map((_, starIndex) => (
-                    <motion.div
+                    <Star
                       key={starIndex}
-                      initial={{ opacity: 0, scale: 0 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: starIndex * 0.1 }}
-                    >
-                      <Star
-                        className={`h-4 w-4 ${
-                          starIndex < testimonial.stars
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    </motion.div>
+                      className={`h-4 w-4 ${
+                        starIndex < testimonial.stars
+                          ? "text-yellow-400 fill-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
                   ))}
                   <span className="ml-2 text-sm text-slate-500">
                     ({testimonial.stars}/5)
@@ -484,12 +393,9 @@ export default function Home() {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <motion.div
-                      className="w-10 h-10 rounded-full bg-linear-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-sm"
-                      whileHover={{ scale: 1.1 }}
-                    >
+                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-sm transition-transform duration-200 hover:scale-105">
                       {testimonial.name.charAt(0)}
-                    </motion.div>
+                    </div>
                     <div className="ml-3">
                       <h4 className="font-semibold text-red-900 text-sm">
                         {testimonial.name}
@@ -504,7 +410,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Google Reviews Badge */}
                 <div className="absolute bottom-2 right-2 opacity-20">
                   <svg
                     className="w-6 h-6 text-red-500"
@@ -519,87 +424,57 @@ export default function Home() {
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
 
           {/* Google Reviews CTA */}
-          <motion.div
-            className="text-center mt-12"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
+          <div className="text-center mt-12">
             <p className="text-slate-600 mb-4">See more reviews on Google</p>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                asChild
-                variant="outline"
-                className="border-red-200 text-red-700 hover:bg-red-50"
+            <Button
+              asChild
+              variant="outline"
+              className="border-red-200 text-red-700 hover:bg-red-50 transition-colors duration-200"
+            >
+              <a
+                href="https://www.google.com/search?q=G+Album+reviews"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center"
               >
-                <a
-                  href="https://www.google.com/search?q=G+Album+reviews"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center"
+                <svg
+                  className="w-5 h-5 mr-2"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
                 >
-                  <svg
-                    className="w-5 h-5 mr-2"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
-                  View Google Reviews
-                </a>
-              </Button>
-            </motion.div>
-          </motion.div>
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                View Google Reviews
+              </a>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <motion.section
-        className="bg-white py-16 sm:py-24"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-      >
+      {/* CTA Section - Simplified */}
+      <section className="bg-white py-16 sm:py-24">
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
           <motion.div
             className="relative isolate overflow-hidden bg-red-900 px-6 py-24 shadow-2xl sm:rounded-3xl sm:px-24 xl:py-32"
-            whileHover={{ scale: 1.02 }}
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            viewport={{ once: true, margin: "-100px" }}
           >
-            <motion.h2
-              className="mx-auto max-w-3xl text-center text-4xl font-semibold tracking-tight text-white sm:text-5xl"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
+            <h2 className="mx-auto max-w-3xl text-center text-4xl font-semibold tracking-tight text-white sm:text-5xl">
               Ready to Create Your Perfect Album?
-            </motion.h2>
-            <motion.p
-              className="mx-auto mt-6 max-w-lg text-center text-lg text-red-100"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
+            </h2>
+            <p className="mx-auto mt-6 max-w-lg text-center text-lg text-red-100">
               Join thousands of satisfied customers and bring your memories to
               life with our premium photo albums.
-            </motion.p>
-            <motion.form
-              className="mx-auto mt-10 flex max-w-md gap-x-4"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              viewport={{ once: true }}
-            >
+            </p>
+            <form className="mx-auto mt-10 flex max-w-md gap-x-4">
               <label htmlFor="email-address" className="sr-only">
                 Email address
               </label>
@@ -610,46 +485,32 @@ export default function Home() {
                 required
                 placeholder="Enter your email"
                 autoComplete="email"
-                className="min-w-0 flex-auto rounded-md bg-white/5 px-3.5 py-2 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-red-200 focus:outline-2 focus:-outline-offset-2 focus:outline-white sm:text-sm/6"
+                className="min-w-0 flex-auto rounded-md bg-white/5 px-3.5 py-2 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-red-200 focus:outline-2 focus:-outline-offset-2 focus:outline-white sm:text-sm/6 transition-all duration-200"
               />
-              <motion.button
+              <Button
                 type="submit"
-                className="flex-none rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-red-900 shadow-2xs hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="flex-none rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-red-900 shadow-2xs hover:bg-red-50 transition-colors duration-200"
               >
                 Subscribe
-              </motion.button>
-            </motion.form>
-            <svg
-              viewBox="0 0 1024 1024"
-              aria-hidden="true"
-              className="absolute top-1/2 left-1/2 -z-10 size-256 -translate-x-1/2"
-            >
-              <circle
-                r={512}
-                cx={512}
-                cy={512}
-                fill="url(#red-gradient)"
-                fillOpacity="0.7"
-              />
-              <defs>
-                <radialGradient
-                  r={1}
-                  cx={0}
-                  cy={0}
-                  id="red-gradient"
-                  gradientUnits="userSpaceOnUse"
-                  gradientTransform="translate(512 512) rotate(90) scale(512)"
-                >
-                  <stop stopColor="#DC2626" />
-                  <stop offset={1} stopColor="#EF4444" stopOpacity={0} />
-                </radialGradient>
-              </defs>
-            </svg>
+              </Button>
+            </form>
           </motion.div>
         </div>
-      </motion.section>
+      </section>
+
+      <style jsx global>{`
+        @keyframes pulse {
+          0%,
+          100% {
+            transform: scale(1);
+            opacity: 0.3;
+          }
+          50% {
+            transform: scale(1.1);
+            opacity: 0.4;
+          }
+        }
+      `}</style>
     </div>
   );
 }
