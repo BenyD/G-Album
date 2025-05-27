@@ -1,38 +1,39 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
 
 const navigation = [
   { name: "Home", href: "/" },
   { name: "About", href: "/about" },
   { name: "Albums", href: "/albums" },
   { name: "Gallery", href: "/gallery" },
-]
+];
 
 export default function Header() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const [scrollProgress, setScrollProgress] = useState(0)
-  const pathname = usePathname()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollTop = window.scrollY
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight
-      const scrollPercent = scrollTop / docHeight
+      const scrollTop = window.scrollY;
+      const docHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPercent = scrollTop / docHeight;
 
-      setScrolled(scrollTop > 10)
-      setScrollProgress(scrollPercent * 100)
-    }
+      setScrolled(scrollTop > 10);
+      setScrollProgress(scrollPercent * 100);
+    };
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <header
@@ -70,7 +71,9 @@ export default function Header() {
               key={item.name}
               href={item.href}
               className={`relative font-medium transition-all duration-300 group ${
-                scrolled ? "text-slate-700 hover:text-red-600" : "text-white hover:text-red-200"
+                scrolled
+                  ? "text-slate-700 hover:text-red-600"
+                  : "text-white hover:text-red-200"
               }`}
             >
               {item.name}
@@ -108,17 +111,33 @@ export default function Header() {
                 : "text-white hover:text-red-200 hover:bg-white/10"
             }`}
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
           </Button>
         </div>
       </nav>
 
       {/* Scroll Progress Bar */}
-      <div className="absolute bottom-0 left-0 w-full h-1 bg-linear-to-r from-red-200/30 to-red-300/30">
+      <div className="absolute bottom-0 left-0 w-full h-0.5 bg-linear-to-r from-red-200/20 to-red-300/20">
         <div
-          className="h-full bg-linear-to-r from-red-500 via-red-600 to-red-700 transition-all duration-150 ease-out"
-          style={{ width: `${scrollProgress}%` }}
-        ></div>
+          className="h-full bg-linear-to-r from-red-500 via-red-600 to-red-700 transition-all duration-300 ease-out"
+          style={{
+            width: `${scrollProgress}%`,
+            boxShadow:
+              "0 0 10px rgba(239, 68, 68, 0.5), 0 0 20px rgba(239, 68, 68, 0.3), 0 0 30px rgba(239, 68, 68, 0.1)",
+          }}
+        >
+          {/* Glow effect */}
+          <div
+            className="absolute top-0 right-0 h-full w-5 bg-linear-to-r from-transparent to-red-500/50 blur-sm"
+            style={{
+              animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            }}
+          />
+        </div>
       </div>
 
       {/* Mobile menu */}
@@ -150,6 +169,18 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        @keyframes pulse {
+          0%,
+          100% {
+            opacity: 0.4;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+      `}</style>
     </header>
-  )
+  );
 }
