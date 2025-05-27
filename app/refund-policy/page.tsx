@@ -1,39 +1,67 @@
+"use client";
+
+import { motion } from "framer-motion";
+import PageHero from "@/components/page-hero";
+import dynamic from "next/dynamic";
+
+// Animation variants
+const fadeInUp = {
+  initial: { opacity: 0, y: 60 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, ease: "easeOut" },
+};
+
+// Client-side only LastUpdated component
+const LastUpdated = dynamic(
+  () =>
+    Promise.resolve(() => {
+      const date = new Date();
+      return (
+        <p className="text-red-800 mb-2">
+          <strong>Last updated:</strong>{" "}
+          {date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </p>
+      );
+    }),
+  { ssr: false }
+);
+
 export default function RefundPolicyPage() {
   return (
     <div className="flex flex-col min-h-screen pt-16">
-      {/* Hero Section */}
-      <section className="relative bg-linear-to-br from-red-600 to-red-900 text-white py-20 overflow-hidden">
-        {/* Background blur elements */}
-        <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-red-400 opacity-30 blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-red-300 opacity-20 blur-3xl"></div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Refund Policy
-            </h1>
-            <p className="text-xl text-red-100">
-              Our commitment to your satisfaction and return process
-            </p>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        title="Refund Policy"
+        subtitle="Our commitment to your satisfaction and return process"
+        className="py-20"
+      />
 
       {/* Content Section */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto prose prose-lg">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-              <p className="text-red-800 mb-2">
-                <strong>Last updated:</strong> {new Date().toLocaleDateString()}
-              </p>
+            <motion.div
+              className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <LastUpdated />
               <p className="text-red-700 text-sm mb-0">
                 At G Album, your satisfaction is our priority. This policy
                 outlines our refund and return procedures.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="space-y-8 text-slate-700">
+            <motion.div
+              className="space-y-8 text-slate-700"
+              variants={fadeInUp}
+              initial="initial"
+              animate="animate"
+            >
               <section>
                 <h2 className="text-2xl font-bold text-red-900 mb-4">
                   1. Our Satisfaction Guarantee
@@ -267,7 +295,7 @@ export default function RefundPolicyPage() {
                   acceptance of the updated policy.
                 </p>
               </section>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
