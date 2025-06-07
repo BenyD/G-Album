@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { usePathname } from "next/navigation"
-import Link from "next/link"
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import {
   BarChart,
   FileText,
@@ -27,15 +27,15 @@ import {
   Search,
   UserCheck,
   ShoppingCart,
-} from "lucide-react"
-import { useRole } from "@/components/admin/role-context"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+} from "lucide-react";
+import { useRole } from "@/components/admin/role-context";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 export default function AdminSidebar() {
-  const pathname = usePathname()
-  const { role, hasPermission } = useRole()
+  const pathname = usePathname();
+  const { role, hasPermission, isLoading } = useRole();
 
   // Define navigation items with required permissions
   const navItems = [
@@ -50,21 +50,21 @@ export default function AdminSidebar() {
       title: "Albums",
       href: "/admin/albums",
       icon: FileText,
-      permission: "edit_albums",
+      permission: "manage_albums",
       shortcut: "⌘A",
     },
     {
       title: "Gallery",
       href: "/admin/gallery",
       icon: ImageIcon,
-      permission: "upload_gallery",
+      permission: "manage_gallery",
       shortcut: "⌘G",
     },
     {
       title: "Form Submissions",
       href: "/admin/submissions",
       icon: MessageSquare,
-      permission: "view_submissions",
+      permission: "manage_submissions",
       shortcut: "⌘M",
       badge: 3,
     },
@@ -72,7 +72,7 @@ export default function AdminSidebar() {
       title: "Newsletter",
       href: "/admin/newsletter",
       icon: Mail,
-      permission: "send_newsletters",
+      permission: "manage_newsletter",
       shortcut: "⌘N",
     },
     {
@@ -82,7 +82,7 @@ export default function AdminSidebar() {
       permission: "view_analytics",
       shortcut: "⌘V",
     },
-  ]
+  ];
 
   // Business management items (for Accounts role and above)
   const businessItems = [
@@ -90,7 +90,7 @@ export default function AdminSidebar() {
       title: "Customers",
       href: "/admin/customers",
       icon: UserCheck,
-      permission: "manage_customers",
+      permission: "manage_users",
       shortcut: "⌘C",
     },
     {
@@ -100,7 +100,7 @@ export default function AdminSidebar() {
       permission: "manage_orders",
       shortcut: "⌘O",
     },
-  ]
+  ];
 
   // Settings submenu items
   const settingsItems = [
@@ -108,7 +108,7 @@ export default function AdminSidebar() {
       title: "User Management",
       href: "/admin/settings/users",
       icon: Users,
-      permission: "manage_roles",
+      permission: "manage_users",
     },
     {
       title: "General Settings",
@@ -120,19 +120,74 @@ export default function AdminSidebar() {
       title: "Profile",
       href: "/admin/profile",
       icon: User,
-      permission: "view_profile",
+      permission: "view_dashboard",
     },
-  ]
+  ];
+
+  // If loading, show a simplified sidebar
+  if (isLoading) {
+    return (
+      <Sidebar className="border-r border-slate-200 w-64">
+        <SidebarHeader className="border-b border-slate-200 pb-2">
+          <div className="flex items-center px-2 py-3">
+            <Link
+              href="/admin/dashboard"
+              className="flex items-center group w-full"
+            >
+              <div className="h-8 w-8 rounded-md bg-red-600 flex items-center justify-center text-white font-bold mr-2">
+                G
+              </div>
+              <span className="text-lg font-semibold">G Album</span>
+            </Link>
+          </div>
+        </SidebarHeader>
+        <SidebarContent className="flex-1 overflow-y-auto">
+          <div className="p-4 text-center text-slate-500">Loading...</div>
+        </SidebarContent>
+      </Sidebar>
+    );
+  }
+
+  // If guest or no role, show minimal sidebar
+  if (role === "guest") {
+    return (
+      <Sidebar className="border-r border-slate-200 w-64">
+        <SidebarHeader className="border-b border-slate-200 pb-2">
+          <div className="flex items-center px-2 py-3">
+            <Link
+              href="/admin/login"
+              className="flex items-center group w-full"
+            >
+              <div className="h-8 w-8 rounded-md bg-red-600 flex items-center justify-center text-white font-bold mr-2">
+                G
+              </div>
+              <span className="text-lg font-semibold">G Album</span>
+            </Link>
+          </div>
+        </SidebarHeader>
+        <SidebarContent className="flex-1 overflow-y-auto">
+          <div className="p-4 text-center text-slate-500">
+            Please sign in to access the admin panel.
+          </div>
+        </SidebarContent>
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar className="border-r border-slate-200 w-64">
       <SidebarHeader className="border-b border-slate-200 pb-2">
         <div className="flex items-center px-2 py-3">
-          <Link href="/admin/dashboard" className="flex items-center group w-full">
+          <Link
+            href="/admin/dashboard"
+            className="flex items-center group w-full"
+          >
             <div className="h-8 w-8 rounded-md bg-red-600 flex items-center justify-center text-white font-bold mr-2 group-hover:bg-red-700 transition-colors">
               G
             </div>
-            <span className="text-lg font-semibold group-hover:text-red-600 transition-colors">G Album</span>
+            <span className="text-lg font-semibold group-hover:text-red-600 transition-colors">
+              G Album
+            </span>
           </Link>
         </div>
         <div className="px-3 mt-2">
@@ -174,22 +229,33 @@ export default function AdminSidebar() {
 
         {/* Main Navigation */}
         <div className="px-3 py-2">
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">Main</h4>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
+            Main
+          </h4>
           <SidebarMenu>
             {navItems.map((item) => {
               // Only show items the user has permission to see
-              if (!hasPermission(item.permission)) return null
+              if (!hasPermission(item.permission)) return null;
 
-              const isActive = pathname === item.href
+              const isActive = pathname === item.href;
 
               return (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                    <Link href={item.href} className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    tooltip={item.title}
+                  >
+                    <Link
+                      href={item.href}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors"
+                    >
                       <item.icon className="h-5 w-5" />
                       <span className="flex-1 truncate">{item.title}</span>
                       {item.badge && (
-                        <Badge className="bg-red-500 hover:bg-red-600 text-white text-xs">{item.badge}</Badge>
+                        <Badge className="bg-red-500 hover:bg-red-600 text-white text-xs">
+                          {item.badge}
+                        </Badge>
                       )}
                       {item.shortcut && (
                         <kbd className="hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-70">
@@ -199,7 +265,7 @@ export default function AdminSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )
+              );
             })}
           </SidebarMenu>
         </div>
@@ -210,17 +276,23 @@ export default function AdminSidebar() {
         {businessItems.some((item) => hasPermission(item.permission)) && (
           <>
             <div className="px-3 py-2">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">Business</h4>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
+                Business
+              </h4>
               <SidebarMenu>
                 {businessItems.map((item) => {
                   // Only show items the user has permission to see
-                  if (!hasPermission(item.permission)) return null
+                  if (!hasPermission(item.permission)) return null;
 
-                  const isActive = pathname === item.href
+                  const isActive = pathname === item.href;
 
                   return (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={item.title}
+                      >
                         <Link
                           href={item.href}
                           className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors"
@@ -235,7 +307,7 @@ export default function AdminSidebar() {
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )
+                  );
                 })}
               </SidebarMenu>
             </div>
@@ -246,24 +318,33 @@ export default function AdminSidebar() {
 
         {/* Settings Navigation */}
         <div className="px-3 py-2">
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">Settings</h4>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
+            Settings
+          </h4>
           <SidebarMenu>
             {settingsItems.map((item) => {
               // Only show items the user has permission to see
-              if (!hasPermission(item.permission)) return null
+              if (!hasPermission(item.permission)) return null;
 
-              const isActive = pathname === item.href
+              const isActive = pathname === item.href;
 
               return (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                    <Link href={item.href} className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    tooltip={item.title}
+                  >
+                    <Link
+                      href={item.href}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors"
+                    >
                       <item.icon className="h-5 w-5" />
                       <span className="flex-1 truncate">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )
+              );
             })}
           </SidebarMenu>
         </div>
@@ -274,10 +355,19 @@ export default function AdminSidebar() {
           <div className="text-xs text-slate-500 mb-2">Logged in as:</div>
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
-              <div className="font-medium text-sm truncate">{role.charAt(0).toUpperCase() + role.slice(1)}</div>
-              <div className="text-xs text-slate-500 truncate">admin@galbum.com</div>
+              <div className="font-medium text-sm truncate">
+                {role.charAt(0).toUpperCase() + role.slice(1)}
+              </div>
+              <div className="text-xs text-slate-500 truncate">
+                admin@galbum.com
+              </div>
             </div>
-            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2" asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+              asChild
+            >
               <Link href="/admin/login">
                 <LogOut className="h-4 w-4" />
               </Link>
@@ -286,5 +376,5 @@ export default function AdminSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

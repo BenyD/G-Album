@@ -1,67 +1,49 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { createContext, useContext } from "react"
-
-type Role = "superadmin" | "admin" | "accounts" | "employee"
+import type React from "react";
+import { createContext, useContext } from "react";
+import { useAuth } from "./auth-context";
 
 interface RoleContextType {
-  role: Role
-  changeRole: (role: Role) => void
-  hasPermission: (permission: string) => boolean
+  role: string;
+  isLoading: boolean;
+  hasPermission: (permission: string) => boolean;
 }
 
-const RoleContext = createContext<RoleContextType | undefined>(undefined)
-
-// Define permissions for each role
-const rolePermissions: Record<Role, string[]> = {
-  superadmin: [
-    "view_dashboard",
-    "edit_albums",
-    "upload_gallery",
-    "view_submissions",
-    "send_newsletters",
-    "view_analytics",
-    "manage_roles",
-    "manage_users",
-    "view_profile",
-    "manage_customers",
-    "manage_orders",
-    "manage_settings",
-  ],
-  admin: [
-    "view_dashboard",
-    "edit_albums",
-    "upload_gallery",
-    "view_submissions",
-    "send_newsletters",
-    "view_analytics",
-    "view_profile",
-    "manage_customers",
-    "manage_orders",
-  ],
-  accounts: ["view_dashboard", "view_submissions", "view_profile", "manage_customers", "manage_orders"],
-  employee: ["view_dashboard", "edit_albums", "upload_gallery", "view_submissions", "view_profile"],
-}
+const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 interface RoleProviderProps {
-  children: React.ReactNode
-  role: Role
-  changeRole: (role: Role) => void
+  children: React.ReactNode;
 }
 
-export function RoleProvider({ children, role, changeRole }: RoleProviderProps) {
-  const hasPermission = (permission: string): boolean => {
-    return rolePermissions[role]?.includes(permission) || false
-  }
+export function RoleProvider({ children }: RoleProviderProps) {
+  const { role, permissions, isLoading } = useAuth();
 
-  return <RoleContext.Provider value={{ role, changeRole, hasPermission }}>{children}</RoleContext.Provider>
+  const hasPermission = (permission: string): boolean => {
+    if (!role || !permissions) return false;
+    return permissions.some((p) => p.name === permission);
+  };
+
+  // If we're loading or don't have a role, provide a default role
+  const currentRole = !isLoading && role?.name ? role.name : "guest";
+
+  return (
+    <RoleContext.Provider
+      value={{
+        role: currentRole,
+        isLoading,
+        hasPermission,
+      }}
+    >
+      {children}
+    </RoleContext.Provider>
+  );
 }
 
 export function useRole() {
-  const context = useContext(RoleContext)
+  const context = useContext(RoleContext);
   if (context === undefined) {
-    throw new Error("useRole must be used within a RoleProvider")
+    throw new Error("useRole must be used within a RoleProvider");
   }
-  return context
+  return context;
 }

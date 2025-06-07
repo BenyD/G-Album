@@ -1,62 +1,150 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/components/admin/auth-context";
+import { Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      await signIn(email, password, rememberMe);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to sign in");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6">
       <div className="w-full max-w-md">
         <Card className="border-0 shadow-lg">
           <CardHeader className="space-y-1 pb-6">
-            <h1 className="text-red-600 font-bold text-3xl text-center mb-2">G Album</h1>
-            <CardTitle className="text-2xl font-bold text-center">Admin Login</CardTitle>
+            <div className="flex justify-center mb-2">
+              <div className="relative h-16 w-16 rounded-full overflow-hidden bg-red-600 ring-4 ring-red-100">
+                <div className="absolute inset-0 flex items-center justify-center text-white text-2xl font-bold">
+                  G
+                </div>
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-center">
+              Admin Login
+            </CardTitle>
             <CardDescription className="text-center text-slate-500">
               Enter your credentials to access the dashboard
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="your.email@example.com" required />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="#" className="text-xs text-red-600 hover:text-red-800 hover:underline">
-                  Forgot password?
-                </Link>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
               </div>
-              <Input id="password" type="password" required />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-            <div className="flex items-center space-x-2">
-              <input
-                id="remember"
-                type="checkbox"
-                className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
-              />
-              <Label htmlFor="remember" className="text-sm text-slate-500">
-                Remember me
-              </Label>
-            </div>
-          </CardContent>
+              <div className="flex items-center space-x-2">
+                <input
+                  id="remember"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={isLoading}
+                />
+                <Label htmlFor="remember" className="text-sm text-slate-500">
+                  Remember me
+                </Label>
+              </div>
+            </CardContent>
 
-          <CardFooter className="flex flex-col gap-4">
-            <Button asChild className="w-full bg-red-600 hover:bg-red-700 text-white">
-              <Link href="/admin/dashboard">Sign in</Link>
-            </Button>
+            <CardFooter className="flex flex-col gap-4">
+              <Button
+                type="submit"
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign in"
+                )}
+              </Button>
 
-            <Link href="/" className="text-sm text-center text-slate-500 hover:text-red-600 transition-colors">
-              ← Back to website
-            </Link>
-          </CardFooter>
+              <Link
+                href="/"
+                className="group flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-red-600 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                Back to website
+              </Link>
+            </CardFooter>
+          </form>
         </Card>
 
-        <p className="mt-6 text-center text-xs text-slate-500">G Album Admin Portal © {new Date().getFullYear()}</p>
+        <p className="mt-6 text-center text-xs text-slate-500">
+          G Album Admin Portal © {new Date().getFullYear()}
+        </p>
       </div>
     </div>
-  )
+  );
 }

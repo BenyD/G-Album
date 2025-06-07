@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import AdminLayoutWrapper from "@/components/admin/admin-layout-wrapper";
+import { AuthProvider } from "@/components/admin/auth-context";
+import { RoleProvider } from "@/components/admin/role-context";
 
 // Shared animation variants
 const pageTransitionVariants = {
@@ -79,36 +81,42 @@ export default function ConditionalLayout({
   // Admin login page - standalone layout with modal-like animation
   if (isAdminLogin || isModalRoute) {
     return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={pathname}
-          variants={modalTransitionVariants}
-          initial="initial"
-          animate="enter"
-          exit="exit"
-          className="min-h-screen"
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
+      <AuthProvider>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            variants={modalTransitionVariants}
+            initial="initial"
+            animate="enter"
+            exit="exit"
+            className="min-h-screen"
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </AuthProvider>
     );
   }
 
   // Admin dashboard pages - use admin layout
   if (isAdminRoute) {
     return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={pathname}
-          variants={pageTransitionVariants}
-          initial="initial"
-          animate="enter"
-          exit="exit"
-          className="min-h-screen"
-        >
-          <AdminLayoutWrapper>{children}</AdminLayoutWrapper>
-        </motion.div>
-      </AnimatePresence>
+      <AuthProvider>
+        <RoleProvider>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              variants={pageTransitionVariants}
+              initial="initial"
+              animate="enter"
+              exit="exit"
+              className="min-h-screen"
+            >
+              <AdminLayoutWrapper>{children}</AdminLayoutWrapper>
+            </motion.div>
+          </AnimatePresence>
+        </RoleProvider>
+      </AuthProvider>
     );
   }
 
