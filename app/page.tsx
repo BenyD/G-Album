@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   Star,
   Calendar,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 // Types for testimonials
 interface Testimonial {
@@ -22,28 +23,52 @@ interface Testimonial {
   date: string;
 }
 
-// Animation variants - Further simplified
+// Optimized animation variants with reduced motion support
 const fadeInUp = {
-  initial: { opacity: 0, y: 15 }, // Further reduced distance
+  initial: { opacity: 0, y: 5 }, // Reduced distance even further
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.3, ease: "easeOut" }, // Even faster animation
+  transition: { duration: 0.2, ease: [0.33, 1, 0.68, 1] }, // Custom easing
 };
 
-const staggerContainer = {
+const staggerChildren = {
   animate: {
     transition: {
-      staggerChildren: 0.03, // Further reduced stagger time
+      delayChildren: 0.1,
+      staggerChildren: 0.03,
     },
   },
 };
 
-const scaleIn = {
-  initial: { opacity: 0, scale: 0.95 }, // More subtle scale
+const fadeInScale = {
+  initial: { opacity: 0, scale: 0.995 },
   animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.3, ease: "easeOut" }, // Faster animation
+  transition: { duration: 0.2, ease: [0.33, 1, 0.68, 1] },
+};
+
+const backgroundVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  transition: { duration: 0.3 },
+};
+
+// Custom hook for managing loading and reduced motion preferences
+const useAnimationSetup = () => {
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    setHasLoaded(true);
+  }, []);
+
+  return {
+    hasLoaded,
+    shouldAnimate: !prefersReducedMotion,
+  };
 };
 
 export default function Home() {
+  const { hasLoaded, shouldAnimate } = useAnimationSetup();
+
   // Testimonials data
   const testimonials: Testimonial[] = [
     {
@@ -98,29 +123,64 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section - Enhanced & Responsive */}
+      {/* Hero Section - Optimized & Accessible */}
       <section className="relative min-h-screen bg-linear-to-br from-red-600 to-red-900 text-white overflow-hidden flex items-center">
-        {/* Improved background elements */}
+        {/* Background elements with reduced motion consideration */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-red-400/30 mix-blend-overlay blur-3xl animate-blob" />
-          <div className="absolute top-1/3 right-1/4 w-96 h-96 rounded-full bg-red-300/20 mix-blend-overlay blur-3xl animate-blob animation-delay-2000" />
-          <div className="absolute -bottom-8 left-1/2 w-96 h-96 rounded-full bg-red-500/20 mix-blend-overlay blur-3xl animate-blob animation-delay-4000" />
+          {hasLoaded && shouldAnimate && (
+            <>
+              <motion.div
+                variants={backgroundVariants}
+                initial="initial"
+                animate="animate"
+                className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-red-400/30 mix-blend-overlay blur-3xl"
+                style={{
+                  animationDuration: "7s",
+                  animationTimingFunction: "ease-in-out",
+                }}
+              />
+              <motion.div
+                variants={backgroundVariants}
+                initial="initial"
+                animate="animate"
+                transition={{ delay: 0.1 }}
+                className="absolute top-1/3 right-1/4 w-96 h-96 rounded-full bg-red-300/20 mix-blend-overlay blur-3xl"
+                style={{
+                  animationDuration: "8s",
+                  animationTimingFunction: "ease-in-out",
+                  animationDelay: "1s",
+                }}
+              />
+              <motion.div
+                variants={backgroundVariants}
+                initial="initial"
+                animate="animate"
+                transition={{ delay: 0.2 }}
+                className="absolute -bottom-8 left-1/2 w-96 h-96 rounded-full bg-red-500/20 mix-blend-overlay blur-3xl"
+                style={{
+                  animationDuration: "9s",
+                  animationTimingFunction: "ease-in-out",
+                  animationDelay: "2s",
+                }}
+              />
+            </>
+          )}
           <div className="absolute inset-0 bg-red-900/20 backdrop-blur-[1px]" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10 py-16 sm:py-20">
           <div className="max-w-7xl mx-auto">
             <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-              {/* Left Column - Content */}
+              {/* Left Column - Content with optimized animations */}
               <motion.div
                 className="lg:col-span-6 xl:col-span-5 text-center lg:text-left"
-                variants={staggerContainer}
+                variants={staggerChildren}
                 initial="initial"
                 animate="animate"
               >
                 <motion.div
                   className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white/90 text-xs font-medium mb-4 sm:mb-6"
-                  variants={fadeInUp}
+                  variants={fadeInScale}
                 >
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-300 opacity-75"></span>
@@ -158,36 +218,36 @@ export default function Home() {
                 >
                   <Button
                     size="lg"
-                    className="bg-white text-red-600 hover:bg-red-50 transition-all duration-300 hover:shadow-lg hover:shadow-white/20 group relative overflow-hidden h-11 sm:h-12 px-5 sm:px-6"
+                    className="bg-white text-red-600 hover:bg-red-50 transition-all duration-200 hover:shadow-lg hover:shadow-white/20 group relative overflow-hidden h-11 sm:h-12 px-5 sm:px-6"
                     asChild
                   >
                     <Link href="/contact">
                       <span className="relative z-10 flex items-center justify-center font-medium text-base">
                         Start Your Journey
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                       </span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-white to-red-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-white to-red-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                     </Link>
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-white/30 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20 hover:border-white transition-all duration-300 group h-11 sm:h-12 px-5 sm:px-6"
+                    className="border-white/30 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20 hover:border-white transition-all duration-200 group h-11 sm:h-12 px-5 sm:px-6"
                     asChild
                   >
                     <Link href="/albums">
                       <span className="relative z-10 flex items-center justify-center font-medium text-base">
                         View Albums
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                       </span>
                     </Link>
                   </Button>
                 </motion.div>
 
-                {/* Trust indicators */}
+                {/* Trust indicators with optimized animations */}
                 <motion.div
                   className="grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto lg:mx-0"
-                  variants={fadeInUp}
+                  variants={fadeInScale}
                 >
                   <div className="text-center lg:text-left">
                     <span className="block text-xl sm:text-2xl font-bold text-white mb-0.5">
@@ -215,10 +275,10 @@ export default function Home() {
                   </div>
                   <div className="text-center lg:text-right">
                     <span className="block text-xl sm:text-2xl font-bold text-white mb-0.5">
-                      100%
+                      24/7
                     </span>
                     <span className="text-[10px] sm:text-xs text-red-200">
-                      Satisfaction
+                      Customer Support
                     </span>
                   </div>
                 </motion.div>
@@ -226,41 +286,20 @@ export default function Home() {
 
               {/* Right Column - Image */}
               <motion.div
-                className="lg:col-span-6 xl:col-span-7 relative"
-                variants={scaleIn}
+                className="lg:col-span-6 xl:col-span-7"
+                variants={fadeInScale}
                 initial="initial"
                 animate="animate"
               >
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl mx-auto max-w-2xl lg:max-w-none">
+                <div className="relative mx-auto max-w-2xl lg:max-w-none">
                   <Image
-                    src="/wedding-photo-album.png"
-                    alt="G Album showcase"
-                    fill
-                    className="object-cover"
+                    src="/modern-photo-album-display.png"
+                    alt="G Album Premium Photo Album Display"
+                    width={800}
+                    height={600}
+                    className="w-full h-auto rounded-2xl shadow-2xl"
                     priority
                   />
-                  {/* Decorative elements */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-red-900/30 to-transparent" />
-                  <div className="absolute inset-0 bg-red-950/20" />
-                </div>
-
-                {/* Floating elements */}
-                <div className="absolute -bottom-6 -right-6 w-48 h-48 bg-white/10 backdrop-blur-md rounded-2xl -z-10 border border-white/20 hidden lg:block" />
-                <div className="absolute -top-6 -left-6 w-32 h-32 bg-red-500/10 backdrop-blur-md rounded-2xl -z-10 border border-red-500/20 hidden lg:block" />
-
-                {/* Stats card */}
-                <div className="absolute -bottom-4 left-4 lg:-left-4 bg-white/90 backdrop-blur-sm px-6 py-4 rounded-xl shadow-lg border border-white/40">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
-                      <Camera className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-red-900 font-semibold">
-                        Premium Quality
-                      </p>
-                      <p className="text-sm text-red-600">Handcrafted Albums</p>
-                    </div>
-                  </div>
                 </div>
               </motion.div>
             </div>
@@ -283,7 +322,7 @@ export default function Home() {
 
           <motion.div
             className="grid md:grid-cols-3 gap-8"
-            variants={staggerContainer}
+            variants={staggerChildren}
             initial="initial"
             whileInView="animate"
             viewport={{ once: true, margin: "-100px" }}

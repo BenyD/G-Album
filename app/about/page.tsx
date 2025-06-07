@@ -4,29 +4,76 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { Truck, Camera, Clock, MessageSquare } from "lucide-react";
 import PageHero from "@/components/page-hero";
+import { useState, useEffect } from "react";
 
-// Optimized animation variants
+// Optimized animation variants with reduced motion support
 const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
+  initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, ease: "easeOut" },
+  transition: { duration: 0.25, ease: "easeOut" },
 };
 
 const staggerContainer = {
   animate: {
     transition: {
-      staggerChildren: 0.05,
+      staggerChildren: 0.02,
+      delayChildren: 0.1,
     },
   },
 };
 
 const scaleIn = {
-  initial: { opacity: 0, scale: 0.95 },
+  initial: { opacity: 0, scale: 0.98 },
   animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.3, ease: "easeOut" },
+  transition: { duration: 0.25, ease: "easeOut" },
+};
+
+// Add loading state detection
+const useHasLoaded = () => {
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    setHasLoaded(true);
+  }, []);
+
+  return hasLoaded;
+};
+
+// Add intersection observer hook for better performance
+const useInView = () => {
+  const [ref, setRef] = useState<HTMLDivElement | null>(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    if (!ref) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "50px",
+      }
+    );
+
+    observer.observe(ref);
+
+    return () => {
+      if (ref) {
+        observer.unobserve(ref);
+      }
+    };
+  }, [ref]);
+
+  return [setRef, isInView] as const;
 };
 
 export default function AboutPage() {
+  const hasLoaded = useHasLoaded();
+  const [aboutRef, isAboutInView] = useInView();
+  const [techRef, isTechInView] = useInView();
+
   // Sample team members
   const teamMembers = [
     {
@@ -105,51 +152,48 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              ref={aboutRef}
+              initial={{ opacity: 0, x: -10 }}
+              animate={
+                isAboutInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }
+              }
               transition={{ duration: 0.4 }}
-              viewport={{ once: true, margin: "-50px" }}
             >
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-red-900">
                 Our Story
               </h2>
               <div className="space-y-4 text-slate-700">
-                {/* Optimize paragraph animations */}
                 <motion.div
                   variants={staggerContainer}
                   initial="initial"
-                  whileInView="animate"
-                  viewport={{ once: true, margin: "-50px" }}
+                  animate={isAboutInView ? "animate" : "initial"}
                   className="space-y-4"
                 >
                   <motion.p variants={fadeInUp}>
                     Since 2018, G Album has been crafting affordable,
                     professional photo albums, striving consistently to meet and
-                    exceed the expectations of our customers. Our photo albums
-                    spark a vibrant sense of creativity with a professional
-                    touch.
+                    exceed the expectations of our customers.
                   </motion.p>
                   <motion.p variants={fadeInUp}>
                     Our primary focus has always been ensuring our clients
                     experience top-tier quality and contentment from our
-                    offerings. We believe that every memory deserves to be
-                    preserved in the most beautiful way possible.
+                    offerings.
                   </motion.p>
                   <motion.p variants={fadeInUp}>
                     Additionally, we consistently leverage advanced, modern
                     technology to fulfill the diverse requirements of our
-                    customers. This commitment to innovation has allowed us to
-                    stay at the forefront of the photo album industry.
+                    customers.
                   </motion.p>
                 </motion.div>
               </div>
             </motion.div>
             <motion.div
               className="relative"
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, x: 10 }}
+              animate={
+                isAboutInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 10 }
+              }
               transition={{ duration: 0.4 }}
-              viewport={{ once: true, margin: "-50px" }}
             >
               <motion.div
                 className="relative rounded-lg overflow-hidden shadow-xl"
@@ -162,16 +206,18 @@ export default function AboutPage() {
                   width={600}
                   height={400}
                   className="w-full object-cover"
+                  loading="eager"
+                  sizes="(max-width: 768px) 100vw, 50vw"
                 />
               </motion.div>
-              {/* Optimize decorative element animation */}
-              <motion.div
-                className="absolute -bottom-6 -left-6 w-48 h-48 bg-linear-to-br from-red-200 to-red-300 rounded-lg -z-10"
-                initial={{ scale: 0.8, opacity: 0 }}
-                whileInView={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                viewport={{ once: true }}
-              />
+              {hasLoaded && isAboutInView && (
+                <motion.div
+                  className="absolute -bottom-6 -left-6 w-48 h-48 bg-linear-to-br from-red-200 to-red-300 rounded-lg -z-10"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                />
+              )}
             </motion.div>
           </div>
         </div>
@@ -181,10 +227,12 @@ export default function AboutPage() {
       <section className="bg-white py-24">
         <div className="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            ref={techRef}
+            initial={{ opacity: 0, y: 10 }}
+            animate={
+              isTechInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
+            }
             transition={{ duration: 0.4 }}
-            viewport={{ once: true, margin: "-50px" }}
           >
             <h2 className="text-base/7 font-semibold text-red-600">
               Advanced Technology

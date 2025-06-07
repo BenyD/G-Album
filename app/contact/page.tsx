@@ -1,29 +1,56 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, MapPin, Phone, Send } from "lucide-react";
 import Image from "next/image";
 import PageHero from "@/components/page-hero";
+import { useState, useEffect } from "react";
 
-// Animation variants
+// Optimized animation variants
 const fadeInUp = {
-  initial: { opacity: 0, y: 60 },
+  initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, ease: "easeOut" },
+  transition: { duration: 0.25, ease: "easeOut" },
+};
+
+const fadeInLeft = {
+  initial: { opacity: 0, x: -10 },
+  animate: { opacity: 1, x: 0 },
+  transition: { duration: 0.25, ease: "easeOut" },
+};
+
+const fadeInRight = {
+  initial: { opacity: 0, x: 10 },
+  animate: { opacity: 1, x: 0 },
+  transition: { duration: 0.25, ease: "easeOut" },
 };
 
 const staggerContainer = {
   animate: {
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
     },
   },
 };
 
+// Add loading state detection
+const useHasLoaded = () => {
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    setHasLoaded(true);
+  }, []);
+
+  return hasLoaded;
+};
+
 export default function ContactPage() {
+  const hasLoaded = useHasLoaded();
+
   return (
     <div className="flex flex-col min-h-screen pt-16">
       <PageHero
@@ -37,22 +64,25 @@ export default function ContactPage() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-12">
             <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
+              variants={fadeInLeft}
+              initial="initial"
+              animate="animate"
             >
-              <h2 className="text-2xl md:text-3xl font-bold mb-6 text-red-900">
+              <motion.h2
+                variants={fadeInUp}
+                initial="initial"
+                animate="animate"
+                className="text-2xl md:text-3xl font-bold mb-6 text-red-900"
+              >
                 Get In Touch
-              </h2>
+              </motion.h2>
 
               {/* Contact Info Cards */}
               <motion.div
                 className="space-y-6 mb-8"
                 variants={staggerContainer}
                 initial="initial"
-                whileInView="animate"
-                viewport={{ once: true }}
+                animate="animate"
               >
                 {[
                   {
@@ -76,7 +106,7 @@ export default function ContactPage() {
                     className="flex items-start p-6 bg-linear-to-br from-white to-red-50 rounded-xl shadow-md border border-red-100"
                     variants={fadeInUp}
                     whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.2 }}
                   >
                     <motion.div
                       className="w-12 h-12 bg-linear-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mr-4 shrink-0"
@@ -99,13 +129,12 @@ export default function ContactPage() {
                 ))}
               </motion.div>
 
-              {/* Google Map - Now Larger */}
+              {/* Google Map */}
               <motion.div
                 className="rounded-xl overflow-hidden shadow-lg border border-red-100 h-[450px] relative mb-12"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
+                variants={fadeInUp}
+                initial="initial"
+                animate="animate"
               >
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d241317.11609823277!2d72.74109995709657!3d19.08219783958221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be7c6306644edc1%3A0x5da4ed8f8d648c69!2sMumbai%2C%20Maharashtra!5e0!3m2!1sen!2sin!4v1653651111548!5m2!1sen!2sin"
@@ -123,10 +152,9 @@ export default function ContactPage() {
               {/* Office Photos Grid */}
               <motion.div
                 className="mt-12"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
+                variants={fadeInUp}
+                initial="initial"
+                animate="animate"
               >
                 <h2 className="text-2xl md:text-3xl font-bold mb-4 text-red-900">
                   Our Office
@@ -136,131 +164,106 @@ export default function ContactPage() {
                   photo albums.
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <motion.div
-                    className="relative aspect-square rounded-lg overflow-hidden shadow-md"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Image
-                      src="/modern-photo-studio-reception.png"
-                      alt="G Album Office Reception"
-                      fill
-                      className="object-cover"
-                    />
-                  </motion.div>
-                  <motion.div
-                    className="relative aspect-square rounded-lg overflow-hidden shadow-md"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Image
-                      src="/placeholder.svg?height=400&width=400&query=photo album design studio workspace"
-                      alt="G Album Design Studio"
-                      fill
-                      className="object-cover"
-                    />
-                  </motion.div>
-                  <motion.div
-                    className="relative aspect-square rounded-lg overflow-hidden shadow-md"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Image
-                      src="/placeholder.svg?height=400&width=400&query=photo album printing equipment"
-                      alt="G Album Printing Area"
-                      fill
-                      className="object-cover"
-                    />
-                  </motion.div>
-                  <motion.div
-                    className="relative aspect-square rounded-lg overflow-hidden shadow-md md:col-span-2"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Image
-                      src="/placeholder.svg?height=600&width=800&query=photo album showroom with samples"
-                      alt="G Album Showroom"
-                      fill
-                      className="object-cover"
-                    />
-                  </motion.div>
-                  <motion.div
-                    className="relative aspect-square rounded-lg overflow-hidden shadow-md"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Image
-                      src="/placeholder.svg?height=400&width=400&query=photo album binding and finishing area"
-                      alt="G Album Finishing Area"
-                      fill
-                      className="object-cover"
-                    />
-                  </motion.div>
+                  {[
+                    {
+                      src: "/modern-photo-studio-reception.png",
+                      alt: "G Album Office Reception",
+                    },
+                    {
+                      src: "/placeholder.svg?height=400&width=400&query=photo album design studio workspace",
+                      alt: "G Album Design Studio",
+                    },
+                    {
+                      src: "/placeholder.svg?height=400&width=400&query=photo album printing equipment",
+                      alt: "G Album Printing Area",
+                    },
+                    {
+                      src: "/placeholder.svg?height=600&width=800&query=photo album showroom with samples",
+                      alt: "G Album Showroom",
+                      className: "md:col-span-2",
+                    },
+                    {
+                      src: "/placeholder.svg?height=400&width=400&query=photo album binding and finishing area",
+                      alt: "G Album Finishing Area",
+                    },
+                  ].map((image, index) => (
+                    <motion.div
+                      key={index}
+                      className={`relative aspect-square rounded-lg overflow-hidden shadow-md ${
+                        image.className || ""
+                      }`}
+                      variants={fadeInUp}
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Image
+                        src={image.src}
+                        alt={image.alt}
+                        fill
+                        className="object-cover"
+                        loading={index < 2 ? "eager" : "lazy"}
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      />
+                    </motion.div>
+                  ))}
                 </div>
               </motion.div>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
+              variants={fadeInRight}
+              initial="initial"
+              animate="animate"
             >
               <div className="bg-white rounded-xl shadow-lg p-8 border border-red-100 overflow-hidden sticky top-24">
                 {/* Glassmorphism effect */}
-                <motion.div
-                  className="absolute -top-20 -right-20 w-40 h-40 bg-red-100 rounded-full opacity-50 blur-3xl"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.5, 0.7, 0.5],
-                  }}
-                  transition={{
-                    duration: 6,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                  }}
-                />
-                <motion.div
-                  className="absolute -bottom-20 -left-20 w-40 h-40 bg-red-50 rounded-full opacity-50 blur-3xl"
-                  animate={{
-                    scale: [1, 1.1, 1],
-                    opacity: [0.5, 0.8, 0.5],
-                  }}
-                  transition={{
-                    duration: 8,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "easeInOut",
-                    delay: 2,
-                  }}
-                />
+                {hasLoaded && (
+                  <>
+                    <motion.div
+                      className="absolute -top-20 -right-20 w-40 h-40 bg-red-100 rounded-full opacity-50 blur-3xl"
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [0.5, 0.7, 0.5],
+                      }}
+                      transition={{
+                        duration: 6,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "easeInOut",
+                      }}
+                    />
+                    <motion.div
+                      className="absolute -bottom-20 -left-20 w-40 h-40 bg-red-50 rounded-full opacity-50 blur-3xl"
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        opacity: [0.5, 0.8, 0.5],
+                      }}
+                      transition={{
+                        duration: 8,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "easeInOut",
+                        delay: 2,
+                      }}
+                    />
+                  </>
+                )}
 
                 <div className="relative z-10">
                   <motion.h2
                     className="text-2xl md:text-3xl font-bold mb-6 text-red-900"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    viewport={{ once: true }}
+                    variants={fadeInUp}
                   >
                     Send us a message
                   </motion.h2>
-                  <motion.p
-                    className="text-slate-600 mb-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                    viewport={{ once: true }}
-                  >
-                    Fill out the form below to get in touch with our team.
-                    We&apos;ll respond to your inquiry as soon as possible.
+                  <motion.p className="text-slate-600 mb-6" variants={fadeInUp}>
+                    Fill out the form below and we'll get back to you as soon as
+                    possible.
                   </motion.p>
 
                   <motion.form
                     className="space-y-6"
                     variants={staggerContainer}
                     initial="initial"
-                    whileInView="animate"
-                    viewport={{ once: true }}
+                    animate="animate"
                   >
                     <motion.div
                       className="grid grid-cols-1 sm:grid-cols-2 gap-4"
