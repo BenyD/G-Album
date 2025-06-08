@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUserProfile = useCallback(
     async (userId: string) => {
       try {
+        console.log("Loading user profile for ID:", userId);
         const { data: profileData, error: profileError } = await supabase
           .from("admin_profiles")
           .select(
@@ -69,6 +70,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq("id", userId)
           .single();
 
+        console.log("Profile query result:", {
+          success: !!profileData,
+          hasError: !!profileError,
+        });
+
         if (profileError) {
           console.error("Error loading profile:", profileError);
           return;
@@ -80,6 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             roleData?.role_permissions?.map(
               (rp: { permission: Permission }) => rp.permission
             ) ?? [];
+
+          console.log("Profile data processed:", {
+            hasRole: !!roleData,
+            permissionsCount: formattedPermissions.length,
+          });
 
           setProfile({ ...profileData, role: roleData });
           setRole(roleData);
@@ -160,6 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string, rememberMe = false) => {
       try {
         setIsLoading(true);
+        console.log("Starting authentication process...");
 
         const {
           data: { user },
@@ -169,9 +181,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
         });
 
-        if (signInError) throw signInError;
+        console.log("Auth response received:", {
+          success: !!user,
+          hasError: !!signInError,
+        });
+
+        if (signInError) {
+          console.error("Authentication error:", signInError);
+          throw signInError;
+        }
 
         if (user) {
+          console.log("User authenticated successfully, loading profile...");
           const { data: profile, error: profileError } = await supabase
             .from("admin_profiles")
             .select(
@@ -194,20 +215,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq("id", user.id)
             .single();
 
+          console.log("Profile query completed:", {
+            hasProfile: !!profile,
+            hasError: !!profileError,
+          });
+
           if (profileError || !profile) {
+            console.error("Profile error:", profileError);
             await supabase.auth.signOut();
             throw new Error(profileError?.message || "No admin profile found");
           }
 
-          if (profile.status === "pending") {
-            await supabase.auth.signOut();
-            throw new Error("Your account is pending approval");
-          }
+          console.log("Profile loaded successfully:", {
+            hasRole: !!profile.role,
+            permissions: profile.role?.role_permissions?.length ?? 0,
+          });
 
-          if (profile.status === "suspended") {
-            await supabase.auth.signOut();
-            throw new Error("Your account has been suspended");
-          }
+          const roleData = profile.role;
+          const formattedPermissions =
+            roleData?.role_permissions?.map(
+              (rp: { permission: Permission }) => rp.permission
+            ) ?? [];
+
+          setProfile({ ...profile, role: roleData });
+          setRole(roleData);
+          setPermissions(formattedPermissions);
 
           // Handle session persistence
           if (!rememberMe) {
@@ -218,15 +250,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           }
 
-          router.push("/admin/dashboard");
+          console.log("Authentication and profile setup completed");
         }
       } catch (error) {
+        console.error("Error in signIn process:", error);
         throw error;
       } finally {
         setIsLoading(false);
       }
     },
-    [supabase, router]
+    [supabase.auth, router]
   );
 
   const signOut = useCallback(async () => {

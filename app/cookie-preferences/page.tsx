@@ -8,47 +8,34 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { CookieManager, CookiePreferences } from "@/utils/cookie-manager";
 
 export default function CookiePreferencesPage() {
   const router = useRouter();
-  const [preferences, setPreferences] = useState({
-    necessary: true, // Always true and disabled
+  const [preferences, setPreferences] = useState<CookiePreferences>({
+    necessary: true,
     functional: false,
     analytics: false,
     marketing: false,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
 
   useEffect(() => {
     // Load saved preferences
-    const savedPreferences = localStorage.getItem("cookieConsent");
-    if (savedPreferences === "all") {
-      setPreferences({
-        necessary: true,
-        functional: true,
-        analytics: true,
-        marketing: true,
-      });
-    } else if (savedPreferences === "necessary") {
-      setPreferences({
-        necessary: true,
-        functional: false,
-        analytics: false,
-        marketing: false,
-      });
-    }
+    const savedPreferences = CookieManager.getPreferences();
+    setPreferences(savedPreferences);
+
+    // Get last saved timestamp
+    const timestamp = CookieManager.getConsentTimestamp();
+    setLastSaved(timestamp);
   }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       // Save preferences
-      localStorage.setItem(
-        "cookieConsent",
-        preferences.functional || preferences.analytics || preferences.marketing
-          ? "all"
-          : "necessary"
-      );
+      CookieManager.setPreferences(preferences);
 
       // Show success message
       toast.success("Cookie preferences saved successfully!");
@@ -58,6 +45,7 @@ export default function CookiePreferencesPage() {
         router.push("/");
       }, 1000);
     } catch (error) {
+      console.error("Error saving preferences:", error);
       toast.error("Failed to save preferences. Please try again.");
     } finally {
       setIsSaving(false);
@@ -170,9 +158,11 @@ export default function CookiePreferencesPage() {
                   >
                     {isSaving ? "Saving..." : "Save Preferences"}
                   </Button>
-                  <p className="text-sm text-gray-500 text-center mt-2">
-                    You will be redirected to the homepage after saving
-                  </p>
+                  {lastSaved && (
+                    <p className="text-sm text-gray-500 text-center mt-2">
+                      Last updated: {new Date(lastSaved).toLocaleString()}
+                    </p>
+                  )}
                 </div>
               </div>
             </motion.div>

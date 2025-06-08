@@ -4,32 +4,42 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import Link from "next/link";
+import { CookieManager, CookiePreferences } from "@/utils/cookie-manager";
 
 const CookieBanner = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     // Check if user has already accepted cookies
-    const cookieConsent = localStorage.getItem("cookieConsent");
-    if (!cookieConsent) {
+    const hasAccepted = CookieManager.hasAcceptedCookies();
+    if (!hasAccepted) {
       setIsVisible(true);
     }
   }, []);
 
   const handleAcceptAll = () => {
-    localStorage.setItem("cookieConsent", "all");
+    const preferences: CookiePreferences = {
+      necessary: true,
+      functional: true,
+      analytics: true,
+      marketing: true,
+    };
+    CookieManager.setPreferences(preferences);
     setIsVisible(false);
-    // Here you would typically initialize all your cookies/tracking
   };
 
   const handleAcceptNecessary = () => {
-    localStorage.setItem("cookieConsent", "necessary");
+    const preferences: CookiePreferences = {
+      necessary: true,
+      functional: false,
+      analytics: false,
+      marketing: false,
+    };
+    CookieManager.setPreferences(preferences);
     setIsVisible(false);
-    // Here you would only initialize essential cookies
   };
 
   const handleCustomize = () => {
-    // You could implement a modal or redirect to cookie settings page
     window.location.href = "/cookie-preferences";
   };
 
