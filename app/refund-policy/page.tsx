@@ -68,8 +68,9 @@ export default function RefundPolicyPage() {
                 </h2>
                 <p className="mb-4">
                   We stand behind the quality of our photo albums and are
-                  committed to ensuring your complete satisfaction. If you're
-                  not happy with your order, we're here to help make it right.
+                  committed to ensuring your complete satisfaction. If
+                  you&apos;re not happy with your order, we&apos;re here to help
+                  make it right.
                 </p>
               </section>
 
@@ -100,7 +101,7 @@ export default function RefundPolicyPage() {
                 </h3>
                 <p className="mb-4">We cannot accept returns for:</p>
                 <ul className="list-disc pl-6 mb-4 space-y-2">
-                  <li>Change of mind or buyer's remorse</li>
+                  <li>Change of mind or buyer&apos;s remorse</li>
                   <li>
                     Albums that have been used, damaged, or altered after
                     delivery
@@ -138,7 +139,7 @@ export default function RefundPolicyPage() {
                   Step 2: Return Authorization
                 </h3>
                 <p className="mb-4">
-                  Once we review your request, we'll provide a Return
+                  Once we review your request, we&apos;ll provide a Return
                   Authorization (RA) number and return instructions. Do not
                   return items without an RA number.
                 </p>
@@ -148,8 +149,8 @@ export default function RefundPolicyPage() {
                 </h3>
                 <p className="mb-4">
                   Package the album securely and ship it to the address
-                  provided. For eligible returns, we'll cover return shipping
-                  costs.
+                  provided. For eligible returns, we&apos;ll cover return
+                  shipping costs.
                 </p>
               </section>
 
@@ -187,7 +188,7 @@ export default function RefundPolicyPage() {
                   5. Replacement Policy
                 </h2>
                 <p className="mb-4">
-                  If your album arrives damaged or defective, we'll gladly
+                  If your album arrives damaged or defective, we&apos;ll gladly
                   provide a replacement at no additional cost. Replacement
                   orders are prioritized and typically ship within 5-7 business
                   days.
@@ -203,8 +204,8 @@ export default function RefundPolicyPage() {
                 </p>
                 <ul className="list-disc pl-6 mb-4 space-y-2">
                   <li>
-                    Minor quality issues that don't significantly impact the
-                    album
+                    Minor quality issues that don&apos;t significantly impact
+                    the album
                   </li>
                   <li>
                     Slight color variations within acceptable printing standards
@@ -275,9 +276,9 @@ export default function RefundPolicyPage() {
                   <p className="mb-2">
                     <strong>G Album Customer Service</strong>
                   </p>
-                  <p className="mb-2">Email: returns@galbum.com</p>
-                  <p className="mb-2">Phone: +91 1234567890</p>
-                  <p className="mb-2">WhatsApp: +91 9876543210</p>
+                  <p className="mb-2">Email: kumaranmadras@gmail.com</p>
+                  <p className="mb-2">Phone: +91 9514422244</p>
+                  <p className="mb-2">WhatsApp: +91 9444639912</p>
                   <p className="mb-0">
                     Hours: Monday-Saturday, 9:00 AM - 6:00 PM IST
                   </p>
@@ -290,9 +291,9 @@ export default function RefundPolicyPage() {
                 </h2>
                 <p className="mb-4">
                   We may update this Refund Policy from time to time. Any
-                  changes will be posted on our website with an updated "Last
-                  updated" date. Continued use of our services constitutes
-                  acceptance of the updated policy.
+                  changes will be posted on our website with an updated
+                  &quot;Last updated&quot; date. Continued use of our services
+                  constitutes acceptance of the updated policy.
                 </p>
               </section>
             </motion.div>

@@ -194,7 +194,7 @@ export default function PrivacyPolicyPage() {
 
               <section>
                 <h2 className="text-2xl font-bold text-red-900 mb-4">
-                  Children's Privacy
+                  Children&apos;s Privacy
                 </h2>
                 <p className="mb-4">
                   Our services are not intended for children under 13 years of
@@ -210,7 +210,7 @@ export default function PrivacyPolicyPage() {
                 <p className="mb-4">
                   We may update this Privacy Policy from time to time. We will
                   notify you of any material changes by posting the new policy
-                  on our website and updating the "Last updated" date.
+                  on our website and updating the &quot;Last updated&quot; date.
                 </p>
               </section>
 
@@ -226,10 +226,10 @@ export default function PrivacyPolicyPage() {
                   <p className="mb-2">
                     <strong>G Album</strong>
                   </p>
-                  <p className="mb-2">Email: privacy@galbum.com</p>
-                  <p className="mb-2">Phone: +91 1234567890</p>
+                  <p className="mb-2">Email: kumaranmadras@gmail.com</p>
+                  <p className="mb-2">Phone: +91 9444639912</p>
                   <p className="mb-0">
-                    Address: 123 Album Street, Mumbai, Maharashtra, India
+                    Address: 123A Triplicane High Road, Chennai, Tamil Nadu,
                   </p>
                 </div>
               </section>

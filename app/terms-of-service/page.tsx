@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import PageHero from "@/components/page-hero";
 
 export default function TermsOfServicePage() {
@@ -21,7 +20,7 @@ export default function TermsOfServicePage() {
                 <strong>Last updated:</strong> {new Date().toLocaleDateString()}
               </p>
               <p className="text-red-700 text-sm mb-0">
-                By using G Album's services, you agree to be bound by these
+                By using G Album&apos;s services, you agree to be bound by these
                 Terms of Service. Please read them carefully.
               </p>
             </div>
@@ -32,8 +31,8 @@ export default function TermsOfServicePage() {
                   1. Acceptance of Terms
                 </h2>
                 <p className="mb-4">
-                  By accessing and using G Album's website and services, you
-                  accept and agree to be bound by the terms and provision of
+                  By accessing and using G Album&apos;s website and services,
+                  you accept and agree to be bound by the terms and provision of
                   this agreement. If you do not agree to abide by the above,
                   please do not use this service.
                 </p>
@@ -188,7 +187,7 @@ export default function TermsOfServicePage() {
                   8. Limitation of Liability
                 </h2>
                 <p className="mb-4">
-                  G Album's liability is limited to the cost of the product
+                  G Album&apos;s liability is limited to the cost of the product
                   purchased. We are not liable for any indirect, incidental,
                   special, or consequential damages arising from the use of our
                   services.
@@ -242,10 +241,11 @@ export default function TermsOfServicePage() {
                   <p className="mb-2">
                     <strong>G Album</strong>
                   </p>
-                  <p className="mb-2">Email: legal@galbum.com</p>
-                  <p className="mb-2">Phone: +91 1234567890</p>
+                  <p className="mb-2">Email: kumaranmadras@gmail.com</p>
+                  <p className="mb-2">Phone: +91 9444639912</p>
                   <p className="mb-0">
-                    Address: 123 Album Street, Mumbai, Maharashtra, India
+                    Address: 123A Triplicane High Road, Chennai, Tamil Nadu,
+                    India
                   </p>
                 </div>
               </section>
