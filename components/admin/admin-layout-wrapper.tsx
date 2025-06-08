@@ -5,6 +5,9 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import AdminSidebar from "@/components/admin/sidebar";
 import AdminHeader from "@/components/admin/header";
 import AdminFooter from "@/components/admin/footer";
+import { useAuth } from "@/components/admin/auth-context";
+import { usePathname } from "next/navigation";
+import AdminLoading from "@/app/admin/loading";
 
 interface AdminLayoutWrapperProps {
   children: React.ReactNode;
@@ -13,6 +16,14 @@ interface AdminLayoutWrapperProps {
 export default function AdminLayoutWrapper({
   children,
 }: AdminLayoutWrapperProps) {
+  const { isLoading, isInitialized } = useAuth();
+  const pathname = usePathname();
+
+  // Show loading state while auth is initializing
+  if (!isInitialized || (isLoading && pathname !== "/admin/login")) {
+    return <AdminLoading />;
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen w-full bg-slate-50 flex">

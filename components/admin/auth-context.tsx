@@ -1,4 +1,6 @@
-import { createContext, useContext, useEffect, useState } from "react";
+"use client";
+
+import { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import type { AdminProfile, Role, Permission } from "@/lib/supabase";
@@ -10,6 +12,7 @@ interface AuthContextType {
   role: Role | null;
   permissions: Permission[];
   isLoading: boolean;
+  isInitialized: boolean;
   signIn: (
     email: string,
     password: string,
@@ -27,60 +30,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
 
   // Create a Supabase client for the browser
   const supabase = createClient();
 
-  // Initialize auth state
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Get current session
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-          setUser(user);
-          await loadUserProfile(user.id);
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadUserProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setRole(null);
-        setPermissions([]);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   // Load user profile, role, and permissions
   const loadUserProfile = async (userId: string) => {
     try {
-      setIsLoading(true);
-      // First, get the basic profile
-      const { data: profile, error: profileError } = await supabase
+      // Use a single query to get profile with role and permissions
+      const { data: profileData, error: profileError } = await supabase
         .from("admin_profiles")
-        .select("*, role_id")
+        .select(
+          `
+          *,
+          role:roles (
+            id,
+            name,
+            description,
+            role_permissions (
+              permission:permissions (
+                id,
+                name,
+                description
+              )
+            )
+          )
+        `
+        )
         .eq("id", userId)
         .single();
 
@@ -89,48 +67,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (profile) {
-        // Then get the role details separately
-        const { data: roleData, error: roleError } = await supabase
-          .from("roles")
-          .select("id, name, description")
-          .eq("id", profile.role_id)
-          .single();
+      if (profileData) {
+        const roleData = profileData.role;
+        const formattedPermissions =
+          roleData?.role_permissions?.map((rp) => rp.permission) ?? [];
 
-        if (roleError) {
-          console.error("Error loading role:", roleError);
-          return;
-        }
-
-        const fullProfile = { ...profile, role: roleData };
-        console.log("Loaded profile:", fullProfile);
-        setProfile(fullProfile);
+        setProfile({ ...profileData, role: roleData });
         setRole(roleData);
-
-        if (profile.role_id) {
-          // Get permissions for the role
-          const { data: permissions, error: permissionsError } = await supabase
-            .from("role_permissions")
-            .select("permission:permissions (id, name, description)")
-            .eq("role_id", profile.role_id);
-
-          if (permissionsError) {
-            console.error("Error loading permissions:", permissionsError);
-            return;
-          }
-
-          const formattedPermissions =
-            permissions?.map((p) => p.permission) ?? [];
-          console.log("Loaded permissions:", formattedPermissions);
-          setPermissions(formattedPermissions);
-        }
+        setPermissions(formattedPermissions);
       }
     } catch (error) {
       console.error("Error in loadUserProfile:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  // Initialize auth state
+  useEffect(() => {
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (mounted) {
+          setUser(user);
+          if (user) {
+            await loadUserProfile(user.id);
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        if (mounted) {
+          setIsInitialized(true);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        setIsLoading(true);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await loadUserProfile(session.user.id);
+        }
+        setIsLoading(false);
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+        setPermissions([]);
+        router.push("/admin/login");
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signIn = async (
     email: string,
@@ -139,8 +143,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     try {
       setIsLoading(true);
-      console.log("Attempting to sign in with email:", email);
-
       const {
         data: { user },
         error: signInError,
@@ -152,26 +154,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (signInError) throw signInError;
 
       if (user) {
-        console.log("User signed in:", user);
-
-        // Get basic profile first
         const { data: profile, error: profileError } = await supabase
           .from("admin_profiles")
-          .select("*, role_id")
+          .select(
+            `
+            *,
+            role:roles (
+              id,
+              name,
+              description,
+              role_permissions (
+                permission:permissions (
+                  id,
+                  name,
+                  description
+                )
+              )
+            )
+          `
+          )
           .eq("id", user.id)
           .single();
 
-        console.log("Profile check result:", { profile, error: profileError });
-
-        if (profileError) {
-          console.error("Profile error:", profileError);
+        if (profileError || !profile) {
           await supabase.auth.signOut();
-          throw new Error("Failed to load admin profile");
-        }
-
-        if (!profile) {
-          await supabase.auth.signOut();
-          throw new Error("No admin profile found");
+          throw new Error(profileError?.message || "No admin profile found");
         }
 
         if (profile.status === "pending") {
@@ -184,21 +191,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error("Your account has been suspended");
         }
 
-        // Get role details separately
-        const { data: roleData, error: roleError } = await supabase
-          .from("roles")
-          .select("id, name, description")
-          .eq("id", profile.role_id)
-          .single();
-
-        if (roleError) {
-          console.error("Error loading role:", roleError);
-          await supabase.auth.signOut();
-          throw new Error("Failed to load role information");
-        }
-
-        const fullProfile = { ...profile, role: roleData };
-
         // Set session persistence based on remember me
         if (rememberMe) {
           await supabase.auth.updateSession({
@@ -207,21 +199,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        setProfile(fullProfile);
+        const roleData = profile.role;
+        const formattedPermissions =
+          roleData?.role_permissions?.map((rp) => rp.permission) ?? [];
+
+        setProfile({ ...profile, role: roleData });
         setRole(roleData);
-
-        // Load permissions
-        if (profile.role_id) {
-          const { data: permissions, error: permissionsError } = await supabase
-            .from("role_permissions")
-            .select("permission:permissions (id, name, description)")
-            .eq("role_id", profile.role_id);
-
-          if (!permissionsError && permissions) {
-            const formattedPermissions = permissions.map((p) => p.permission);
-            setPermissions(formattedPermissions);
-          }
-        }
+        setPermissions(formattedPermissions);
 
         router.push("/admin/dashboard");
       }
@@ -234,29 +218,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/admin/login");
+    setIsLoading(true);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setRole(null);
+      setPermissions([]);
+      router.push("/admin/login");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const hasPermission = (permissionName: string) => {
-    return permissions.some((p) => p.name === permissionName);
-  };
+  const hasPermission = useMemo(
+    () => (permissionName: string) => {
+      return permissions.some((p) => p.name === permissionName);
+    },
+    [permissions]
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      user,
+      profile,
+      role,
+      permissions,
+      isLoading,
+      isInitialized,
+      signIn,
+      signOut,
+      hasPermission,
+    }),
+    [user, profile, role, permissions, isLoading, isInitialized, hasPermission]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        role,
-        permissions,
-        isLoading,
-        signIn,
-        signOut,
-        hasPermission,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 

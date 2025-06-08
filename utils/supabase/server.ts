@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { Database } from "@/lib/database.types";
 
 export const createClient = async () => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,19 +11,19 @@ export const createClient = async () => {
     {
       cookies: {
         async get(name: string) {
-          const cookie = await cookieStore.get(name);
+          const cookie = cookieStore.get(name);
           return cookie?.value;
         },
         async set(name: string, value: string, options: any) {
           try {
-            await cookieStore.set({ name, value, ...options });
+            cookieStore.set({ name, value, ...options });
           } catch (error) {
             // Handle cookies in read-only contexts
           }
         },
         async remove(name: string, options: any) {
           try {
-            await cookieStore.delete({ name, ...options });
+            cookieStore.delete({ name, ...options });
           } catch (error) {
             // Handle cookies in read-only contexts
           }

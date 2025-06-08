@@ -60,9 +60,9 @@ export default function LoginPage() {
           </CardHeader>
 
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -72,8 +72,8 @@ export default function LoginPage() {
                   required
                   disabled={isLoading}
                 />
-              </div>
-              <div className="space-y-2">
+            </div>
+            <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
@@ -97,24 +97,24 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
-              </div>
+            </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  id="remember"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
+            <div className="flex items-center space-x-2">
+              <input
+                id="remember"
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   disabled={isLoading}
-                />
-                <Label htmlFor="remember" className="text-sm text-slate-500">
-                  Remember me
-                </Label>
-              </div>
-            </CardContent>
+              />
+              <Label htmlFor="remember" className="text-sm text-slate-500">
+                Remember me
+              </Label>
+            </div>
+          </CardContent>
 
-            <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-4">
               <Button
                 type="submit"
                 className="w-full bg-red-600 hover:bg-red-700 text-white"
@@ -128,7 +128,7 @@ export default function LoginPage() {
                 ) : (
                   "Sign in"
                 )}
-              </Button>
+            </Button>
 
               <Link
                 href="/"
@@ -136,8 +136,8 @@ export default function LoginPage() {
               >
                 <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                 Back to website
-              </Link>
-            </CardFooter>
+            </Link>
+          </CardFooter>
           </form>
         </Card>
 

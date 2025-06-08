@@ -32,10 +32,21 @@ import { useRole } from "@/components/admin/role-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/components/admin/auth-context";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
   const { role, hasPermission, isLoading } = useRole();
+  const { profile, signOut } = useAuth();
+
+  // Format role name for display (e.g., "super_admin" -> "Super Admin")
+  const formatRoleName = (roleName: string | undefined) => {
+    if (!roleName) return "";
+    return roleName
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
 
   // Define navigation items with required permissions
   const navItems = [
@@ -356,21 +367,19 @@ export default function AdminSidebar() {
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
               <div className="font-medium text-sm truncate">
-                {role.charAt(0).toUpperCase() + role.slice(1)}
+                {profile?.full_name || "Admin User"}
               </div>
               <div className="text-xs text-slate-500 truncate">
-                admin@galbum.com
+                {profile?.role?.name && formatRoleName(profile.role.name)}
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
-              asChild
+              onClick={() => signOut()}
             >
-              <Link href="/admin/login">
-                <LogOut className="h-4 w-4" />
-              </Link>
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>

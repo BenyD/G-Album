@@ -56,9 +56,7 @@ export async function updateSession(request: NextRequest) {
 
   // Refresh session if expired - required for Server Components
   // https://supabase.com/docs/guides/auth/server-side/overview
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  await supabase.auth.getUser();
 
   return response;
 }

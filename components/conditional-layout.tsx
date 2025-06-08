@@ -82,18 +82,18 @@ export default function ConditionalLayout({
   if (isAdminLogin || isModalRoute) {
     return (
       <AuthProvider>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            variants={modalTransitionVariants}
-            initial="initial"
-            animate="enter"
-            exit="exit"
-            className="min-h-screen"
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={pathname}
+          variants={modalTransitionVariants}
+          initial="initial"
+          animate="enter"
+          exit="exit"
+          className="min-h-screen"
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
       </AuthProvider>
     );
   }
@@ -103,18 +103,18 @@ export default function ConditionalLayout({
     return (
       <AuthProvider>
         <RoleProvider>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              variants={pageTransitionVariants}
-              initial="initial"
-              animate="enter"
-              exit="exit"
-              className="min-h-screen"
-            >
-              <AdminLayoutWrapper>{children}</AdminLayoutWrapper>
-            </motion.div>
-          </AnimatePresence>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={pathname}
+          variants={pageTransitionVariants}
+          initial="initial"
+          animate="enter"
+          exit="exit"
+          className="min-h-screen"
+        >
+          <AdminLayoutWrapper>{children}</AdminLayoutWrapper>
+        </motion.div>
+      </AnimatePresence>
         </RoleProvider>
       </AuthProvider>
     );
