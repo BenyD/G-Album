@@ -4,31 +4,37 @@ import type { NextRequest } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-  const res = await updateSession(request);
+  let response = NextResponse.next();
+
+  // Create a Supabase client for auth operations
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          // If the cookie is being set, update the response
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          response.cookies.set({ name, value: "", ...options });
+        },
+      },
+    }
+  );
 
   const { pathname } = request.nextUrl;
 
   // Handle admin routes
   if (pathname.startsWith("/admin")) {
-    // Create a Supabase client for auth operations
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value;
-          },
-          set(name: string, value: string, options: any) {
-            res.cookies.set({ name, value, ...options });
-          },
-          remove(name: string, options: any) {
-            res.cookies.set({ name, value: "", ...options });
-          },
-        },
-      }
-    );
-
     // Allow access to login page if not authenticated
     if (pathname === "/admin/login") {
       const {
@@ -37,7 +43,7 @@ export async function middleware(request: NextRequest) {
       if (user) {
         return NextResponse.redirect(new URL("/admin/dashboard", request.url));
       }
-      return res;
+      return response;
     }
 
     // Protect all other admin routes
@@ -62,7 +68,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return res;
+  return response;
 }
 
 export const config = {

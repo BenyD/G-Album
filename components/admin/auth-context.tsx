@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import type { AdminProfile, Role, Permission } from "@/lib/supabase";
@@ -37,13 +44,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   // Load user profile, role, and permissions
-  const loadUserProfile = async (userId: string) => {
-    try {
-      // Use a single query to get profile with role and permissions
-      const { data: profileData, error: profileError } = await supabase
-        .from("admin_profiles")
-        .select(
-          `
+  const loadUserProfile = useCallback(
+    async (userId: string) => {
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from("admin_profiles")
+          .select(
+            `
           *,
           role:roles (
             id,
@@ -58,28 +65,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             )
           )
         `
-        )
-        .eq("id", userId)
-        .single();
+          )
+          .eq("id", userId)
+          .single();
 
-      if (profileError) {
-        console.error("Error loading profile:", profileError);
-        return;
+        if (profileError) {
+          console.error("Error loading profile:", profileError);
+          return;
+        }
+
+        if (profileData) {
+          const roleData = profileData.role;
+          const formattedPermissions =
+            roleData?.role_permissions?.map(
+              (rp: { permission: Permission }) => rp.permission
+            ) ?? [];
+
+          setProfile({ ...profileData, role: roleData });
+          setRole(roleData);
+          setPermissions(formattedPermissions);
+        }
+      } catch (error) {
+        console.error("Error in loadUserProfile:", error);
       }
-
-      if (profileData) {
-        const roleData = profileData.role;
-        const formattedPermissions =
-          roleData?.role_permissions?.map((rp) => rp.permission) ?? [];
-
-        setProfile({ ...profileData, role: roleData });
-        setRole(roleData);
-        setPermissions(formattedPermissions);
-      }
-    } catch (error) {
-      console.error("Error in loadUserProfile:", error);
-    }
-  };
+    },
+    [supabase]
+  );
 
   // Initialize auth state
   useEffect(() => {
@@ -87,6 +98,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
+        // Check if we're returning after a window close with no remember-me
+        const wasClosing = sessionStorage.getItem("closing");
+        if (wasClosing) {
+          await supabase.auth.signOut();
+          sessionStorage.removeItem("closing");
+          router.push("/admin/login");
+          return;
+        }
+
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -134,30 +154,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadUserProfile, router, supabase.auth]);
 
-  const signIn = async (
-    email: string,
-    password: string,
-    rememberMe = false
-  ) => {
-    try {
-      setIsLoading(true);
-      const {
-        data: { user },
-        error: signInError,
-      } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  const signIn = useCallback(
+    async (email: string, password: string, rememberMe = false) => {
+      try {
+        setIsLoading(true);
 
-      if (signInError) throw signInError;
+        const {
+          data: { user },
+          error: signInError,
+        } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (user) {
-        const { data: profile, error: profileError } = await supabase
-          .from("admin_profiles")
-          .select(
-            `
+        if (signInError) throw signInError;
+
+        if (user) {
+          const { data: profile, error: profileError } = await supabase
+            .from("admin_profiles")
+            .select(
+              `
             *,
             role:roles (
               id,
@@ -172,52 +190,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               )
             )
           `
-          )
-          .eq("id", user.id)
-          .single();
+            )
+            .eq("id", user.id)
+            .single();
 
-        if (profileError || !profile) {
-          await supabase.auth.signOut();
-          throw new Error(profileError?.message || "No admin profile found");
+          if (profileError || !profile) {
+            await supabase.auth.signOut();
+            throw new Error(profileError?.message || "No admin profile found");
+          }
+
+          if (profile.status === "pending") {
+            await supabase.auth.signOut();
+            throw new Error("Your account is pending approval");
+          }
+
+          if (profile.status === "suspended") {
+            await supabase.auth.signOut();
+            throw new Error("Your account has been suspended");
+          }
+
+          // Handle session persistence
+          if (!rememberMe) {
+            // If not remembering, set up cleanup on window close
+            window.addEventListener("beforeunload", () => {
+              // Store a flag in sessionStorage that we're closing
+              sessionStorage.setItem("closing", "true");
+            });
+          }
+
+          router.push("/admin/dashboard");
         }
-
-        if (profile.status === "pending") {
-          await supabase.auth.signOut();
-          throw new Error("Your account is pending approval");
-        }
-
-        if (profile.status === "suspended") {
-          await supabase.auth.signOut();
-          throw new Error("Your account has been suspended");
-        }
-
-        // Set session persistence based on remember me
-        if (rememberMe) {
-          await supabase.auth.updateSession({
-            refresh_token: user.refresh_token!,
-            access_token: user.access_token!,
-          });
-        }
-
-        const roleData = profile.role;
-        const formattedPermissions =
-          roleData?.role_permissions?.map((rp) => rp.permission) ?? [];
-
-        setProfile({ ...profile, role: roleData });
-        setRole(roleData);
-        setPermissions(formattedPermissions);
-
-        router.push("/admin/dashboard");
+      } catch (error) {
+        throw error;
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Sign in error:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [supabase, router]
+  );
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     setIsLoading(true);
     try {
       await supabase.auth.signOut();
@@ -229,7 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [supabase, router]);
 
   const hasPermission = useMemo(
     () => (permissionName: string) => {
@@ -250,7 +262,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       hasPermission,
     }),
-    [user, profile, role, permissions, isLoading, isInitialized, hasPermission]
+    [
+      user,
+      profile,
+      role,
+      permissions,
+      isLoading,
+      isInitialized,
+      hasPermission,
+      signIn,
+      signOut,
+    ]
   );
 
   return (
