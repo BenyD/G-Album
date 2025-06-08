@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   LogOut,
   Settings,
@@ -175,9 +176,13 @@ export default function AdminHeader() {
                 href="/admin/dashboard"
                 className="flex items-center gap-2 font-semibold text-base lg:text-lg text-slate-900 hover:text-red-600 transition-colors"
               >
-                <div className="h-7 w-7 lg:h-8 lg:w-8 rounded-md bg-red-600 flex items-center justify-center text-white font-bold text-sm lg:text-base">
-                  G
-                </div>
+                <Image
+                  src="/G Album Logo (RED).svg"
+                  alt="G Album Logo"
+                  width={32}
+                  height={32}
+                  className="transition-transform hover:scale-105"
+                />
                 <span className="hidden lg:inline">G Album</span>
               </Link>
             </div>

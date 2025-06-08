@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Sidebar,
   SidebarContent,
@@ -145,10 +146,16 @@ export default function AdminSidebar() {
               href="/admin/dashboard"
               className="flex items-center group w-full"
             >
-              <div className="h-8 w-8 rounded-md bg-red-600 flex items-center justify-center text-white font-bold mr-2">
-                G
-              </div>
-              <span className="text-lg font-semibold">G Album</span>
+              <Image
+                src="/G Album Logo (RED).svg"
+                alt="G Album Logo"
+                width={32}
+                height={32}
+                className="mr-2 transition-transform group-hover:scale-105"
+              />
+              <span className="text-lg font-semibold group-hover:text-red-600 transition-colors">
+                G Album
+              </span>
             </Link>
           </div>
         </SidebarHeader>
@@ -169,10 +176,16 @@ export default function AdminSidebar() {
               href="/admin/login"
               className="flex items-center group w-full"
             >
-              <div className="h-8 w-8 rounded-md bg-red-600 flex items-center justify-center text-white font-bold mr-2">
-                G
-              </div>
-              <span className="text-lg font-semibold">G Album</span>
+              <Image
+                src="/G Album Logo (RED).svg"
+                alt="G Album Logo"
+                width={32}
+                height={32}
+                className="mr-2 transition-transform group-hover:scale-105"
+              />
+              <span className="text-lg font-semibold group-hover:text-red-600 transition-colors">
+                G Album
+              </span>
             </Link>
           </div>
         </SidebarHeader>
@@ -193,9 +206,13 @@ export default function AdminSidebar() {
             href="/admin/dashboard"
             className="flex items-center group w-full"
           >
-            <div className="h-8 w-8 rounded-md bg-red-600 flex items-center justify-center text-white font-bold mr-2 group-hover:bg-red-700 transition-colors">
-              G
-            </div>
+            <Image
+              src="/G Album Logo (RED).svg"
+              alt="G Album Logo"
+              width={32}
+              height={32}
+              className="mr-2 transition-transform group-hover:scale-105"
+            />
             <span className="text-lg font-semibold group-hover:text-red-600 transition-colors">
               G Album
             </span>

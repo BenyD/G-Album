@@ -165,26 +165,86 @@ export function UserManagementClient({
     }
   };
 
-  // Quick actions for role assignment
-  const handleQuickAction = async (
-    userId: string,
-    action: "approve" | "suspend"
-  ) => {
+  // Format status for display
+  const formatStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  };
+
+  // Handle quick approval
+  const handleQuickApproval = async (userId: string, roleId: string) => {
     try {
-      if (action === "approve") {
-        // Get the default role (viewer)
-        const viewerRole = roles.find((r) => r.name === "viewer");
-        if (viewerRole) {
-          await assignRole(userId, viewerRole.id);
-          toast.success("User approved with viewer role");
-        }
-      } else {
-        await updateUserStatus(userId, "suspended");
-        toast.success("User suspended");
+      await assignRole(userId, roleId);
+      // Find the default viewer role
+      const viewerRole = roles.find((r) => r.name === "viewer");
+      if (viewerRole) {
+        await handleRoleAssign(userId, viewerRole.id);
+        toast.success("User approved successfully");
+        // Refresh the users list
+        const updatedUsers = users.map((user) =>
+          user.id === userId
+            ? {
+                ...user,
+                profile: {
+                  ...user.profile,
+                  role_id: viewerRole.id,
+                  status: "approved",
+                },
+              }
+            : user
+        );
+        setUsers(updatedUsers);
       }
     } catch (error) {
-      console.error(`Error in quick action (${action}):`, error);
-      toast.error(`Failed to ${action} user`);
+      console.error("Error approving user:", error);
+      toast.error("Failed to approve user");
+    }
+  };
+
+  // Handle edit save
+  const handleEditSave = async () => {
+    if (!editingUser) return;
+
+    try {
+      // Update profile if name changed
+      if (
+        editingUser.profile?.full_name !==
+        users.find((u) => u.id === editingUser.id)?.profile?.full_name
+      ) {
+        await updateUserProfile(editingUser.id, {
+          full_name: editingUser.profile?.full_name || "",
+        });
+      }
+
+      // Update role if changed
+      if (
+        editingUser.profile?.role_id !==
+        users.find((u) => u.id === editingUser.id)?.profile?.role_id
+      ) {
+        await assignRole(editingUser.id, editingUser.profile?.role_id || "");
+      }
+
+      // Update status if changed
+      if (
+        editingUser.profile?.status !==
+        users.find((u) => u.id === editingUser.id)?.profile?.status
+      ) {
+        await updateUserStatus(
+          editingUser.id,
+          editingUser.profile?.status as "approved" | "suspended"
+        );
+      }
+
+      // Update local state
+      const updatedUsers = users.map((user) =>
+        user.id === editingUser.id ? editingUser : user
+      );
+      setUsers(updatedUsers);
+
+      setEditingUser(null);
+      toast.success("User updated successfully");
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast.error("Failed to update user");
     }
   };
 
@@ -308,22 +368,13 @@ export function UserManagementClient({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="gap-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                      onClick={() => handleQuickAction(user.id, "approve")}
-                    >
-                      <Check className="h-4 w-4" />
-                      Approve as Viewer
-                    </Button>
                     <Select
                       onValueChange={(roleId) =>
-                        handleRoleAssign(user.id, roleId)
+                        handleQuickApproval(user.id, roleId)
                       }
                     >
                       <SelectTrigger className="w-[130px] h-8">
-                        <SelectValue placeholder="Other role..." />
+                        <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
                         {roles.map((role) => (
@@ -393,27 +444,9 @@ export function UserManagementClient({
                       {user.profile?.full_name || "-"}
                     </td>
                     <td className="p-4 align-middle">
-                      <Select
-                        defaultValue={user.profile?.role_id || undefined}
-                        onValueChange={(roleId) =>
-                          handleRoleAssign(user.id, roleId)
-                        }
-                      >
-                        <SelectTrigger className="w-[130px] h-8">
-                          <SelectValue>
-                            {user.profile?.role?.name
-                              ? formatRoleName(user.profile.role.name)
-                              : "Select role"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roles.map((role) => (
-                            <SelectItem key={role.id} value={role.id}>
-                              {formatRoleName(role.name)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {user.profile?.role?.name
+                        ? formatRoleName(user.profile.role.name)
+                        : "-"}
                     </td>
                     <td className="p-4 align-middle">
                       <Badge
@@ -423,173 +456,54 @@ export function UserManagementClient({
                             : "bg-red-100 text-red-800"
                         }
                       >
-                        {user.profile?.status}
+                        {formatStatus(user.profile?.status || "pending")}
                       </Badge>
                     </td>
                     <td className="p-4 align-middle">
                       <div className="flex items-center gap-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="gap-2"
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
                               onClick={() => setEditingUser(user)}
                             >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Edit User</DialogTitle>
-                              <DialogDescription>
-                                Make changes to the user's profile
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  Full Name
-                                </label>
-                                <Input
-                                  defaultValue={user.profile?.full_name || ""}
-                                  onChange={(e) =>
-                                    setEditingUser((prev) =>
-                                      prev
-                                        ? {
-                                            ...prev,
-                                            profile: {
-                                              ...prev.profile!,
-                                              full_name: e.target.value,
-                                            },
-                                          }
-                                        : null
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  Role
-                                </label>
-                                <Select
-                                  defaultValue={
-                                    user.profile?.role_id || undefined
-                                  }
-                                  onValueChange={(roleId) =>
-                                    setEditingUser((prev) =>
-                                      prev
-                                        ? {
-                                            ...prev,
-                                            profile: {
-                                              ...prev.profile!,
-                                              role_id: roleId,
-                                            },
-                                          }
-                                        : null
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select role" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {roles.map((role) => (
-                                      <SelectItem key={role.id} value={role.id}>
-                                        {formatRoleName(role.name)}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  Status
-                                </label>
-                                <Select
-                                  defaultValue={
-                                    user.profile?.status || "pending"
-                                  }
-                                  onValueChange={(
-                                    status: "approved" | "suspended"
-                                  ) =>
-                                    setEditingUser((prev) =>
-                                      prev
-                                        ? {
-                                            ...prev,
-                                            profile: {
-                                              ...prev.profile!,
-                                              status,
-                                            },
-                                          }
-                                        : null
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="approved">
-                                      Approved
-                                    </SelectItem>
-                                    <SelectItem value="suspended">
-                                      Suspended
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button
-                                variant="outline"
-                                onClick={() => setEditingUser(null)}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  if (editingUser?.profile) {
-                                    handleUserUpdate(user.id, {
-                                      full_name:
-                                        editingUser.profile.full_name ||
-                                        undefined,
-                                      role_id:
-                                        editingUser.profile.role_id ||
-                                        undefined,
-                                      status: editingUser.profile.status,
-                                    });
-                                  }
-                                }}
-                              >
-                                Save Changes
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className={
-                            user.profile?.status === "approved"
-                              ? "text-red-600 hover:text-red-700 hover:bg-red-50"
-                              : "text-green-600 hover:text-green-700 hover:bg-green-50"
-                          }
-                          onClick={() =>
-                            handleStatusUpdate(
-                              user.id,
-                              user.profile?.status === "approved"
-                                ? "suspended"
-                                : "approved"
-                            )
-                          }
-                        >
-                          {user.profile?.status === "approved" ? (
-                            <Ban className="h-4 w-4" />
-                          ) : (
-                            <Check className="h-4 w-4" />
-                          )}
-                        </Button>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit User
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusUpdate(
+                                  user.id,
+                                  user.profile?.status === "approved"
+                                    ? "suspended"
+                                    : "approved"
+                                )
+                              }
+                              className={
+                                user.profile?.status === "approved"
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }
+                            >
+                              {user.profile?.status === "approved" ? (
+                                <>
+                                  <Ban className="mr-2 h-4 w-4" />
+                                  Suspend User
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="mr-2 h-4 w-4" />
+                                  Approve User
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   </tr>
@@ -599,6 +513,105 @@ export function UserManagementClient({
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog
+        open={!!editingUser}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Make changes to the user's profile
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Full Name</label>
+              <Input
+                value={editingUser?.profile?.full_name || ""}
+                onChange={(e) =>
+                  setEditingUser((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          profile: {
+                            ...prev.profile!,
+                            full_name: e.target.value,
+                          },
+                        }
+                      : null
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Role</label>
+              <Select
+                value={editingUser?.profile?.role_id}
+                onValueChange={(roleId) =>
+                  setEditingUser((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          profile: {
+                            ...prev.profile!,
+                            role_id: roleId,
+                          },
+                        }
+                      : null
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {formatRoleName(role.name)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select
+                value={editingUser?.profile?.status}
+                onValueChange={(status: "approved" | "suspended") =>
+                  setEditingUser((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          profile: {
+                            ...prev.profile!,
+                            status,
+                          },
+                        }
+                      : null
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSave}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
