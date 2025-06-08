@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Star,
   Calendar,
+  Shield,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -46,9 +47,39 @@ const fadeInScale = {
 };
 
 const backgroundVariants = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  transition: { duration: 0.3 },
+  initial: { opacity: 0, scale: 1 },
+  animate1: {
+    opacity: [0.3, 0.4, 0.3],
+    scale: [1, 1.2, 1],
+    y: [0, -20, 0],
+    transition: {
+      duration: 8,
+      repeat: Infinity,
+      ease: "easeInOut",
+    },
+  },
+  animate2: {
+    opacity: [0.2, 0.3, 0.2],
+    scale: [1, 1.3, 1],
+    x: [0, 30, 0],
+    transition: {
+      duration: 10,
+      repeat: Infinity,
+      ease: "easeInOut",
+      delay: 1,
+    },
+  },
+  animate3: {
+    opacity: [0.2, 0.3, 0.2],
+    scale: [1, 1.4, 1],
+    x: [0, -40, 0],
+    transition: {
+      duration: 12,
+      repeat: Infinity,
+      ease: "easeInOut",
+      delay: 2,
+    },
+  },
 };
 
 // Custom hook for managing loading and reduced motion preferences
@@ -72,52 +103,47 @@ export default function Home() {
   // Testimonials data
   const testimonials: Testimonial[] = [
     {
-      name: "Priya & Rahul Sharma",
-      role: "Wedding Couple",
+      name: "Daniel Dsouza",
+      role: "Customer",
       stars: 5,
-      quote:
-        "G Album created the most beautiful wedding album for us. The quality and attention to detail exceeded our expectations! Every page tells our story perfectly.",
-      date: "2 weeks ago",
+      quote: "Affordable price and friendly staffs",
+      date: "5 months ago",
     },
     {
-      name: "Ananya Patel",
-      role: "Family Portrait",
+      name: "Amulraj Arthi",
+      role: "Customer",
       stars: 5,
-      quote:
-        "Our family portraits look amazing in the album. The team was professional and delivered exactly what we wanted.",
-      date: "1 month ago",
+      quote: "It's very good. Photo printing shop",
+      date: "2 years ago",
     },
     {
-      name: "Vikram Mehta",
-      role: "Anniversary Celebration",
+      name: "Mr. Vijayarajan",
+      role: "Local Guide",
       stars: 5,
-      quote:
-        "The anniversary album was a perfect gift for my wife. The craftsmanship and design are truly exceptional. Highly recommend G Album!",
-      date: "3 weeks ago",
+      quote: "Wonderful service",
+      date: "3 years ago",
     },
     {
-      name: "Sneha Gupta",
-      role: "Baby Photoshoot",
+      name: "Sai Pranav",
+      role: "Local Guide",
       stars: 5,
-      quote:
-        "They captured our baby's precious moments beautifully. The album quality is outstanding and will be treasured forever.",
-      date: "1 week ago",
+      quote: "Excellent 👍👍👍",
+      date: "3 years ago",
     },
     {
-      name: "Rajesh Kumar",
-      role: "Corporate Event",
-      stars: 4,
-      quote:
-        "Professional service for our company event album. Great attention to detail and timely delivery.",
-      date: "2 months ago",
-    },
-    {
-      name: "Kavya & Arjun",
-      role: "Pre-wedding Shoot",
+      name: "stills vijaymani",
+      role: "Local Guide",
       stars: 5,
       quote:
-        "Amazing work on our pre-wedding album! The team understood our vision perfectly and delivered beyond expectations. The album design is simply stunning.",
-      date: "1 month ago",
+        "Good service. It is a great pleasure to have some pets like humans in our company.",
+      date: "3 years ago",
+    },
+    {
+      name: "Welcome World",
+      role: "Customer",
+      stars: 5,
+      quote: "G Album is a No 1 Wedding Album!",
+      date: "3 years ago",
     },
   ];
 
@@ -127,45 +153,36 @@ export default function Home() {
       <section className="relative min-h-screen bg-linear-to-br from-red-600 to-red-900 text-white overflow-hidden flex items-center">
         {/* Background elements with reduced motion consideration */}
         <div className="absolute inset-0">
+          {/* Animated gradient orbs */}
           {hasLoaded && shouldAnimate && (
             <>
               <motion.div
                 variants={backgroundVariants}
                 initial="initial"
-                animate="animate"
-                className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-red-400/30 mix-blend-overlay blur-3xl"
-                style={{
-                  animationDuration: "7s",
-                  animationTimingFunction: "ease-in-out",
-                }}
+                animate="animate1"
+                className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-gradient-to-br from-red-400/40 to-red-300/20 mix-blend-overlay blur-3xl"
               />
               <motion.div
                 variants={backgroundVariants}
                 initial="initial"
-                animate="animate"
-                transition={{ delay: 0.1 }}
-                className="absolute top-1/3 right-1/4 w-96 h-96 rounded-full bg-red-300/20 mix-blend-overlay blur-3xl"
-                style={{
-                  animationDuration: "8s",
-                  animationTimingFunction: "ease-in-out",
-                  animationDelay: "1s",
-                }}
+                animate="animate2"
+                className="absolute top-1/3 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-red-300/30 to-red-200/20 mix-blend-overlay blur-3xl"
               />
               <motion.div
                 variants={backgroundVariants}
                 initial="initial"
-                animate="animate"
-                transition={{ delay: 0.2 }}
-                className="absolute -bottom-8 left-1/2 w-96 h-96 rounded-full bg-red-500/20 mix-blend-overlay blur-3xl"
-                style={{
-                  animationDuration: "9s",
-                  animationTimingFunction: "ease-in-out",
-                  animationDelay: "2s",
-                }}
+                animate="animate3"
+                className="absolute -bottom-8 left-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-bl from-red-500/30 to-red-400/20 mix-blend-overlay blur-3xl"
               />
             </>
           )}
-          <div className="absolute inset-0 bg-red-900/20 backdrop-blur-[1px]" />
+          {/* Pattern overlay */}
+          <div
+            className="absolute inset-0 bg-[url('/pattern.svg')] opacity-[0.03] bg-repeat"
+            style={{ backgroundSize: "30px" }}
+          />
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-red-900/40 via-red-800/30 to-red-700/40 backdrop-blur-[1px]" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10 py-16 sm:py-20">
@@ -173,13 +190,13 @@ export default function Home() {
             <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
               {/* Left Column - Content with optimized animations */}
               <motion.div
-                className="lg:col-span-6 xl:col-span-5 text-center lg:text-left"
+                className="lg:col-span-6 xl:col-span-5 text-center lg:text-left pt-8 sm:pt-12 lg:pt-0"
                 variants={staggerChildren}
                 initial="initial"
                 animate="animate"
               >
                 <motion.div
-                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white/90 text-xs font-medium mb-4 sm:mb-6"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white/90 text-xs font-medium mb-8 sm:mb-10 lg:mb-6"
                   variants={fadeInScale}
                 >
                   <span className="relative flex h-1.5 w-1.5">
@@ -246,39 +263,40 @@ export default function Home() {
 
                 {/* Trust indicators with optimized animations */}
                 <motion.div
-                  className="grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto lg:mx-0"
+                  className="flex items-center gap-6 max-w-xl mx-auto lg:mx-0 justify-center lg:justify-start"
                   variants={fadeInScale}
                 >
                   <div className="text-center lg:text-left">
-                    <span className="block text-xl sm:text-2xl font-bold text-white mb-0.5">
-                      5.0
-                    </span>
-                    <div className="flex items-center justify-center lg:justify-start gap-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-yellow-400 fill-yellow-400"
-                        />
-                      ))}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xl sm:text-2xl font-bold text-white">
+                        4.7
+                      </span>
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < 4
+                                ? "text-yellow-400 fill-yellow-400"
+                                : "text-yellow-400/40 fill-yellow-400/40"
+                            }`}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    <span className="text-[10px] sm:text-xs text-red-200 mt-0.5">
-                      Google Reviews
+                    <span className="text-xs sm:text-sm text-red-200 mt-1 block">
+                      100+ Reviews on Google
                     </span>
                   </div>
-                  <div className="text-center border-l border-r border-white/10 px-1 sm:px-2">
-                    <span className="block text-xl sm:text-2xl font-bold text-white mb-0.5">
-                      1000+
+
+                  <div className="w-px h-12 bg-white/10" />
+
+                  <div className="text-center lg:text-left">
+                    <span className="block text-xl sm:text-2xl font-bold text-white">
+                      1,000+
                     </span>
-                    <span className="text-[10px] sm:text-xs text-red-200">
-                      Happy Customers
-                    </span>
-                  </div>
-                  <div className="text-center lg:text-right">
-                    <span className="block text-xl sm:text-2xl font-bold text-white mb-0.5">
-                      24/7
-                    </span>
-                    <span className="text-[10px] sm:text-xs text-red-200">
-                      Customer Support
+                    <span className="text-xs sm:text-sm text-red-200 mt-1 block">
+                      Customers Worldwide
                     </span>
                   </div>
                 </motion.div>
@@ -292,14 +310,90 @@ export default function Home() {
                 animate="animate"
               >
                 <div className="relative mx-auto max-w-2xl lg:max-w-none">
-                  <Image
-                    src="/modern-photo-album-display.png"
-                    alt="G Album Premium Photo Album Display"
-                    width={800}
-                    height={600}
-                    className="w-full h-auto rounded-2xl shadow-2xl"
-                    priority
+                  {/* Decorative elements */}
+                  <motion.div
+                    className="absolute -top-8 -left-8 w-24 h-24 bg-gradient-to-br from-red-200 to-red-300 rounded-full opacity-20 blur-2xl"
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [0.2, 0.3, 0.2],
+                    }}
+                    transition={{
+                      duration: 5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
                   />
+                  <motion.div
+                    className="absolute -bottom-8 -right-8 w-32 h-32 bg-gradient-to-tr from-red-300 to-red-200 rounded-full opacity-20 blur-2xl"
+                    animate={{
+                      scale: [1, 1.3, 1],
+                      opacity: [0.2, 0.3, 0.2],
+                    }}
+                    transition={{
+                      duration: 6,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 1,
+                    }}
+                  />
+
+                  {/* Main image container */}
+                  <motion.div
+                    className="relative rounded-2xl bg-gradient-to-br from-red-100/10 to-white/10 p-1 backdrop-blur-sm"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    {/* Image */}
+                    <div className="relative rounded-xl overflow-hidden">
+                      <Image
+                        src="/images/hero-image.jpg"
+                        alt="G Album Premium Photo Album Display"
+                        width={800}
+                        height={600}
+                        className="w-full h-auto"
+                        priority
+                      />
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-red-900/20 to-transparent" />
+                    </div>
+                  </motion.div>
+
+                  {/* Floating badge - Moved outside the main container */}
+                  <motion.div
+                    className="absolute -right-3 -bottom-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg px-3 py-2 shadow-xl z-10"
+                    initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{
+                      delay: 0.5,
+                      duration: 0.4,
+                      ease: "easeOut",
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-red-200 fill-red-200/20" />
+                      <span className="text-sm font-medium text-white">
+                        Premium Quality
+                      </span>
+                    </div>
+                  </motion.div>
+
+                  {/* Decorative dots */}
+                  <div className="absolute -right-4 top-1/4 flex flex-col gap-1.5">
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-red-200/50"
+                      />
+                    ))}
+                  </div>
+                  <div className="absolute -left-4 bottom-1/4 flex flex-col gap-1.5">
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-red-200/50"
+                      />
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -587,7 +681,7 @@ export default function Home() {
               className="border-red-200 text-red-700 hover:bg-red-50 transition-colors duration-200"
             >
               <a
-                href="https://www.google.com/search?q=G+Album+reviews"
+                href="https://www.google.com/search?sca_esv=d6b7cd5f9271c9c7&sxsrf=AE3TifNuy-P0AdrYsyWPn16GPkiLnKMwyQ:1749355121336&si=AMgyJEtREmoPL4P1I5IDCfuA8gybfVI2d5Uj7QMwYCZHKDZ-ExB71LX0tMl5rEws_3c3lUUo3xoQ_Z6aLw1lZ9TmHhR3sOAq-sHveQSImTwAIVn4S-7hytJanufWjTAimkFmCyVUmC1R&q=G+album+Reviews&sa=X&ved=2ahUKEwiZmt_U9-CNAxUXS2wGHQ_nJBsQ0bkNegQIIxAE&biw=1512&bih=823&dpr=2"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center"

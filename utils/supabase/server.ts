@@ -1,32 +1,34 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { Database } from "@/lib/database.types";
 
-export async function createClient() {
+export const createClient = async () => {
   const cookieStore = cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        async get(name: string) {
+          const cookie = await cookieStore.get(name);
+          return cookie?.value;
         },
-        set(name: string, value: string, options: any) {
+        async set(name: string, value: string, options: any) {
           try {
-            cookieStore.set(name, value, options);
+            await cookieStore.set({ name, value, ...options });
           } catch (error) {
-            // Handle error if cookies cannot be set
+            // Handle cookies in read-only contexts
           }
         },
-        remove(name: string, options: any) {
+        async remove(name: string, options: any) {
           try {
-            cookieStore.set(name, "", { ...options, maxAge: 0 });
+            await cookieStore.delete({ name, ...options });
           } catch (error) {
-            // Handle error if cookies cannot be removed
+            // Handle cookies in read-only contexts
           }
         },
       },
     }
   );
-}
+};

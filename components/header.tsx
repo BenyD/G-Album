@@ -72,7 +72,11 @@ export default function Header() {
           <Link href="/" className="flex items-center group">
             <div className="relative">
               <Image
-                src="/placeholder-oefem.png"
+                src={
+                  scrolled
+                    ? "/G Album Logo (RED).svg"
+                    : "/G Album Logo (WHITE).svg"
+                }
                 alt="G Album Logo"
                 width={40}
                 height={40}

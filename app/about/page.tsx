@@ -22,12 +22,6 @@ const staggerContainer = {
   },
 };
 
-const scaleIn = {
-  initial: { opacity: 0, scale: 0.98 },
-  animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.25, ease: "easeOut" },
-};
-
 // Add loading state detection
 const useHasLoaded = () => {
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -102,7 +96,6 @@ export default function AboutPage() {
     },
   ];
 
-  // Sample technology/machines for bento grid
   const technologies = [
     {
       name: "HP Indigo Digital Press",
@@ -201,7 +194,7 @@ export default function AboutPage() {
                 transition={{ duration: 0.2 }}
               >
                 <Image
-                  src="/placeholder.svg?height=600&width=800&query=photo album workshop with people working"
+                  src="/images/about-image.jpeg"
                   alt="G Album workshop"
                   width={600}
                   height={400}
@@ -257,10 +250,13 @@ export default function AboutPage() {
             >
               <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-4xl lg:rounded-tl-4xl" />
               <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)] lg:rounded-tl-[calc(2rem+1px)]">
-                <img
+                <Image
                   alt={technologies[0].name}
                   src={technologies[0].image || "/placeholder.svg"}
                   className="h-80 object-cover object-center"
+                  width={800}
+                  height={320}
+                  priority
                 />
                 <div className="p-10 pt-4">
                   <h3 className="text-sm/4 font-semibold text-red-600">
@@ -323,10 +319,13 @@ export default function AboutPage() {
                       : "max-lg:rounded-b-[calc(2rem+1px)] lg:rounded-br-[calc(2rem+1px)]"
                   }`}
                 >
-                  <img
+                  <Image
                     alt={tech.name}
                     src={tech.image || "/placeholder.svg"}
                     className="h-80 object-cover object-center"
+                    width={800}
+                    height={320}
+                    priority
                   />
                   <div className="p-10 pt-4">
                     <h3 className="text-sm/4 font-semibold text-red-600">
@@ -480,9 +479,10 @@ export default function AboutPage() {
               Meet Our Team
             </h2>
             <p className="mt-6 text-lg/8 text-slate-600">
-              We're a passionate group of professionals dedicated to crafting
-              the perfect photo albums that preserve your most cherished
-              memories with exceptional quality and attention to detail.
+              We&apos;re a passionate group of professionals dedicated to
+              crafting the perfect photo albums that preserve your most
+              cherished memories with exceptional quality and attention to
+              detail.
             </p>
           </motion.div>
           <motion.ul
@@ -493,17 +493,20 @@ export default function AboutPage() {
             whileInView="animate"
             viewport={{ once: true, margin: "-50px" }}
           >
-            {teamMembers.map((member, index) => (
+            {teamMembers.map((member) => (
               <motion.li key={member.name} variants={fadeInUp}>
                 <motion.div
                   className="mx-auto"
                   whileHover={{ scale: 1.03 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <img
+                  <Image
                     src={member.image || "/placeholder.svg"}
                     alt={member.name}
                     className="mx-auto size-32 rounded-full object-cover border-2 border-red-100"
+                    width={128}
+                    height={128}
+                    priority
                   />
                 </motion.div>
                 <h3 className="mt-6 text-base/7 font-semibold tracking-tight text-red-900">

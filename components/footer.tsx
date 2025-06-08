@@ -89,7 +89,7 @@ export default function Footer() {
             <div className="space-y-4 xl:col-span-4">
               <div className="flex items-center">
                 <Image
-                  src="/placeholder-h285v.png"
+                  src="/G Album Logo (WHITE).svg"
                   alt="G Album Logo"
                   width={36}
                   height={36}

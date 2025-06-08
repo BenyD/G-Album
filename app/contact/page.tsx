@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,17 +88,24 @@ export default function ContactPage() {
                   {
                     icon: Phone,
                     title: "Phone",
-                    details: ["+91 1234567890", "+91 9876543210"],
+                    details: [
+                      "+91 951 44 222 44",
+                      "+91 951 44 222 00",
+                      "+91 944 46 399 12",
+                    ],
                   },
                   {
                     icon: Mail,
                     title: "Email",
-                    details: ["contact@galbum.com", "support@galbum.com"],
+                    details: ["galbum99@gmail.com", "kumaranmadras@gmail.com"],
                   },
                   {
                     icon: MapPin,
                     title: "Address",
-                    details: ["123 Album Street", "Mumbai, Maharashtra, India"],
+                    details: [
+                      "123A Triplicane High Road, Near Sathya Showroom",
+                      "Chennai, Tamil Nadu, India",
+                    ],
                   },
                 ].map((contact, index) => (
                   <motion.div
@@ -137,7 +144,7 @@ export default function ContactPage() {
                 animate="animate"
               >
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d241317.11609823277!2d72.74109995709657!3d19.08219783958221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be7c6306644edc1%3A0x5da4ed8f8d648c69!2sMumbai%2C%20Maharashtra!5e0!3m2!1sen!2sin!4v1653651111548!5m2!1sen!2sin"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3886.655961843812!2d80.27406069999999!3d13.057557399999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a526626d7cad0f5%3A0x848ef8cffda3a829!2sG%20album!5e0!3m2!1sen!2sin!4v1749355571128!5m2!1sen!2sin"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
@@ -255,8 +262,8 @@ export default function ContactPage() {
                     Send us a message
                   </motion.h2>
                   <motion.p className="text-slate-600 mb-6" variants={fadeInUp}>
-                    Fill out the form below and we'll get back to you as soon as
-                    possible.
+                    Fill out the form below and we&apos;ll get back to you as
+                    soon as possible.
                   </motion.p>
 
                   <motion.form
@@ -282,36 +289,24 @@ export default function ContactPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email" className="text-slate-700">
-                          Email
+                          Email (Optional)
                         </Label>
                         <Input
                           id="email"
                           type="email"
                           placeholder="Your email"
                           className="border-red-200 focus-visible:ring-red-500"
-                          required
                         />
                       </div>
                     </motion.div>
 
                     <motion.div className="space-y-2" variants={fadeInUp}>
                       <Label htmlFor="phone" className="text-slate-700">
-                        Phone
+                        Phone Number *
                       </Label>
                       <Input
                         id="phone"
                         placeholder="Your phone number"
-                        className="border-red-200 focus-visible:ring-red-500"
-                      />
-                    </motion.div>
-
-                    <motion.div className="space-y-2" variants={fadeInUp}>
-                      <Label htmlFor="subject" className="text-slate-700">
-                        Subject
-                      </Label>
-                      <Input
-                        id="subject"
-                        placeholder="What is this regarding?"
                         className="border-red-200 focus-visible:ring-red-500"
                         required
                       />
