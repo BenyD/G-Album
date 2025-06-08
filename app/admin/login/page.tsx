@@ -23,12 +23,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { signIn, isLoading: authLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (isSubmitting || authLoading) return;
+
+    setIsSubmitting(true);
     console.log("Login attempt started:", { email });
 
     try {
@@ -39,10 +41,12 @@ export default function LoginPage() {
       console.error("Login error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
       console.log("Login attempt finished");
     }
   };
+
+  const isLoading = isSubmitting || authLoading;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6">
@@ -76,6 +80,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -89,11 +94,13 @@ export default function LoginPage() {
                     required
                     disabled={isLoading}
                     placeholder="Enter your password"
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -128,7 +135,7 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    {isSubmitting ? "Signing in..." : "Loading..."}
                   </>
                 ) : (
                   "Sign in"

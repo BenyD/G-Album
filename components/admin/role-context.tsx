@@ -1,11 +1,11 @@
 "use client";
 
 import type React from "react";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useMemo, useEffect, useState } from "react";
 import { useAuth } from "./auth-context";
 
 interface RoleContextType {
-  role: string;
+  role: string | null;
   isLoading: boolean;
   hasPermission: (permission: string) => boolean;
 }
@@ -25,27 +25,42 @@ export function useRole() {
 }
 
 export function RoleProvider({ children }: RoleProviderProps) {
-  const { role, permissions, isLoading } = useAuth();
+  const {
+    role,
+    permissions,
+    isLoading: authLoading,
+    isInitialized,
+  } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Handle loading state
+  useEffect(() => {
+    if (isInitialized) {
+      console.log("Role context: Auth initialized, updating loading state...", {
+        authLoading,
+        hasRole: !!role,
+        permissionsCount: permissions.length,
+      });
+      setIsLoading(authLoading);
+    }
+  }, [authLoading, isInitialized, role, permissions]);
 
   const hasPermission = useMemo(
     () =>
       (permission: string): boolean => {
-        if (!role || !permissions) return false;
+        if (!role || !permissions || isLoading) return false;
         return permissions.some((p) => p.name === permission);
       },
-    [role, permissions]
+    [role, permissions, isLoading]
   );
-
-  // If we're loading or don't have a role, provide a default role
-  const currentRole = !isLoading && role?.name ? role.name : "guest";
 
   const contextValue = useMemo(
     () => ({
-      role: currentRole,
-      isLoading,
+      role: role?.name ?? null,
+      isLoading: isLoading || !isInitialized,
       hasPermission,
     }),
-    [currentRole, isLoading, hasPermission]
+    [role?.name, isLoading, isInitialized, hasPermission]
   );
 
   return (

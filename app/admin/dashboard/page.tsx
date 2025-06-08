@@ -1,6 +1,7 @@
 "use client";
 
 import { useRole } from "@/components/admin/role-context";
+import { useAuth } from "@/components/admin/auth-context";
 import {
   Card,
   CardContent,
@@ -40,11 +41,76 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import { useMemo } from "react";
 
 export default function DashboardPage() {
-  const { role, hasPermission, isLoading } = useRole();
+  const { role, hasPermission, isLoading: roleLoading } = useRole();
+  const { isInitialized, isLoading: authLoading } = useAuth();
 
-  if (isLoading) {
+  const supabaseUsage = useMemo(
+    () => ({
+      storage: {
+        used: 0.73, // GB
+        total: 1, // GB
+        percentage: 73,
+      },
+      database: {
+        used: 45.2, // MB
+        total: 500, // MB
+        percentage: 9,
+      },
+      bandwidth: {
+        used: 8.4, // GB this month
+        total: 5, // GB per month (free tier)
+        percentage: 168, // Over limit
+        resetDate: "2024-02-01",
+      },
+      auth: {
+        users: 156,
+        total: 50000, // Free tier limit
+        percentage: 0.3,
+      },
+      realtime: {
+        connections: 12,
+        total: 200, // Free tier limit
+        percentage: 6,
+      },
+      edgeFunctions: {
+        invocations: 2840,
+        total: 500000, // Free tier limit per month
+        percentage: 0.6,
+      },
+    }),
+    []
+  );
+
+  const storageBreakdown = useMemo(
+    () => [
+      { category: "Album Images", size: 0.45, percentage: 62 },
+      { category: "Gallery Images", size: 0.18, percentage: 25 },
+      { category: "Profile Pictures", size: 0.06, percentage: 8 },
+      { category: "System Files", size: 0.04, percentage: 5 },
+    ],
+    []
+  );
+
+  const usageHistory = useMemo(
+    () => [
+      { month: "Sep", storage: 0.32, bandwidth: 3.2, users: 89 },
+      { month: "Oct", storage: 0.48, bandwidth: 4.8, users: 112 },
+      { month: "Nov", storage: 0.61, bandwidth: 6.1, users: 134 },
+      { month: "Dec", storage: 0.69, bandwidth: 7.8, users: 145 },
+      { month: "Jan", storage: 0.73, bandwidth: 8.4, users: 156 },
+    ],
+    []
+  );
+
+  if (!isInitialized || authLoading || roleLoading) {
+    console.log("Loading dashboard...", {
+      isInitialized,
+      authLoading,
+      roleLoading,
+    });
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -52,7 +118,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (!role) {
+  if (!role || role === "guest") {
+    console.log("Access denied: Invalid role", { role });
     return (
       <Alert variant="destructive" className="max-w-lg mx-auto mt-8">
         <AlertTitle>Access Denied</AlertTitle>
@@ -64,55 +131,7 @@ export default function DashboardPage() {
     );
   }
 
-  // Supabase usage data (these would come from Supabase API in real implementation)
-  const supabaseUsage = {
-    storage: {
-      used: 0.73, // GB
-      total: 1, // GB
-      percentage: 73,
-    },
-    database: {
-      used: 45.2, // MB
-      total: 500, // MB
-      percentage: 9,
-    },
-    bandwidth: {
-      used: 8.4, // GB this month
-      total: 5, // GB per month (free tier)
-      percentage: 168, // Over limit
-      resetDate: "2024-02-01",
-    },
-    auth: {
-      users: 156,
-      total: 50000, // Free tier limit
-      percentage: 0.3,
-    },
-    realtime: {
-      connections: 12,
-      total: 200, // Free tier limit
-      percentage: 6,
-    },
-    edgeFunctions: {
-      invocations: 2840,
-      total: 500000, // Free tier limit per month
-      percentage: 0.6,
-    },
-  };
-
-  const storageBreakdown = [
-    { category: "Album Images", size: 0.45, percentage: 62 },
-    { category: "Gallery Images", size: 0.18, percentage: 25 },
-    { category: "Profile Pictures", size: 0.06, percentage: 8 },
-    { category: "System Files", size: 0.04, percentage: 5 },
-  ];
-
-  const usageHistory = [
-    { month: "Sep", storage: 0.32, bandwidth: 3.2, users: 89 },
-    { month: "Oct", storage: 0.48, bandwidth: 4.8, users: 112 },
-    { month: "Nov", storage: 0.61, bandwidth: 6.1, users: 134 },
-    { month: "Dec", storage: 0.69, bandwidth: 7.8, users: 145 },
-    { month: "Jan", storage: 0.73, bandwidth: 8.4, users: 156 },
-  ];
+  console.log("Rendering dashboard with role:", role);
 
   return (
     <div className="space-y-4">

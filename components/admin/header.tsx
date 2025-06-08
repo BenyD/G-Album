@@ -162,7 +162,7 @@ export default function AdminHeader() {
         scrolled ? "bg-white/95 backdrop-blur-xs shadow-xs" : "bg-white"
       }`}
     >
-      <div className="w-full h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 md:px-6">
+      <div className="w-full h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 md:px-6 max-w-[1920px] mx-auto">
         {/* Left Section */}
         <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
           {/* Mobile Sidebar Trigger */}
