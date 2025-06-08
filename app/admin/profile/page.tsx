@@ -11,20 +11,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  Info,
-  Mail,
-  Save,
-  Upload,
-  Shield,
-  Clock,
-  Users,
-  FileText,
-  Settings,
-  Edit,
-} from "lucide-react";
+import { Mail, Save, Upload, Shield, Clock, Edit } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { updateProfile, uploadProfilePicture } from "./actions";
@@ -139,23 +127,14 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Alert className="bg-blue-50 border-blue-200">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-800">Your Profile</AlertTitle>
-        <AlertDescription className="text-blue-700">
-          You are viewing your profile as <strong>{role}</strong>. You can
-          update your profile picture and name.
-        </AlertDescription>
-      </Alert>
-
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Profile Settings</h2>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="space-y-6">
         {/* Profile Information Card */}
-        <Card className="lg:col-span-1">
+        <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
             <CardDescription>
@@ -196,7 +175,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="w-full mb-2">
+            <div className="w-full max-w-sm mb-4">
               {isEditingName ? (
                 <div className="flex items-center gap-2">
                   <Input
@@ -204,6 +183,7 @@ export default function ProfilePage() {
                     onChange={(e) => setUserName(e.target.value)}
                     className="text-center"
                     disabled={isLoading}
+                    placeholder="Enter your name"
                   />
                   <Button
                     size="sm"
@@ -231,29 +211,32 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 mb-2">
-              <Mail className="h-4 w-4 text-slate-500" />
-              <span className="text-slate-600">{user?.email}</span>
-            </div>
-            <Badge className={getRoleBadgeColor(profile?.role?.name)}>
-              {formatRoleName(profile?.role?.name)}
-            </Badge>
-            <div className="mt-4 text-sm text-slate-500">
-              <p>
-                Joined: {new Date(user?.created_at || "").toLocaleDateString()}
-              </p>
-              <p>
-                Last updated:{" "}
-                {profile?.updated_at
-                  ? new Date(profile.updated_at).toLocaleDateString()
-                  : "Never"}
-              </p>
+            <div className="flex flex-col items-center gap-3 w-full max-w-sm">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-slate-500" />
+                <span className="text-slate-600">{user?.email}</span>
+              </div>
+              <Badge className={getRoleBadgeColor(profile?.role?.name)}>
+                {formatRoleName(profile?.role?.name)}
+              </Badge>
+              <div className="text-sm text-slate-500 flex gap-4">
+                <p>
+                  Joined:{" "}
+                  {new Date(user?.created_at || "").toLocaleDateString()}
+                </p>
+                <p>
+                  Updated:{" "}
+                  {profile?.updated_at
+                    ? new Date(profile.updated_at).toLocaleDateString()
+                    : "Never"}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabs Section */}
-        <Card className="lg:col-span-2">
+        {/* Account Details Card */}
+        <Card>
           <CardHeader>
             <CardTitle>Account Details</CardTitle>
             <CardDescription>
@@ -290,15 +273,28 @@ export default function ProfilePage() {
 
                   <div className="border border-slate-200 rounded-lg p-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {profile?.role?.role_permissions?.map((rp) => (
+                      {profile?.role?.role_permissions?.map((rp: any) => (
                         <div
                           key={rp.permission.id}
                           className="flex items-center gap-2 text-sm text-slate-600"
                         >
                           <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div>
-                          {formatPermissionName(rp.permission.name)}
+                          <span
+                            className="truncate"
+                            title={rp.permission.description}
+                          >
+                            {rp.permission.name
+                              ? formatPermissionName(rp.permission.name)
+                              : "Unknown Permission"}
+                          </span>
                         </div>
                       ))}
+                      {(!profile?.role?.role_permissions ||
+                        profile.role.role_permissions.length === 0) && (
+                        <div className="col-span-2 text-sm text-slate-500 text-center py-2">
+                          No permissions assigned
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -306,22 +302,45 @@ export default function ProfilePage() {
 
               <TabsContent value="activity" className="space-y-4">
                 <div className="space-y-3">
-                  <h4 className="font-medium text-sm text-slate-700">
-                    Recent Activity
-                  </h4>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Clock className="h-5 w-5 text-slate-600" />
+                    <h4 className="font-medium text-slate-700">
+                      Recent Activity
+                    </h4>
+                  </div>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {/* Profile Update Activity */}
+                    {profile?.updated_at && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
+                        <div className="shrink-0 mt-1">
+                          <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900">
+                            Profile Updated
+                          </p>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(profile.updated_at).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Account Creation Activity */}
                     <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
                       <div className="shrink-0 mt-1">
-                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-900">
-                          Profile Updated
+                          Account Created
                         </p>
                         <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {new Date().toLocaleString()}
+                            {new Date(user?.created_at || "").toLocaleString()}
                           </span>
                         </div>
                       </div>
