@@ -1,6 +1,6 @@
 "use client";
 
-import type React from "react";
+import React from "react";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,6 +9,19 @@ import Footer from "@/components/footer";
 import AdminLayoutWrapper from "@/components/admin/admin-layout-wrapper";
 import { AuthProvider } from "@/components/admin/auth-context";
 import { RoleProvider } from "@/components/admin/role-context";
+
+// List of valid routes in the application
+const validRoutes = [
+  "/",
+  "/about",
+  "/albums",
+  "/gallery",
+  "/contact",
+  "/privacy-policy",
+  "/terms-of-service",
+  "/refund-policy",
+  "/cookie-preferences",
+];
 
 // Shared animation variants
 const pageTransitionVariants = {
@@ -72,37 +85,20 @@ export default function ConditionalLayout({
     window.scrollTo(0, 0);
   }, [pathname]);
 
-  // Check if we're in admin routes
+  // Check if we're in admin routes or special pages
   const isAdminRoute = pathname.startsWith("/admin");
   const isAdminLogin = pathname === "/admin/login";
   const isModalRoute =
     pathname.includes("login") || pathname.includes("signup");
 
-  // Admin login page - standalone layout with modal-like animation
-  if (isAdminLogin || isModalRoute) {
-    return (
-      <AuthProvider>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={pathname}
-          variants={modalTransitionVariants}
-          initial="initial"
-          animate="enter"
-          exit="exit"
-          className="min-h-screen"
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
-      </AuthProvider>
-    );
-  }
+  // Check if this is a valid route or a dynamic route
+  const isDynamicRoute = pathname.startsWith("/albums/");
+  const isValidRoute = validRoutes.includes(pathname) || isDynamicRoute;
+  const is404Page = !isValidRoute && !isAdminRoute;
 
-  // Admin dashboard pages - use admin layout
-  if (isAdminRoute) {
+  // 404 page - standalone layout with page transition
+  if (is404Page) {
     return (
-      <AuthProvider>
-        <RoleProvider>
       <AnimatePresence mode="wait">
         <motion.div
           key={pathname}
@@ -112,9 +108,49 @@ export default function ConditionalLayout({
           exit="exit"
           className="min-h-screen"
         >
-          <AdminLayoutWrapper>{children}</AdminLayoutWrapper>
+          {children}
         </motion.div>
       </AnimatePresence>
+    );
+  }
+
+  // Admin login page - standalone layout with modal-like animation
+  if (isAdminLogin || isModalRoute) {
+    return (
+      <AuthProvider>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            variants={modalTransitionVariants}
+            initial="initial"
+            animate="enter"
+            exit="exit"
+            className="min-h-screen"
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </AuthProvider>
+    );
+  }
+
+  // Admin dashboard pages - use admin layout
+  if (isAdminRoute) {
+    return (
+      <AuthProvider>
+        <RoleProvider>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              variants={pageTransitionVariants}
+              initial="initial"
+              animate="enter"
+              exit="exit"
+              className="min-h-screen"
+            >
+              <AdminLayoutWrapper>{children}</AdminLayoutWrapper>
+            </motion.div>
+          </AnimatePresence>
         </RoleProvider>
       </AuthProvider>
     );
