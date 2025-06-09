@@ -44,44 +44,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   // Load user profile, role, and permissions
-  const loadUserProfile = useCallback(
-    async (userId: string) => {
-      try {
-        console.log("Loading user profile for ID:", userId);
+  const loadUserProfile = useCallback(async (userId: string) => {
+    try {
+      console.log("Loading user profile for ID:", userId);
 
-        // Try to load profile from server
-        const response = await fetch(`/api/admin/profile?userId=${userId}`);
-        if (!response.ok) {
-          console.error(
-            "Error loading profile from server:",
-            await response.text()
-          );
-          return false;
-        }
-
-        const serverProfileData = await response.json();
-        if (!serverProfileData) {
-          console.log("No profile data found from server");
-          return false;
-        }
-
-        const roleData = serverProfileData.role;
-        const formattedPermissions =
-          roleData?.role_permissions?.map(
-            (rp: { permission: Permission }) => rp.permission
-          ) ?? [];
-
-        setProfile(serverProfileData);
-        setRole(roleData);
-        setPermissions(formattedPermissions);
-        return true;
-      } catch (error) {
-        console.error("Error in loadUserProfile:", error);
+      // Try to load profile from server
+      const response = await fetch(`/api/admin/profile?userId=${userId}`);
+      if (!response.ok) {
+        console.error(
+          "Error loading profile from server:",
+          await response.text()
+        );
         return false;
       }
-    },
-    [supabase]
-  );
+
+      const serverProfileData = await response.json();
+      if (!serverProfileData) {
+        console.log("No profile data found from server");
+        return false;
+      }
+
+      const roleData = serverProfileData.role;
+      const formattedPermissions =
+        roleData?.role_permissions?.map(
+          (rp: { permission: Permission }) => rp.permission
+        ) ?? [];
+
+      setProfile(serverProfileData);
+      setRole(roleData);
+      setPermissions(formattedPermissions);
+      return true;
+    } catch (error) {
+      console.error("Error in loadUserProfile:", error);
+      return false;
+    }
+  }, []);
 
   // Initialize auth state
   useEffect(() => {
