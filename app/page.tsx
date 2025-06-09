@@ -14,6 +14,8 @@ import {
   Shield,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getFeaturedAlbums } from "@/lib/services/albums";
+import type { Album } from "@/lib/types/albums";
 
 // Types for testimonials
 interface Testimonial {
@@ -99,6 +101,24 @@ const useAnimationSetup = () => {
 
 export default function Home() {
   const { hasLoaded, shouldAnimate } = useAnimationSetup();
+  const [featuredAlbums, setFeaturedAlbums] = useState<Album[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadFeaturedAlbums();
+  }, []);
+
+  const loadFeaturedAlbums = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getFeaturedAlbums();
+      setFeaturedAlbums(data);
+    } catch (error) {
+      console.error("Error loading featured albums:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Testimonials data
   const testimonials: Testimonial[] = [
@@ -513,68 +533,94 @@ export default function Home() {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Wedding Collection",
-                desc: "Elegant wedding memories captured in timeless albums",
-                image: "/rara.jpg",
-              },
-              {
-                title: "Family Portraits",
-                desc: "Beautiful family moments preserved forever",
-                image: "/birthday-album-cover.png",
-              },
-              {
-                title: "Anniversary Special",
-                desc: "Celebrating love stories with premium albums",
-                image: "/anniversary-album-cover.png",
-              },
-            ].map((album, index) => (
-              <motion.div
-                key={index}
-                className="group relative isolate"
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                viewport={{ once: true, margin: "-100px" }}
-                whileHover={{ y: -8 }}
-              >
-                <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:shadow-xl bg-white">
-                  <div className="relative aspect-4/5">
-                    <Image
-                      src={album.image}
-                      alt={album.title}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    {/* Enhanced gradient overlay - visible by default */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-red-900/50 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
-                    {/* Glow effect */}
-                    <div className="absolute -inset-x-2 bottom-0 h-1/2 bg-red-500/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  </div>
-                  {/* Content visible by default */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-6 transition-all duration-500">
-                    <div className="relative z-10">
-                      <h3 className="text-2xl font-bold text-white mb-2 translate-y-0 group-hover:translate-y-0 transition-transform duration-500">
-                        {album.title}
-                      </h3>
-                      <p className="text-red-100 mb-4 line-clamp-2 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
-                        {album.desc}
-                      </p>
-                      <Button
-                        size="sm"
-                        className="bg-white/90 backdrop-blur-sm text-red-600 hover:bg-white hover:text-red-700 transition-colors duration-200 group/btn translate-y-0 group-hover:translate-y-0 opacity-90 hover:opacity-100"
-                      >
-                        View Album
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
-                      </Button>
+            {isLoading ? (
+              // Loading skeletons
+              [...Array(3)].map((_, index) => (
+                <motion.div
+                  key={index}
+                  className="group relative isolate animate-pulse"
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                >
+                  <div className="relative overflow-hidden rounded-xl shadow-lg bg-white">
+                    <div className="relative aspect-4/5 bg-gray-200" />
+                    <div className="absolute inset-0 flex flex-col justify-end p-6">
+                      <div className="space-y-3">
+                        <div className="h-6 bg-gray-300 rounded w-3/4" />
+                        <div className="h-4 bg-gray-300 rounded w-1/2" />
+                        <div className="h-8 bg-gray-300 rounded w-1/3 mt-4" />
+                      </div>
                     </div>
                   </div>
-                </div>
-                {/* Card glow effect */}
-                <div className="absolute -inset-x-4 -inset-y-4 z-[-1] bg-red-500/20 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
+                </motion.div>
+              ))
+            ) : featuredAlbums.length === 0 ? (
+              <motion.div
+                className="col-span-3 text-center py-12"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                viewport={{ once: true }}
+              >
+                <h3 className="text-xl font-semibold text-gray-700">
+                  No featured albums yet
+                </h3>
+                <p className="text-gray-500 mt-2">
+                  Check back soon for featured content
+                </p>
               </motion.div>
-            ))}
+            ) : (
+              featuredAlbums.map((album, index) => (
+                <motion.div
+                  key={album.id}
+                  className="group relative isolate"
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  whileHover={{ y: -8 }}
+                >
+                  <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:shadow-xl bg-white">
+                    <div className="relative aspect-4/5">
+                      <Image
+                        src={album.cover_image_url || "/placeholder.svg"}
+                        alt={album.title}
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      {/* Enhanced gradient overlay - visible by default */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-red-900/50 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
+                      {/* Glow effect */}
+                      <div className="absolute -inset-x-2 bottom-0 h-1/2 bg-red-500/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    </div>
+                    {/* Content visible by default */}
+                    <div className="absolute inset-0 flex flex-col justify-end p-6 transition-all duration-500">
+                      <div className="relative z-10">
+                        <h3 className="text-2xl font-bold text-white mb-2 translate-y-0 group-hover:translate-y-0 transition-transform duration-500">
+                          {album.title}
+                        </h3>
+                        <p className="text-red-100 mb-4 line-clamp-2 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
+                          {album.description || "No description"}
+                        </p>
+                        <Link href={`/albums/${album.id}`}>
+                          <Button
+                            size="sm"
+                            className="bg-white/90 backdrop-blur-sm text-red-600 hover:bg-white hover:text-red-700 transition-colors duration-200 group/btn translate-y-0 group-hover:translate-y-0 opacity-90 hover:opacity-100"
+                          >
+                            View Album
+                            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Card glow effect */}
+                  <div className="absolute -inset-x-4 -inset-y-4 z-[-1] bg-red-500/20 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
       </section>
