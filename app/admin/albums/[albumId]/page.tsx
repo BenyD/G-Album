@@ -30,8 +30,69 @@ import {
   uploadImage,
   deleteImage,
 } from "@/lib/services/albums";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 const steps = ["Album Details", "Manage Images", "Review"];
+
+// Simple image preview component
+function ImagePreview({
+  src,
+  isCover,
+  onSetCover,
+  onRemove,
+}: {
+  src: string;
+  isCover: boolean;
+  onSetCover?: () => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="group relative aspect-square">
+      {/* Main image container */}
+      <div className="h-full w-full rounded-lg border border-gray-200 overflow-hidden">
+        <img src={src} alt="" className="h-full w-full object-cover" />
+      </div>
+
+      {/* Overlay controls */}
+      {(onSetCover || onRemove) && (
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute inset-0 bg-black/50 rounded-lg" />
+          <div className="relative flex gap-2">
+            {onSetCover && (
+              <button
+                onClick={onSetCover}
+                className={cn(
+                  "p-2 rounded-full",
+                  isCover
+                    ? "bg-red-600 text-white hover:bg-red-700"
+                    : "bg-white text-gray-700 hover:bg-gray-100"
+                )}
+              >
+                <ImageIcon className="w-4 h-4" />
+              </button>
+            )}
+            {onRemove && (
+              <button
+                onClick={onRemove}
+                className="p-2 rounded-full bg-white text-red-600 hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Cover badge */}
+      {isCover && (
+        <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 text-xs font-medium rounded">
+          Cover
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EditAlbumPage() {
   const router = useRouter();
@@ -358,39 +419,87 @@ export default function EditAlbumPage() {
                   </div>
                 )}
 
-                {/* Existing Images */}
+                {/* Existing Images Section */}
                 {existingImages.length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="font-medium">Existing Images</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      {existingImages.map((image) => (
-                        <div key={image.image_url} className="relative group">
-                          <div className="aspect-square relative rounded-lg overflow-hidden">
-                            <Image
+                  <div className="space-y-4 bg-gray-50 rounded-lg p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">
+                          Existing Images
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {existingImages.length} image
+                          {existingImages.length !== 1 ? "s" : ""} in this album
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const firstImage = existingImages[0];
+                            if (firstImage) {
+                              setCoverImageUrl(firstImage.image_url);
+                            }
+                          }}
+                          disabled={existingImages.length === 0}
+                        >
+                          <ImageIcon className="w-4 h-4 mr-2" />
+                          Set First as Cover
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {existingImages.map((image, index) => (
+                        <div
+                          key={image.image_url}
+                          className="bg-white rounded-lg shadow-sm border"
+                        >
+                          <div className="relative">
+                            <ImagePreview
                               src={image.image_url}
-                              alt=""
-                              fill
-                              className="object-cover"
+                              isCover={coverImageUrl === image.image_url}
+                              onSetCover={() =>
+                                setCoverImageUrl(image.image_url)
+                              }
+                              onRemove={() =>
+                                removeExistingImage(image.image_url)
+                              }
                             />
-                          </div>
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 flex gap-2">
-                              <Button
-                                size="sm"
-                                variant={
-                                  coverImageUrl === image.image_url
-                                    ? "default"
-                                    : "outline"
-                                }
-                                onClick={() =>
-                                  setCoverImageUrl(image.image_url)
-                                }
+                            <div className="absolute top-2 left-2">
+                              <Badge
+                                variant="secondary"
+                                className="bg-white/90"
                               >
-                                <ImageIcon className="w-4 h-4" />
-                              </Button>
+                                #{index + 1}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="p-3 border-t">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {coverImageUrl === image.image_url ? (
+                                  <Badge className="bg-red-600">
+                                    Cover Image
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7"
+                                    onClick={() =>
+                                      setCoverImageUrl(image.image_url)
+                                    }
+                                  >
+                                    Set as Cover
+                                  </Button>
+                                )}
+                              </div>
                               <Button
+                                variant="ghost"
                                 size="sm"
-                                variant="destructive"
+                                className="h-7 text-red-600 hover:text-red-700 hover:bg-red-50"
                                 onClick={() =>
                                   removeExistingImage(image.image_url)
                                 }
@@ -399,44 +508,32 @@ export default function EditAlbumPage() {
                               </Button>
                             </div>
                           </div>
-                          {coverImageUrl === image.image_url && (
-                            <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-md text-xs">
-                              Cover
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* New Images */}
+                {/* New Images Section */}
                 {uploadedImages.length > 0 && (
                   <div className="space-y-4">
-                    <h3 className="font-medium">New Images</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-gray-700">
+                        New Images
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {uploadedImages.length} image
+                        {uploadedImages.length !== 1 ? "s" : ""} to be added
+                      </p>
+                    </div>
                     <div className="grid grid-cols-3 gap-4">
                       {uploadedImages.map((image) => (
-                        <div key={image.id} className="relative group">
-                          <div className="aspect-square relative rounded-lg overflow-hidden">
-                            <Image
-                              src={image.preview}
-                              alt=""
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => removeNewImage(image.id)}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                        <ImagePreview
+                          key={image.id}
+                          src={image.preview}
+                          isCover={false}
+                          onRemove={() => removeNewImage(image.id)}
+                        />
                       ))}
                     </div>
                   </div>
@@ -470,35 +567,23 @@ export default function EditAlbumPage() {
                   </div>
 
                   <div>
-                    <h3 className="font-medium">Images</h3>
-                    <div className="mt-2 grid grid-cols-4 gap-4">
+                    <h3 className="text-lg font-medium text-gray-700 mb-4">
+                      Images Preview
+                    </h3>
+                    <div className="grid grid-cols-4 gap-4">
                       {existingImages.map((image) => (
-                        <div
+                        <ImagePreview
                           key={image.image_url}
-                          className="relative aspect-square"
-                        >
-                          <Image
-                            src={image.image_url}
-                            alt=""
-                            fill
-                            className="object-cover rounded-lg"
-                          />
-                          {coverImageUrl === image.image_url && (
-                            <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-md text-xs">
-                              Cover
-                            </div>
-                          )}
-                        </div>
+                          src={image.image_url}
+                          isCover={coverImageUrl === image.image_url}
+                        />
                       ))}
                       {uploadedImages.map((image) => (
-                        <div key={image.id} className="relative aspect-square">
-                          <Image
-                            src={image.preview}
-                            alt=""
-                            fill
-                            className="object-cover rounded-lg"
-                          />
-                        </div>
+                        <ImagePreview
+                          key={image.id}
+                          src={image.preview}
+                          isCover={false}
+                        />
                       ))}
                     </div>
                   </div>

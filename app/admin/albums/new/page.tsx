@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   Check,
   X,
+  Trash,
 } from "lucide-react";
 import { useRole } from "@/components/admin/role-context";
 import type { UploadedImage } from "@/lib/types/albums";
@@ -29,6 +30,7 @@ import {
 } from "@/lib/services/albums";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 const steps = ["Album Details", "Upload Images", "Review"];
 
@@ -441,8 +443,8 @@ export default function NewAlbumPage() {
   return (
     <div className="container max-w-4xl mx-auto py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Create New Album</h1>
-        <div className="mt-6">
+        <h1 className="text-3xl font-bold">Create New Album</h1>
+        <div className="mt-4">
           <div className="flex justify-between items-center">
             {steps.map((step, index) => (
               <div
@@ -452,12 +454,11 @@ export default function NewAlbumPage() {
                 }`}
               >
                 <div
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200",
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
                     currentStep >= index
                       ? "bg-red-600 text-white"
-                      : "bg-gray-100 text-gray-400"
-                  )}
+                      : "bg-gray-200 text-gray-600"
+                  }`}
                 >
                   {currentStep > index ? (
                     <Check className="w-4 h-4" />
@@ -466,9 +467,9 @@ export default function NewAlbumPage() {
                   )}
                 </div>
                 {index < steps.length - 1 && (
-                  <div className="flex-1 h-1 mx-4 bg-gray-100">
+                  <div className="flex-1 h-1 mx-4 bg-gray-200">
                     <div
-                      className="h-full bg-red-600 transition-all duration-200"
+                      className="h-full bg-red-600 transition-all duration-300"
                       style={{
                         width: currentStep > index ? "100%" : "0%",
                       }}
@@ -480,7 +481,7 @@ export default function NewAlbumPage() {
           </div>
           <div className="flex justify-between mt-2">
             {steps.map((step) => (
-              <span key={step} className="text-sm font-medium text-gray-500">
+              <span key={step} className="text-sm text-gray-600 font-medium">
                 {step}
               </span>
             ))}
@@ -488,7 +489,7 @@ export default function NewAlbumPage() {
         </div>
       </div>
 
-      <Card className="border border-gray-200">
+      <Card>
         <CardContent className="pt-6">
           <AnimatePresence mode="wait">
             {currentStep === 0 && (
@@ -548,14 +549,11 @@ export default function NewAlbumPage() {
               >
                 <div
                   className={cn(
-                    "border-2 border-dashed rounded-lg p-6 transition-all duration-200",
+                    "border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200",
                     isDragging
                       ? "border-red-500 bg-red-50"
                       : "border-gray-200 hover:border-red-500"
                   )}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
                 >
                   <input
                     type="file"
@@ -570,46 +568,114 @@ export default function NewAlbumPage() {
                   <label
                     htmlFor="images"
                     className="cursor-pointer flex flex-col items-center"
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                   >
-                    <Upload className="w-8 h-8 text-gray-400 mb-3" />
-                    <h3 className="text-lg font-medium text-gray-700">
-                      Upload Images
-                    </h3>
-                    <p className="text-gray-500 text-sm text-center mt-1">
-                      Drag and drop your images here, or click to browse
-                    </p>
+                    <Upload className="w-12 h-12 text-gray-400 mb-4" />
+                    <span className="text-gray-600 font-medium">
+                      Click to upload images
+                    </span>
+                    <span className="text-gray-400 text-sm mt-1">
+                      or drag and drop them here
+                    </span>
                   </label>
                 </div>
 
                 {isUploading && (
                   <div className="space-y-2">
-                    <Progress value={uploadProgress} className="bg-gray-100" />
-                    <p className="text-sm text-center text-gray-600">
-                      Uploading {uploadProgress.toFixed(0)}%
+                    <Progress value={uploadProgress} />
+                    <p className="text-sm text-gray-600 text-center">
+                      Uploading images...
                     </p>
                   </div>
                 )}
 
                 {uploadedImages.length > 0 && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 bg-gray-50 rounded-lg p-6">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium text-gray-700">
-                        Uploaded Images
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {uploadedImages.length} image
-                        {uploadedImages.length !== 1 ? "s" : ""}
-                      </p>
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">
+                          Uploaded Images
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {uploadedImages.length} image
+                          {uploadedImages.length !== 1 ? "s" : ""} ready to be
+                          added
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const firstImage = uploadedImages[0];
+                            if (firstImage) {
+                              setCoverImageId(firstImage.id);
+                            }
+                          }}
+                          disabled={uploadedImages.length === 0}
+                        >
+                          <ImageIcon className="w-4 h-4 mr-2" />
+                          Set First as Cover
+                        </Button>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      {uploadedImages.map((image) => (
-                        <ImagePreview
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {uploadedImages.map((image, index) => (
+                        <div
                           key={image.id}
-                          src={image.preview}
-                          isCover={coverImageId === image.id}
-                          onSetCover={() => setCoverImageId(image.id)}
-                          onRemove={() => removeImage(image.id)}
-                        />
+                          className="bg-white rounded-lg shadow-sm border"
+                        >
+                          <div className="relative">
+                            <ImagePreview
+                              src={image.preview}
+                              isCover={coverImageId === image.id}
+                              onSetCover={() => setCoverImageId(image.id)}
+                              onRemove={() => removeImage(image.id)}
+                            />
+                            <div className="absolute top-2 left-2">
+                              <Badge
+                                variant="secondary"
+                                className="bg-white/90"
+                              >
+                                #{index + 1}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="p-3 border-t">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {coverImageId === image.id ? (
+                                  <Badge className="bg-red-600">
+                                    Cover Image
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7"
+                                    onClick={() => setCoverImageId(image.id)}
+                                  >
+                                    Set as Cover
+                                  </Button>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => removeImage(image.id)}
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2 truncate">
+                              {image.file.name}
+                            </p>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -625,34 +691,92 @@ export default function NewAlbumPage() {
                 className="space-y-6"
               >
                 {isSubmitting && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Uploading images and creating album...</span>
-                      <span>{Math.round(uploadProgress)}%</span>
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-gray-700">
+                        Creating Album
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {uploadProgress.toFixed(0)}% Complete
+                      </p>
                     </div>
-                    <Progress value={uploadProgress} className="h-2" />
+                    <Progress value={uploadProgress} className="bg-gray-200" />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div
+                          className={cn(
+                            "w-4 h-4 rounded-full flex items-center justify-center",
+                            uploadProgress > 0 && uploadProgress < 100
+                              ? "bg-yellow-500"
+                              : uploadProgress === 100
+                              ? "bg-green-500"
+                              : "bg-gray-300"
+                          )}
+                        >
+                          {uploadProgress === 100 ? (
+                            <Check className="w-3 h-3 text-white" />
+                          ) : (
+                            <div
+                              className={cn(
+                                "w-2 h-2 rounded-full",
+                                uploadProgress > 0 ? "bg-white" : "bg-gray-400"
+                              )}
+                            />
+                          )}
+                        </div>
+                        <span
+                          className={cn(
+                            uploadProgress > 0
+                              ? "text-gray-700"
+                              : "text-gray-500"
+                          )}
+                        >
+                          Uploading Images ({uploadedImages.length})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <div
+                          className={cn(
+                            "w-4 h-4 rounded-full flex items-center justify-center",
+                            uploadProgress === 100 && !isSubmitting
+                              ? "bg-green-500"
+                              : "bg-gray-300"
+                          )}
+                        >
+                          {uploadProgress === 100 && !isSubmitting ? (
+                            <Check className="w-3 h-3 text-white" />
+                          ) : (
+                            <div className="w-2 h-2 rounded-full bg-gray-400" />
+                          )}
+                        </div>
+                        <span
+                          className={cn(
+                            uploadProgress === 100
+                              ? "text-gray-700"
+                              : "text-gray-500"
+                          )}
+                        >
+                          Creating Album
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
+
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">
-                      Album Details
-                    </h3>
-                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h3 className="font-medium">Album Details</h3>
+                    <div className="mt-2 space-y-2">
                       <p>
                         <span className="font-medium">Title:</span> {title}
                       </p>
                       <p>
                         <span className="font-medium">Description:</span>{" "}
-                        {description || "No description"}
+                        {description || "None"}
                       </p>
                       <p>
                         <span className="font-medium">Featured:</span>{" "}
                         {featured ? "Yes" : "No"}
-                      </p>
-                      <p>
-                        <span className="font-medium">Number of Images:</span>{" "}
-                        {uploadedImages.length}
                       </p>
                     </div>
                   </div>
@@ -661,94 +785,42 @@ export default function NewAlbumPage() {
                     <h3 className="text-lg font-medium text-gray-700 mb-4">
                       Images Preview
                     </h3>
-                    <div className="grid grid-cols-4 gap-4">
-                      {uploadedImages.map((image) => (
-                        <ImagePreview
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {uploadedImages.map((image, index) => (
+                        <div
                           key={image.id}
-                          src={image.preview}
-                          isCover={coverImageId === image.id}
-                        />
+                          className="bg-white rounded-lg shadow-sm border"
+                        >
+                          <div className="relative">
+                            <ImagePreview
+                              src={image.preview}
+                              isCover={coverImageId === image.id}
+                            />
+                            <div className="absolute top-2 left-2">
+                              <Badge
+                                variant="secondary"
+                                className="bg-white/90"
+                              >
+                                #{index + 1}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="p-3 border-t">
+                            <div className="flex items-center gap-2">
+                              {coverImageId === image.id && (
+                                <Badge className="bg-red-600">
+                                  Cover Image
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2 truncate">
+                              {image.file.name}
+                            </p>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
-
-                  {isSubmitting && (
-                    <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-700">
-                          Creating Album
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {uploadProgress.toFixed(0)}% Complete
-                        </p>
-                      </div>
-                      <Progress
-                        value={uploadProgress}
-                        className="bg-gray-200"
-                      />
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <div
-                            className={cn(
-                              "w-4 h-4 rounded-full flex items-center justify-center",
-                              uploadProgress > 0 && uploadProgress < 100
-                                ? "bg-yellow-500"
-                                : uploadProgress === 100
-                                ? "bg-green-500"
-                                : "bg-gray-300"
-                            )}
-                          >
-                            {uploadProgress === 100 ? (
-                              <Check className="w-3 h-3 text-white" />
-                            ) : (
-                              <div
-                                className={cn(
-                                  "w-2 h-2 rounded-full",
-                                  uploadProgress > 0
-                                    ? "bg-white"
-                                    : "bg-gray-400"
-                                )}
-                              />
-                            )}
-                          </div>
-                          <span
-                            className={cn(
-                              uploadProgress > 0
-                                ? "text-gray-700"
-                                : "text-gray-500"
-                            )}
-                          >
-                            Uploading Images ({uploadedImages.length})
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <div
-                            className={cn(
-                              "w-4 h-4 rounded-full flex items-center justify-center",
-                              uploadProgress === 100 && !isSubmitting
-                                ? "bg-green-500"
-                                : "bg-gray-300"
-                            )}
-                          >
-                            {uploadProgress === 100 && !isSubmitting ? (
-                              <Check className="w-3 h-3 text-white" />
-                            ) : (
-                              <div className="w-2 h-2 rounded-full bg-gray-400" />
-                            )}
-                          </div>
-                          <span
-                            className={cn(
-                              uploadProgress === 100
-                                ? "text-gray-700"
-                                : "text-gray-500"
-                            )}
-                          >
-                            Creating Album
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </motion.div>
             )}
