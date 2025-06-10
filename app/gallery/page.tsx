@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, X, Grid3X3, List, Calendar, Tag } from "lucide-react";
 import PageHero from "@/components/page-hero";
+import { getAllGalleryImages } from "@/lib/services/gallery";
+import type { GalleryImage } from "@/lib/services/gallery";
+import Masonry from "react-masonry-css";
 
 // Optimized animation variants
 const fadeInUp = {
@@ -83,67 +86,79 @@ const useInView = () => {
   return [setRef, isInView] as const;
 };
 
-// Sample tags for filtering
-const allTags = [
-  "Wedding",
-  "Birthday",
-  "Anniversary",
-  "Family",
-  "Baby",
-  "Travel",
-  "Corporate",
-  "Graduation",
-];
+// Get unique album names for filtering
+const deriveAlbumNames = (images: GalleryImage[]) => {
+  const uniqueAlbums = new Set<string>();
+  images.forEach((image) => {
+    uniqueAlbums.add(image.album_name);
+  });
+  return Array.from(uniqueAlbums).sort();
+};
 
-// Sample gallery images with tags and metadata
-const allGalleryImages = Array.from({ length: 24 }, (_, i) => ({
-  id: i + 1,
-  src: `/placeholder.svg?height=600&width=600&query=photo album page ${i + 1}`,
-  alt: `Gallery image ${i + 1}`,
-  tags: allTags.filter(() => Math.random() > 0.5),
-  date: new Date(
-    2023,
-    Math.floor(Math.random() * 12),
-    Math.floor(Math.random() * 28) + 1
-  ).toLocaleDateString(),
-  title: `Album Collection ${i + 1}`,
-  description: `Beautiful memories captured in this stunning photo album featuring ${allTags[
-    Math.floor(Math.random() * allTags.length)
-  ].toLowerCase()} moments.`,
-}));
+const breakpointColumns = {
+  default: 4,
+  1536: 4,
+  1280: 3,
+  1024: 3,
+  768: 2,
+  640: 1,
+};
 
 export default function GalleryPage() {
   const hasLoaded = useHasLoaded();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedAlbums, setSelectedAlbums] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"masonry" | "list">("masonry");
   const [visibleItems, setVisibleItems] = useState(12);
   const itemsPerPage = 12;
   const [gridRef, isGridInView] = useInView();
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load gallery images
+  useEffect(() => {
+    const loadImages = async () => {
+      try {
+        setIsLoading(true);
+        const images = await getAllGalleryImages();
+        setGalleryImages(images);
+      } catch (err) {
+        console.error("Error loading gallery images:", err);
+        setError("Failed to load gallery images. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadImages();
+  }, []);
+
+  // Derive album names from loaded images
+  const allAlbums = useMemo(
+    () => deriveAlbumNames(galleryImages),
+    [galleryImages]
+  );
 
   // Optimize filtered images calculation
   const filteredImages = useMemo(() => {
     const searchLower = searchQuery.toLowerCase();
-    return allGalleryImages.filter((image) => {
+    return galleryImages.filter((image) => {
       if (
         searchQuery &&
         !image.alt.toLowerCase().includes(searchLower) &&
-        !image.title.toLowerCase().includes(searchLower) &&
-        !image.description.toLowerCase().includes(searchLower)
+        !image.album_name.toLowerCase().includes(searchLower)
       ) {
         return false;
       }
 
-      if (
-        selectedTags.length &&
-        !selectedTags.some((tag) => image.tags.includes(tag))
-      ) {
+      if (selectedAlbums.length && !selectedAlbums.includes(image.album_name)) {
         return false;
       }
 
       return true;
     });
-  }, [searchQuery, selectedTags]);
+  }, [searchQuery, selectedAlbums, galleryImages]);
 
   // Optimize scroll handler with useCallback
   const handleScroll = useCallback(() => {
@@ -168,7 +183,7 @@ export default function GalleryPage() {
   // Reset visible items when filters change
   useEffect(() => {
     setVisibleItems(itemsPerPage);
-  }, [searchQuery, selectedTags]);
+  }, [searchQuery]);
 
   // Debounce function
   function debounce(fn: Function, ms: number) {
@@ -179,20 +194,35 @@ export default function GalleryPage() {
     };
   }
 
-  // Toggle tag selection
-  const toggleTag = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter((t) => t !== tag));
-    } else {
-      setSelectedTags([...selectedTags, tag]);
-    }
+  // Toggle album selection
+  const toggleAlbum = (album: string) => {
+    setSelectedAlbums((prev) =>
+      prev.includes(album) ? prev.filter((a) => a !== album) : [...prev, album]
+    );
   };
 
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
-    setSelectedTags([]);
+    setSelectedAlbums([]);
   };
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-semibold text-red-600">Oops!</h2>
+          <p className="text-slate-600">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="bg-red-600 text-white hover:bg-red-700"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -217,7 +247,7 @@ export default function GalleryPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <Input
                 type="search"
-                placeholder="Search albums, descriptions..."
+                placeholder="Search albums..."
                 className="pl-10 border-red-200 focus-visible:ring-red-500 bg-white"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -269,11 +299,11 @@ export default function GalleryPage() {
               <div className="flex items-center gap-2">
                 <Filter className="h-5 w-5 text-red-600" />
                 <span className="font-medium text-slate-700">
-                  Filter by Category:
+                  Filter by Album:
                 </span>
               </div>
 
-              {(searchQuery || selectedTags.length > 0) && (
+              {(searchQuery || selectedAlbums.length > 0) && (
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -297,24 +327,26 @@ export default function GalleryPage() {
               initial="initial"
               animate="animate"
             >
-              {allTags.map((tag) => (
+              {allAlbums.map((album) => (
                 <motion.div
-                  key={tag}
+                  key={album}
                   variants={animationVariant}
                   whileHover={{ scale: prefersReducedMotion ? 1 : 1.05 }}
                   whileTap={{ scale: prefersReducedMotion ? 1 : 0.95 }}
                 >
                   <Button
-                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                    variant={
+                      selectedAlbums.includes(album) ? "default" : "outline"
+                    }
                     size="sm"
-                    onClick={() => toggleTag(tag)}
+                    onClick={() => toggleAlbum(album)}
                     className={`${
-                      selectedTags.includes(tag)
+                      selectedAlbums.includes(album)
                         ? "bg-red-600 text-white hover:bg-red-700"
                         : "border-red-200 text-red-700 hover:bg-red-50"
                     }`}
                   >
-                    {tag}
+                    {album}
                   </Button>
                 </motion.div>
               ))}
@@ -326,86 +358,111 @@ export default function GalleryPage() {
       {/* Gallery Grid */}
       <section className="py-12 bg-gradient-to-b from-white to-red-50/30">
         <div className="container mx-auto px-4">
-          <motion.div
-            ref={gridRef}
-            className={`grid gap-4 ${
-              viewMode === "masonry"
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                : "grid-cols-1"
-            }`}
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-          >
-            <AnimatePresence mode="wait">
-              {filteredImages.slice(0, visibleItems).map((image, index) => (
-                <motion.div
-                  key={image.id}
-                  variants={animationVariant}
-                  initial="initial"
-                  animate={isGridInView ? "animate" : "initial"}
-                  exit="exit"
-                  className={`relative ${
-                    viewMode === "masonry"
-                      ? "aspect-[3/4]"
-                      : "aspect-[16/9] sm:aspect-[21/9]"
-                  } rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300`}
+          {isLoading ? (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600"></div>
+            </div>
+          ) : (
+            <>
+              {viewMode === "masonry" ? (
+                <Masonry
+                  breakpointCols={breakpointColumns}
+                  className="flex -ml-4 w-auto"
+                  columnClassName="pl-4 bg-clip-padding"
                 >
-                  <Image
-                    src={image.src}
-                    alt={image.alt}
-                    fill
-                    className="object-cover"
-                    sizes={
-                      viewMode === "masonry"
-                        ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        : "100vw"
-                    }
-                    loading={index < 12 ? "eager" : "lazy"}
-                    priority={index < 4}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                      <h3 className="text-lg font-semibold">{image.title}</h3>
-                      <p className="text-sm opacity-90">{image.description}</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {image.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                  {filteredImages.slice(0, visibleItems).map((image, index) => (
+                    <motion.div
+                      key={image.id}
+                      variants={animationVariant}
+                      initial="initial"
+                      animate={isGridInView ? "animate" : "initial"}
+                      exit="exit"
+                      className="mb-4 group"
+                    >
+                      <div className="relative overflow-hidden">
+                        <Image
+                          src={image.image_url}
+                          alt={image.alt}
+                          width={800}
+                          height={1200}
+                          className="w-full h-auto object-cover rounded-none transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          priority={index < 4}
+                        />
+                        {/* Album title overlay */}
+                        <div className="absolute inset-0 flex items-end justify-start p-4 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <h3 className="text-white text-lg font-medium tracking-wide">
+                            {image.album_name}
+                          </h3>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </motion.div>
+                  ))}
+                </Masonry>
+              ) : (
+                <motion.div
+                  ref={gridRef}
+                  className="grid grid-cols-1 gap-4"
+                  variants={staggerContainer}
+                  initial="initial"
+                  animate="animate"
+                >
+                  <AnimatePresence mode="wait">
+                    {filteredImages
+                      .slice(0, visibleItems)
+                      .map((image, index) => (
+                        <motion.div
+                          key={image.id}
+                          variants={animationVariant}
+                          initial="initial"
+                          animate={isGridInView ? "animate" : "initial"}
+                          exit="exit"
+                          className="relative aspect-[16/9] sm:aspect-[21/9] overflow-hidden"
+                        >
+                          <Image
+                            src={image.image_url}
+                            alt={image.alt}
+                            fill
+                            className="object-cover"
+                            sizes="100vw"
+                            loading={index < 12 ? "eager" : "lazy"}
+                            priority={index < 4}
+                          />
+                          {/* Album title overlay */}
+                          <div className="absolute inset-0 flex items-end justify-start p-6 bg-gradient-to-t from-black/50 via-black/20 to-transparent">
+                            <h3 className="text-white text-xl font-medium tracking-wide">
+                              {image.album_name}
+                            </h3>
+                          </div>
+                        </motion.div>
+                      ))}
+                  </AnimatePresence>
                 </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+              )}
 
-          {/* Load More Button */}
-          {visibleItems < filteredImages.length && (
-            <motion.div
-              className="flex justify-center mt-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() =>
-                  setVisibleItems((prev) =>
-                    Math.min(prev + itemsPerPage, filteredImages.length)
-                  )
-                }
-                className="border-red-200 text-red-700 hover:bg-red-50"
-              >
-                Load More
-              </Button>
-            </motion.div>
+              {/* Load More Button */}
+              {!isLoading && visibleItems < filteredImages.length && (
+                <motion.div
+                  className="flex justify-center mt-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() =>
+                      setVisibleItems((prev) =>
+                        Math.min(prev + itemsPerPage, filteredImages.length)
+                      )
+                    }
+                    className="border-red-200 text-red-700 hover:bg-red-50"
+                  >
+                    Load More
+                  </Button>
+                </motion.div>
+              )}
+            </>
           )}
         </div>
       </section>
