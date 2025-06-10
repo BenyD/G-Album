@@ -10,7 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getAlbumById } from "@/lib/services/albums";
 import type { Album } from "@/lib/types/albums";
-import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Masonry from "react-masonry-css";
 import PageHero from "@/components/page-hero";
 
@@ -122,24 +127,30 @@ const AlbumPage = () => {
       </div>
 
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
-        <DialogContent className="max-w-screen-lg w-full p-0 overflow-hidden">
-          <DialogHeader className="absolute top-2 right-2 z-50">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full bg-black/20 hover:bg-black/40 text-white"
-              onClick={() => setIsImageModalOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogHeader>
-          <div className="relative aspect-[16/9] w-full">
-            <Image
-              src={currentImage}
-              alt="Full size preview"
-              fill
-              className="object-contain"
-            />
+        <DialogContent
+          className="max-w-screen-lg w-full p-0 overflow-hidden border-none bg-transparent"
+          hideCloseButton
+        >
+          <div className="relative w-full">
+            <DialogHeader className="absolute top-2 right-2 z-50 block">
+              <DialogTitle className="sr-only">Image Preview</DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full bg-black/20 hover:bg-black/40 text-white"
+                onClick={() => setIsImageModalOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogHeader>
+            <div className="relative aspect-[16/9] w-full">
+              <Image
+                src={currentImage}
+                alt="Full size preview"
+                fill
+                className="object-contain"
+              />
+            </div>
           </div>
         </DialogContent>
       </Dialog>

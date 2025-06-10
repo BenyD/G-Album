@@ -1,11 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
-import { createClient as createServiceClient } from "@/utils/supabase/service-role";
-import type {
-  Album,
-  AlbumImage,
-  CreateAlbumData,
-  UploadedImage,
-} from "@/lib/types/albums";
+import type { Album, CreateAlbumData } from "@/lib/types/albums";
 
 export const STORAGE_BUCKET = "albums";
 
@@ -31,7 +25,7 @@ export async function uploadImage(
         `Attempting to upload ${fileName} (attempt ${attempt}/${retryCount})`
       );
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from(STORAGE_BUCKET)
         .upload(fileName, file, {
           cacheControl: "3600",
@@ -280,6 +274,7 @@ export async function deleteAlbum(id: string): Promise<void> {
 }
 
 export async function deleteImage(url: string): Promise<void> {
+  const supabase = createClient();
   // Extract the path from the URL
   const path = url.split("/").slice(-2).join("/");
 
