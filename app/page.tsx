@@ -575,50 +575,50 @@ export default function Home() {
               featuredAlbums.map((album, index) => (
                 <motion.div
                   key={album.id}
-                  className="group relative isolate"
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  whileHover={{ y: -8 }}
-                >
-                  <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:shadow-xl bg-white">
-                    <div className="relative aspect-4/5">
-                      <Image
+                className="group relative isolate"
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                viewport={{ once: true, margin: "-100px" }}
+                whileHover={{ y: -8 }}
+              >
+                <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:shadow-xl bg-white">
+                  <div className="relative aspect-4/5">
+                    <Image
                         src={album.cover_image_url || "/placeholder.svg"}
-                        alt={album.title}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                      {/* Enhanced gradient overlay - visible by default */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-red-900/50 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
-                      {/* Glow effect */}
-                      <div className="absolute -inset-x-2 bottom-0 h-1/2 bg-red-500/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    </div>
-                    {/* Content visible by default */}
-                    <div className="absolute inset-0 flex flex-col justify-end p-6 transition-all duration-500">
-                      <div className="relative z-10">
-                        <h3 className="text-2xl font-bold text-white mb-2 translate-y-0 group-hover:translate-y-0 transition-transform duration-500">
-                          {album.title}
-                        </h3>
-                        <p className="text-red-100 mb-4 line-clamp-2 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
+                      alt={album.title}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    {/* Enhanced gradient overlay - visible by default */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-red-900/50 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
+                    {/* Glow effect */}
+                    <div className="absolute -inset-x-2 bottom-0 h-1/2 bg-red-500/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  </div>
+                  {/* Content visible by default */}
+                  <div className="absolute inset-0 flex flex-col justify-end p-6 transition-all duration-500">
+                    <div className="relative z-10">
+                      <h3 className="text-2xl font-bold text-white mb-2 translate-y-0 group-hover:translate-y-0 transition-transform duration-500">
+                        {album.title}
+                      </h3>
+                      <p className="text-red-100 mb-4 line-clamp-2 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
                           {album.description || "No description"}
-                        </p>
+                      </p>
                         <Link href={`/albums/${album.id}`}>
-                          <Button
-                            size="sm"
-                            className="bg-white/90 backdrop-blur-sm text-red-600 hover:bg-white hover:text-red-700 transition-colors duration-200 group/btn translate-y-0 group-hover:translate-y-0 opacity-90 hover:opacity-100"
-                          >
-                            View Album
-                            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
-                          </Button>
+                      <Button
+                        size="sm"
+                        className="bg-white/90 backdrop-blur-sm text-red-600 hover:bg-white hover:text-red-700 transition-colors duration-200 group/btn translate-y-0 group-hover:translate-y-0 opacity-90 hover:opacity-100"
+                      >
+                        View Album
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
+                      </Button>
                         </Link>
-                      </div>
                     </div>
                   </div>
-                  {/* Card glow effect */}
-                  <div className="absolute -inset-x-4 -inset-y-4 z-[-1] bg-red-500/20 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
-                </motion.div>
+                </div>
+                {/* Card glow effect */}
+                <div className="absolute -inset-x-4 -inset-y-4 z-[-1] bg-red-500/20 opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
+              </motion.div>
               ))
             )}
           </div>
