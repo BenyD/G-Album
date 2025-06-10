@@ -159,6 +159,11 @@ async function handleAdminRoutes(
 ): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
+  // Redirect /admin to /admin/dashboard
+  if (pathname === "/admin") {
+    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+  }
+
   // Allow access to login page if not authenticated
   if (pathname === "/admin/login") {
     const {
