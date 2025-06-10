@@ -33,9 +33,16 @@ export async function getUsers() {
     if (usersError) throw usersError;
 
     // Get all admin profiles with their roles using service client
-    const { data: profiles, error: profilesError } = await serviceClient
-      .from("admin_profiles")
-      .select("*, role:roles(id, name, description)");
+    const { data: profiles, error: profilesError } = await serviceClient.from(
+      "admin_profiles"
+    ).select(`
+        *,
+        role:roles (
+          id,
+          name,
+          description
+        )
+      `);
 
     if (profilesError) throw profilesError;
 

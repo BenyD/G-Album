@@ -174,26 +174,34 @@ export function UserManagementClient({
   const handleQuickApproval = async (userId: string, roleId: string) => {
     try {
       await assignRole(userId, roleId);
-      // Find the default viewer role
-      const viewerRole = roles.find((r) => r.name === "viewer");
-      if (viewerRole) {
-        await handleRoleAssign(userId, viewerRole.id);
-        toast.success("User approved successfully");
-        // Refresh the users list
-        const updatedUsers = users.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                profile: {
-                  ...user.profile,
-                  role_id: viewerRole.id,
-                  status: "approved",
-                },
-              }
-            : user
-        );
-        setUsers(updatedUsers);
+
+      // Find the selected role
+      const selectedRole = roles.find((r) => r.id === roleId);
+      if (!selectedRole) {
+        throw new Error("Selected role not found");
       }
+
+      toast.success("User approved successfully");
+
+      // Update the users list with the correct role information
+      const updatedUsers = users.map((user) =>
+        user.id === userId
+          ? {
+              ...user,
+              profile: {
+                ...user.profile,
+                role_id: roleId,
+                role: {
+                  id: roleId,
+                  name: selectedRole.name,
+                  description: selectedRole.description,
+                },
+                status: "approved",
+              },
+            }
+          : user
+      );
+      setUsers(updatedUsers);
     } catch (error) {
       console.error("Error approving user:", error);
       toast.error("Failed to approve user");
