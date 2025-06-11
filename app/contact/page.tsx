@@ -8,6 +8,8 @@ import { Mail, MapPin, Phone, Send } from "lucide-react";
 import Image from "next/image";
 import PageHero from "@/components/page-hero";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { contactConfig } from "@/config/contact";
 
 // Optimized animation variants
 const fadeInUp = {
@@ -50,6 +52,93 @@ const useHasLoaded = () => {
 
 export default function ContactPage() {
   const hasLoaded = useHasLoaded();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      setIsSubmitting(true);
+
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit form");
+      }
+
+      // Show success toast
+      toast.success("Message sent successfully! Redirecting to WhatsApp...");
+
+      // Clear form
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        message: "",
+      });
+
+      // Redirect to WhatsApp after a short delay
+      setTimeout(() => {
+        window.location.href = data.whatsappUrl;
+      }, 1500);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
+  // Update the contact info section to use the config
+  const contactInfo = [
+    {
+      icon: Phone,
+      title: "Phone",
+      details: [
+        contactConfig.whatsapp.number,
+        ...contactConfig.whatsapp.alternateNumbers,
+      ],
+    },
+    {
+      icon: Mail,
+      title: "Email",
+      details: [contactConfig.email.primary, contactConfig.email.alternate],
+    },
+    {
+      icon: MapPin,
+      title: "Address",
+      details: [
+        `${contactConfig.address.line1}, ${contactConfig.address.line2}`,
+        `${contactConfig.address.city}, ${contactConfig.address.state}, ${contactConfig.address.country}`,
+      ],
+    },
+  ];
 
   return (
     <div className="flex flex-col min-h-screen pt-16">
@@ -84,30 +173,7 @@ export default function ContactPage() {
                 initial="initial"
                 animate="animate"
               >
-                {[
-                  {
-                    icon: Phone,
-                    title: "Phone",
-                    details: [
-                      "+91 951 44 222 44",
-                      "+91 951 44 222 00",
-                      "+91 944 46 399 12",
-                    ],
-                  },
-                  {
-                    icon: Mail,
-                    title: "Email",
-                    details: ["galbum99@gmail.com", "kumaranmadras@gmail.com"],
-                  },
-                  {
-                    icon: MapPin,
-                    title: "Address",
-                    details: [
-                      "123A Triplicane High Road, Near Sathya Showroom",
-                      "Chennai, Tamil Nadu, India",
-                    ],
-                  },
-                ].map((contact, index) => (
+                {contactInfo.map((contact, index) => (
                   <motion.div
                     key={index}
                     className="flex items-start p-6 bg-linear-to-br from-white to-red-50 rounded-xl shadow-md border border-red-100"
@@ -271,6 +337,7 @@ export default function ContactPage() {
                     variants={staggerContainer}
                     initial="initial"
                     animate="animate"
+                    onSubmit={handleSubmit}
                   >
                     <motion.div
                       className="grid grid-cols-1 sm:grid-cols-2 gap-4"
@@ -285,6 +352,8 @@ export default function ContactPage() {
                           placeholder="Your name"
                           className="border-red-200 focus-visible:ring-red-500"
                           required
+                          value={formData.name}
+                          onChange={handleInputChange}
                         />
                       </div>
                       <div className="space-y-2">
@@ -296,6 +365,8 @@ export default function ContactPage() {
                           type="email"
                           placeholder="Your email"
                           className="border-red-200 focus-visible:ring-red-500"
+                          value={formData.email}
+                          onChange={handleInputChange}
                         />
                       </div>
                     </motion.div>
@@ -309,6 +380,8 @@ export default function ContactPage() {
                         placeholder="Your phone number"
                         className="border-red-200 focus-visible:ring-red-500"
                         required
+                        value={formData.phone}
+                        onChange={handleInputChange}
                       />
                     </motion.div>
 
@@ -322,6 +395,8 @@ export default function ContactPage() {
                         placeholder="Your message"
                         className="w-full rounded-md border border-red-200 p-3 text-sm focus:outline-hidden focus:ring-2 focus:ring-red-500"
                         required
+                        value={formData.message}
+                        onChange={handleInputChange}
                       ></textarea>
                     </motion.div>
 
@@ -333,9 +408,19 @@ export default function ContactPage() {
                       <Button
                         type="submit"
                         className="w-full bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                        disabled={isSubmitting}
                       >
-                        Send to WhatsApp
-                        <Send className="ml-2 h-4 w-4" />
+                        {isSubmitting ? (
+                          <div className="flex items-center justify-center">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                            Processing...
+                          </div>
+                        ) : (
+                          <>
+                            Send to WhatsApp
+                            <Send className="ml-2 h-4 w-4" />
+                          </>
+                        )}
                       </Button>
                     </motion.div>
                   </motion.form>
