@@ -6,6 +6,17 @@ import { useAuth } from "@/components/admin/auth-context";
 import { RoleProvider } from "@/components/admin/role-context";
 import { useEffect, useState, useCallback, useRef } from "react";
 import AdminLoading from "@/components/admin/loading";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function AdminLayoutClient({
   children,
@@ -103,10 +114,12 @@ export default function AdminLayoutClient({
   if (isLoginPage) {
     console.log("Rendering login page...");
     return (
-      <div className="min-h-screen w-full">
-        <Toaster richColors position="top-right" />
-        <main className="w-full">{children}</main>
-      </div>
+      <QueryClientProvider client={queryClient}>
+        <div className="min-h-screen w-full">
+          <Toaster richColors position="top-right" />
+          <main className="w-full">{children}</main>
+        </div>
+      </QueryClientProvider>
     );
   }
 
@@ -126,14 +139,16 @@ export default function AdminLayoutClient({
   if (user && profile) {
     console.log("Rendering authenticated page...");
     return (
-      <RoleProvider>
-        <div className="min-h-screen w-full">
-          <Toaster richColors position="top-right" />
-          <main className="p-4 sm:p-6 md:p-8 w-full max-w-[1920px] mx-auto">
-            {children}
-          </main>
-        </div>
-      </RoleProvider>
+      <QueryClientProvider client={queryClient}>
+        <RoleProvider>
+          <div className="min-h-screen w-full">
+            <Toaster richColors position="top-right" />
+            <main className="p-4 sm:p-6 md:p-8 w-full max-w-[1920px] mx-auto">
+              {children}
+            </main>
+          </div>
+        </RoleProvider>
+      </QueryClientProvider>
     );
   }
 

@@ -1,6 +1,6 @@
 import { Suspense, memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const StatCard = memo(function StatCard() {
   return (
@@ -31,58 +31,83 @@ const TableRow = memo(function TableRow() {
 
 export default function CustomersLoading() {
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8">
-      {/* Header */}
-      <Suspense>
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-8 w-[150px]" />
-            <Skeleton className="h-4 w-[250px] mt-2" />
-          </div>
-          <Skeleton className="h-10 w-[120px]" />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <Skeleton className="h-8 w-[200px]" />
+          <Skeleton className="h-4 w-[300px] mt-2" />
         </div>
-      </Suspense>
+        <Skeleton className="h-10 w-[120px]" />
+      </div>
 
-      {/* Statistics Cards */}
-      <Suspense>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <StatCard key={i} />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Customers
+            </CardTitle>
+            <Skeleton className="h-4 w-4" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-[100px]" />
+            <Skeleton className="h-4 w-[150px] mt-1" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Active Customers
+            </CardTitle>
+            <Skeleton className="h-4 w-4" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-[100px]" />
+            <Skeleton className="h-4 w-[150px] mt-1" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <Skeleton className="h-4 w-4" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-[100px]" />
+            <Skeleton className="h-4 w-[150px] mt-1" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Average Orders
+            </CardTitle>
+            <Skeleton className="h-4 w-4" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-[100px]" />
+            <Skeleton className="h-4 w-[150px] mt-1" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="rounded-md border">
+        <div className="p-4">
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
+            >
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[200px]" />
+                  <Skeleton className="h-4 w-[150px]" />
+                </div>
+              </div>
+              <Skeleton className="h-8 w-[100px]" />
+            </div>
           ))}
         </div>
-      </Suspense>
-
-      {/* Search and Filters */}
-      <Suspense>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <Skeleton className="h-10 w-full sm:w-64" />
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
-          </div>
-        </div>
-      </Suspense>
-
-      {/* Table */}
-      <Suspense>
-        <div className="rounded-md border">
-          <div className="p-4">
-            {/* Table Header */}
-            <div className="flex items-center justify-between border-b pb-4">
-              <div className="grid grid-cols-7 w-full gap-4">
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <Skeleton key={i} className="h-5 w-full" />
-                ))}
-              </div>
-            </div>
-
-            {/* Table Rows */}
-            {Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i} />
-            ))}
-          </div>
-        </div>
-      </Suspense>
+      </div>
     </div>
   );
 }
