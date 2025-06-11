@@ -26,6 +26,8 @@ import {
   Building2,
   IndianRupee,
   RefreshCw,
+  Pencil,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +80,16 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const supabase = createClient();
 
@@ -92,6 +104,24 @@ function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(() => func(...args), wait);
   };
 }
+
+// Add default form state
+const defaultFormState: Omit<
+  Customer,
+  | "id"
+  | "is_active"
+  | "total_orders"
+  | "total_spent"
+  | "created_at"
+  | "updated_at"
+> = {
+  studio_name: "",
+  email: "",
+  phone: "",
+  address: "",
+  reference_name: null,
+  reference_phone: null,
+};
 
 export default function CustomersPage() {
   const router = useRouter();
@@ -116,6 +146,12 @@ export default function CustomersPage() {
     reference_name: "",
   });
   const [flagReason, setFlagReason] = useState("");
+  const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
+    null
+  );
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editForm, setEditForm] = useState(defaultFormState);
 
   // Set up debounced search
   const debouncedSearch = useCallback(
@@ -189,25 +225,53 @@ export default function CustomersPage() {
     },
   });
 
-  // Update customer status mutation
-  const updateCustomerMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: UpdateCustomerInput;
-    }) => {
+  // Delete customer mutation
+  const deleteCustomerMutation = useMutation({
+    mutationFn: async (customerId: string) => {
       const { error } = await supabase
         .from("customers")
-        .update(data)
-        .eq("id", id);
+        .delete()
+        .eq("id", customerId);
+
+      if (error) {
+        console.error("Delete error:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Customer deleted successfully");
+      setCustomerToDelete(null);
+    },
+    onError: (error: Error) => {
+      console.error("Delete mutation error:", error);
+      toast.error("Failed to delete customer: " + error.message);
+      setCustomerToDelete(null);
+    },
+  });
+
+  // Update customer mutation
+  const updateCustomerMutation = useMutation({
+    mutationFn: async (customer: Customer) => {
+      const { error } = await supabase
+        .from("customers")
+        .update({
+          studio_name: customer.studio_name,
+          email: customer.email,
+          phone: customer.phone,
+          address: customer.address,
+          reference_name: customer.reference_name,
+          reference_phone: customer.reference_phone,
+        })
+        .eq("id", customer.id);
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast.success("Customer updated successfully");
+      setIsEditCustomerOpen(false);
+      setEditingCustomer(null);
     },
     onError: (error) => {
       toast.error("Failed to update customer: " + error.message);
@@ -239,10 +303,7 @@ export default function CustomersPage() {
   };
 
   const handleStatusChange = (customer: Customer) => {
-    updateCustomerMutation.mutate({
-      id: customer.id,
-      data: { is_active: !customer.is_active },
-    });
+    updateCustomerMutation.mutate(customer);
   };
 
   const handleFlagCustomer = (e: React.FormEvent) => {
@@ -312,6 +373,28 @@ export default function CustomersPage() {
     return filtered;
   }, [customersData, debouncedSearchTerm, statusFilter, sortBy]);
 
+  const handleDeleteCustomer = () => {
+    if (!customerToDelete?.id) {
+      console.error("No customer selected for deletion");
+      return;
+    }
+    try {
+      deleteCustomerMutation.mutate(customerToDelete.id);
+    } catch (error) {
+      console.error("Error in handleDeleteCustomer:", error);
+    }
+  };
+
+  const handleEditCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+
+    updateCustomerMutation.mutate({
+      ...editingCustomer,
+      ...editForm,
+    });
+  };
+
   if (isLoadingCustomers) {
     return <div>Loading...</div>;
   }
@@ -328,73 +411,79 @@ export default function CustomersPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-red-50/50">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <Users className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Customers</p>
-                <p className="text-2xl font-bold text-red-900">
-                  {customersData?.length}
-                </p>
-              </div>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Customers
+            </CardTitle>
+            <Users className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingCustomers ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                customersData?.length ?? 0
+              )}
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-red-50/50">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <UserCheck className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Active Customers
-                </p>
-                <p className="text-2xl font-bold text-red-900">
-                  {customersData?.filter((c) => c.is_active).length}
-                </p>
-              </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Active Customers
+            </CardTitle>
+            <UserCheck className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingCustomers ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                customersData?.filter((customer) => customer.is_active)
+                  .length ?? 0
+              )}
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-red-50/50">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Orders</p>
-                <p className="text-2xl font-bold text-red-900">
-                  {customersData?.reduce((sum, c) => sum + c.total_orders, 0)}
-                </p>
-              </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingCustomers ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                customersData?.reduce(
+                  (acc, customer) => acc + (customer.total_orders ?? 0),
+                  0
+                ) ?? 0
+              )}
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-red-50/50">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <FileText className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Avg. Orders</p>
-                <p className="text-2xl font-bold text-red-900">
-                  {customersData?.length > 0
-                    ? (
-                        customersData.reduce(
-                          (sum, c) => sum + c.total_orders,
-                          0
-                        ) / customersData.length
-                      ).toFixed(1)
-                    : 0}
-                </p>
-              </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg. Orders</CardTitle>
+            <FileText className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingCustomers ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : customersData && customersData.length > 0 ? (
+                (
+                  customersData.reduce(
+                    (acc, customer) => acc + (customer.total_orders ?? 0),
+                    0
+                  ) / customersData.length
+                ).toFixed(1)
+              ) : (
+                "0.0"
+              )}
             </div>
           </CardContent>
         </Card>
@@ -403,7 +492,7 @@ export default function CustomersPage() {
       {/* Search and Filters */}
       <Card className="border-red-100">
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 w-4 h-4" />
               <Input
@@ -427,8 +516,6 @@ export default function CustomersPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
-                  <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setStatusFilter("All")}>
                     All Customers
                   </DropdownMenuItem>
@@ -470,180 +557,19 @@ export default function CustomersPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Button
+                onClick={() => setIsAddCustomerOpen(true)}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Customer
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Add Customer Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={() => setIsAddCustomerOpen(true)}
-          className="relative group overflow-hidden bg-red-600 hover:bg-red-700 text-white transition-all duration-300 shadow-md hover:shadow-lg"
-        >
-          <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-red-500 to-red-600 group-hover:scale-105 transition-transform duration-300" />
-          <span className="relative flex items-center">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Customer
-          </span>
-        </Button>
-      </div>
-
-      {/* Add Customer Modal */}
-      <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-red-900">
-              Add New Customer
-            </DialogTitle>
-            <DialogDescription>
-              Create a new customer profile. Fill in all the required details.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleAddCustomer}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="studio_name" className="text-red-900">
-                  Name / Studio Name *
-                </Label>
-                <Input
-                  id="studio_name"
-                  value={newCustomer.studio_name}
-                  onChange={(e) =>
-                    setNewCustomer({
-                      ...newCustomer,
-                      studio_name: e.target.value,
-                    })
-                  }
-                  placeholder="John Doe / ABC Photography"
-                  className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-red-900">
-                    Email Address *
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newCustomer.email}
-                    onChange={(e) =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        email: e.target.value,
-                      })
-                    }
-                    placeholder="customer@example.com"
-                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="phone" className="text-red-900">
-                    Contact Number *
-                  </Label>
-                  <Input
-                    id="phone"
-                    value={newCustomer.phone}
-                    onChange={(e) =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        phone: e.target.value,
-                      })
-                    }
-                    placeholder="+91 98765 43210"
-                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="address" className="text-red-900">
-                  Address *
-                </Label>
-                <Textarea
-                  id="address"
-                  value={newCustomer.address}
-                  onChange={(e) =>
-                    setNewCustomer({
-                      ...newCustomer,
-                      address: e.target.value,
-                    })
-                  }
-                  placeholder="123 Main St, City, State"
-                  className="border-red-100 focus:border-red-200 focus:ring-red-100 min-h-[100px]"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="reference_phone" className="text-red-900">
-                    Reference Phone (Optional)
-                  </Label>
-                  <Input
-                    id="reference_phone"
-                    value={newCustomer.reference_phone}
-                    onChange={(e) =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        reference_phone: e.target.value,
-                      })
-                    }
-                    placeholder="+91 98765 43210"
-                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="reference_name" className="text-red-900">
-                    Reference Name (Optional)
-                  </Label>
-                  <Input
-                    id="reference_name"
-                    value={newCustomer.reference_name}
-                    onChange={(e) =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        reference_name: e.target.value,
-                      })
-                    }
-                    placeholder="Jane Doe"
-                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsAddCustomerOpen(false)}
-                className="border-red-100 hover:bg-red-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  !newCustomer.studio_name ||
-                  !newCustomer.email ||
-                  !newCustomer.phone ||
-                  !newCustomer.address
-                }
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Create Customer
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Customers Table */}
       {filteredCustomers.length === 0 ? (
@@ -752,6 +678,17 @@ export default function CustomersPage() {
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
+                            setEditingCustomer(customer);
+                            setIsEditCustomerOpen(true);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit Customer
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedCustomer(customer);
                             setIsFlagCustomerOpen(true);
                           }}
@@ -759,6 +696,22 @@ export default function CustomersPage() {
                         >
                           <AlertTriangle className="w-4 h-4 mr-2" />
                           Flag Customer
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (customer) {
+                              console.log(
+                                "Setting customer to delete:",
+                                customer
+                              );
+                              setCustomerToDelete(customer);
+                            }
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash className="w-4 h-4 mr-2" />
+                          Delete Customer
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -949,7 +902,7 @@ export default function CustomersPage() {
 
               <SheetFooter className="flex-row gap-2 sm:flex-row">
                 <Button
-                  className="flex-1"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                   onClick={() =>
                     router.push(`/admin/orders?customer=${selectedCustomer.id}`)
                   }
@@ -958,8 +911,8 @@ export default function CustomersPage() {
                   View Orders
                 </Button>
                 <Button
-                  variant="destructive"
-                  className="flex-1"
+                  variant="outline"
+                  className="flex-1 border-red-100 hover:bg-red-50"
                   onClick={() => {
                     setIsFlagCustomerOpen(true);
                     setIsDetailsOpen(false);
@@ -968,11 +921,397 @@ export default function CustomersPage() {
                   <AlertTriangle className="w-4 h-4 mr-2" />
                   Flag Customer
                 </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 border-red-100 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                  onClick={() => {
+                    setCustomerToDelete(selectedCustomer);
+                    setIsDetailsOpen(false);
+                  }}
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Delete Customer
+                </Button>
               </SheetFooter>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Edit Customer Modal */}
+      <Dialog
+        open={isEditCustomerOpen}
+        onOpenChange={(open) => {
+          if (open && editingCustomer) {
+            setEditForm({
+              studio_name: editingCustomer.studio_name,
+              email: editingCustomer.email,
+              phone: editingCustomer.phone,
+              address: editingCustomer.address,
+              reference_name: editingCustomer.reference_name,
+              reference_phone: editingCustomer.reference_phone,
+            });
+          } else {
+            setEditForm(defaultFormState);
+            setEditingCustomer(null);
+          }
+          setIsEditCustomerOpen(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-900">
+              Edit Customer
+            </DialogTitle>
+            <DialogDescription>
+              Update customer information. Changes will be saved immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditCustomer}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit_studio_name" className="text-red-900">
+                  Name / Studio Name *
+                </Label>
+                <Input
+                  id="edit_studio_name"
+                  value={editForm.studio_name}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      studio_name: e.target.value,
+                    }))
+                  }
+                  placeholder="John Doe / ABC Photography"
+                  className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_email" className="text-red-900">
+                    Email Address *
+                  </Label>
+                  <Input
+                    id="edit_email"
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    placeholder="customer@example.com"
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_phone" className="text-red-900">
+                    Contact Number *
+                  </Label>
+                  <Input
+                    id="edit_phone"
+                    value={editForm.phone}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                    placeholder="+91 98765 43210"
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="edit_address" className="text-red-900">
+                  Address *
+                </Label>
+                <Textarea
+                  id="edit_address"
+                  value={editForm.address}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      address: e.target.value,
+                    }))
+                  }
+                  placeholder="123 Main St, City, State"
+                  className="border-red-100 focus:border-red-200 focus:ring-red-100 min-h-[100px]"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor="edit_reference_phone"
+                    className="text-red-900"
+                  >
+                    Reference Phone (Optional)
+                  </Label>
+                  <Input
+                    id="edit_reference_phone"
+                    value={editForm.reference_phone || ""}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        reference_phone: e.target.value || null,
+                      }))
+                    }
+                    placeholder="+91 98765 43210"
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_reference_name" className="text-red-900">
+                    Reference Name (Optional)
+                  </Label>
+                  <Input
+                    id="edit_reference_name"
+                    value={editForm.reference_name || ""}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        reference_name: e.target.value || null,
+                      }))
+                    }
+                    placeholder="Jane Doe"
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditCustomerOpen(false);
+                  setEditingCustomer(null);
+                  setEditForm(defaultFormState);
+                }}
+                className="border-red-100 hover:bg-red-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  !editForm.studio_name ||
+                  !editForm.email ||
+                  !editForm.phone ||
+                  !editForm.address
+                }
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Customer Confirmation */}
+      <AlertDialog
+        open={!!customerToDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCustomerToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {customerToDelete?.studio_name}?
+              This action cannot be undone. All associated data will be
+              permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setCustomerToDelete(null)}
+              className="border-red-100 hover:bg-red-50"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                console.log("Delete confirmation clicked");
+                handleDeleteCustomer();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add Customer Modal */}
+      <Dialog open={isAddCustomerOpen} onOpenChange={setIsAddCustomerOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-900">
+              Add New Customer
+            </DialogTitle>
+            <DialogDescription>
+              Create a new customer profile. Fill in all the required details.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddCustomer}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="studio_name" className="text-red-900">
+                  Name / Studio Name *
+                </Label>
+                <Input
+                  id="studio_name"
+                  value={newCustomer.studio_name}
+                  onChange={(e) =>
+                    setNewCustomer({
+                      ...newCustomer,
+                      studio_name: e.target.value,
+                    })
+                  }
+                  placeholder="John Doe / ABC Photography"
+                  className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email" className="text-red-900">
+                    Email Address *
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newCustomer.email}
+                    onChange={(e) =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        email: e.target.value,
+                      })
+                    }
+                    placeholder="customer@example.com"
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="phone" className="text-red-900">
+                    Contact Number *
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={newCustomer.phone}
+                    onChange={(e) =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        phone: e.target.value,
+                      })
+                    }
+                    placeholder="+91 98765 43210"
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="address" className="text-red-900">
+                  Address *
+                </Label>
+                <Textarea
+                  id="address"
+                  value={newCustomer.address}
+                  onChange={(e) =>
+                    setNewCustomer({
+                      ...newCustomer,
+                      address: e.target.value,
+                    })
+                  }
+                  placeholder="123 Main St, City, State"
+                  className="border-red-100 focus:border-red-200 focus:ring-red-100 min-h-[100px]"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="reference_phone" className="text-red-900">
+                    Reference Phone (Optional)
+                  </Label>
+                  <Input
+                    id="reference_phone"
+                    value={newCustomer.reference_phone}
+                    onChange={(e) =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        reference_phone: e.target.value,
+                      })
+                    }
+                    placeholder="+91 98765 43210"
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="reference_name" className="text-red-900">
+                    Reference Name (Optional)
+                  </Label>
+                  <Input
+                    id="reference_name"
+                    value={newCustomer.reference_name}
+                    onChange={(e) =>
+                      setNewCustomer({
+                        ...newCustomer,
+                        reference_name: e.target.value,
+                      })
+                    }
+                    placeholder="Jane Doe"
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddCustomerOpen(false)}
+                className="border-red-100 hover:bg-red-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  !newCustomer.studio_name ||
+                  !newCustomer.email ||
+                  !newCustomer.phone ||
+                  !newCustomer.address
+                }
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Create Customer
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

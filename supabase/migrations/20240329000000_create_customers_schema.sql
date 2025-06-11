@@ -110,6 +110,18 @@ CREATE POLICY "Allow admin update customers"
         )
     );
 
+-- Add delete policy for customers
+CREATE POLICY "Allow admin delete customers"
+    ON public.customers
+    FOR DELETE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.admin_profiles
+            WHERE admin_profiles.id = auth.uid()
+        )
+    );
+
 -- Policies for customer_flags table
 CREATE POLICY "Allow admin read customer flags"
     ON public.customer_flags
