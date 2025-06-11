@@ -26,6 +26,10 @@ import {
   MessageSquare,
   Filter,
   X,
+  RefreshCw,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,6 +45,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -54,6 +59,25 @@ import { RoleBasedContent } from "@/components/admin/role-based-content";
 import { useState, useMemo, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ChevronDown } from "lucide-react";
 
 interface Submission {
   id: string;
@@ -65,6 +89,21 @@ interface Submission {
   created_at: string;
   updated_at: string;
 }
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+};
 
 export default function SubmissionsPage() {
   const { role } = useRole();
@@ -78,6 +117,9 @@ export default function SubmissionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [submissionToDelete, setSubmissionToDelete] =
+    useState<Submission | null>(null);
 
   // Fetch submissions
   const fetchSubmissions = async () => {
@@ -259,170 +301,101 @@ export default function SubmissionsPage() {
     sortBy !== "created_at" ||
     sortOrder !== "desc";
 
-  // Update the mobile card view actions
-  const renderMobileCardActions = (submission: Submission) => (
-    <div className="flex gap-1">
-      {submission.status !== "Replied" && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleStatusChange(submission.id, "Replied");
-          }}
-        >
-          <Check className="h-3 w-3" />
-        </Button>
-      )}
-      <RoleBasedContent permissions={["manage_roles", "manage_albums"]}>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2 text-red-600"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (
-              window.confirm("Are you sure you want to delete this submission?")
-            ) {
-              handleDelete(submission.id);
-            }
-          }}
-        >
-          <Trash className="h-3 w-3" />
-        </Button>
-      </RoleBasedContent>
-    </div>
-  );
+  const handleDeleteClick = (submission) => {
+    setSubmissionToDelete(submission);
+    setDeleteDialogOpen(true);
+  };
 
-  // Update the desktop table actions
-  const renderTableActions = (submission: Submission) => (
-    <td className="p-4 align-middle">
-      <div className="flex items-center gap-2">
-        {submission.status !== "Replied" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleStatusChange(submission.id, "Replied");
-            }}
-          >
-            <Check className="h-4 w-4 mr-1" />
-            Mark as Replied
-          </Button>
-        )}
-        <RoleBasedContent permissions={["manage_roles", "manage_albums"]}>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-red-600"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (
-                window.confirm(
-                  "Are you sure you want to delete this submission?"
-                )
-              ) {
-                handleDelete(submission.id);
-              }
-            }}
-          >
-            <Trash className="h-4 w-4 mr-1" />
-            Delete
-          </Button>
-        </RoleBasedContent>
-      </div>
-    </td>
-  );
-
-  // Update the dialog actions
-  const renderDialogActions = (submission: Submission) => (
-    <div className="flex flex-col sm:flex-row gap-2">
-      {submission.status !== "Replied" && (
-        <Button
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => handleStatusChange(submission.id, "Replied")}
-        >
-          <Check className="h-4 w-4 mr-1" />
-          Mark as Replied
-        </Button>
-      )}
-      <RoleBasedContent permissions={["manage_roles", "manage_albums"]}>
-        <Button
-          variant="destructive"
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => {
-            if (
-              window.confirm("Are you sure you want to delete this submission?")
-            ) {
-              handleDelete(submission.id);
-            }
-          }}
-        >
-          <Trash className="h-4 w-4 mr-1" />
-          Delete
-        </Button>
-      </RoleBasedContent>
-    </div>
-  );
+  const handleDeleteConfirm = async () => {
+    if (submissionToDelete) {
+      await handleDelete(submissionToDelete.id);
+      setDeleteDialogOpen(false);
+      setSubmissionToDelete(null);
+      if (selectedSubmission?.id === submissionToDelete.id) {
+        setSelectedSubmission(null);
+      }
+    }
+  };
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
-      <Alert className="bg-blue-50 border-blue-200">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-800">Form Submissions</AlertTitle>
-        <AlertDescription className="text-blue-700">
-          You are viewing as <strong>{role}</strong>. Click on any submission to
-          view full details.
-        </AlertDescription>
-      </Alert>
-
+    <div className="container mx-auto space-y-8 py-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Form Submissions
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isLoading
-              ? "Loading submissions..."
-              : `Showing ${filteredAndSortedSubmissions.length} of ${submissions.length} submissions`}
-          </p>
-        </div>
+      <div className="flex flex-col gap-2 relative">
+        <h1 className="text-2xl font-bold text-red-900">Form Submissions</h1>
+        <p className="text-muted-foreground">
+          Manage and respond to contact form submissions
+        </p>
+        <div className="absolute -bottom-1 left-0 w-12 h-1 bg-red-600 rounded-full" />
       </div>
 
-      {/* Controls Card */}
-      <Card>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-red-50/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <MessageSquare className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Total Submissions
+                </p>
+                <p className="text-2xl font-bold text-red-900">
+                  {submissions.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <Clock className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">New Submissions</p>
+                <p className="text-2xl font-bold text-red-900">
+                  {submissions.filter((s) => s.status === "New").length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Replied</p>
+                <p className="text-2xl font-bold text-red-900">
+                  {submissions.filter((s) => s.status === "Replied").length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card className="border-red-100">
         <CardContent className="p-4">
-          {/* Search and Filter Row */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                type="search"
-                placeholder="Search by name, email, or message..."
-                className="pl-8 pr-10"
+                placeholder="Search submissions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 border-red-100 focus:border-red-200 focus:ring-red-100"
               />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1 h-6 w-6 p-0"
-                  onClick={() => setSearchQuery("")}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <Filter className="h-4 w-4 mr-2" />
+                <SelectTrigger className="w-full sm:w-[140px] border-red-100">
+                  <Filter className="w-4 h-4 mr-2 text-red-600" />
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -431,461 +404,234 @@ export default function SubmissionsPage() {
                   <SelectItem value="replied">Replied</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:w-[140px] border-red-100">
+                  <ArrowUpDown className="w-4 h-4 mr-2 text-red-600" />
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Date</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="status">Status</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Sort and Clear Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (sortBy === "created_at") {
-                  setSortBy("name");
-                } else if (sortBy === "name") {
-                  setSortBy("status");
-                } else {
-                  setSortBy("created_at");
-                  setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                }
-              }}
-              className="w-full sm:w-auto"
-            >
-              <ArrowUpDown className="mr-2 h-4 w-4" />
-              Sort by {sortBy} ({sortOrder})
-            </Button>
-            {hasActiveFilters && (
+      {/* Submissions Table */}
+      {filteredAndSortedSubmissions.length === 0 ? (
+        <Card className="border-red-100">
+          <CardContent className="py-16 flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+              <MessageSquare className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-red-900 mb-2">
+              No Submissions Found
+            </h3>
+            <p className="text-muted-foreground max-w-sm mb-6">
+              {searchQuery || statusFilter !== "all"
+                ? "No submissions match your current filters. Try adjusting your search criteria or clearing filters."
+                : "When you receive form submissions from your website, they will appear here."}
+            </p>
+            {(searchQuery || statusFilter !== "all") && (
               <Button
-                variant="ghost"
+                variant="outline"
+                className="border-red-100 hover:bg-red-50"
                 onClick={() => {
                   setSearchQuery("");
                   setStatusFilter("all");
                   setSortBy("created_at");
                   setSortOrder("desc");
                 }}
-                className="w-full sm:w-auto"
               >
-                <X className="mr-2 h-4 w-4" />
+                <RefreshCw className="w-4 h-4 mr-2" />
                 Clear Filters
               </Button>
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" className="text-xs sm:text-sm">
-            All ({filteredAndSortedSubmissions.length})
-          </TabsTrigger>
-          <TabsTrigger value="new" className="text-xs sm:text-sm">
-            New ({getSubmissionsByStatus("new").length})
-          </TabsTrigger>
-          <TabsTrigger value="replied" className="text-xs sm:text-sm">
-            Replied ({getSubmissionsByStatus("replied").length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">All Form Submissions</CardTitle>
-              <CardDescription>
-                View and manage contact form submissions from your website
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {/* Mobile Card View */}
-              <div className="block md:hidden space-y-3">
-                {filteredAndSortedSubmissions.map((submission) => (
-                  <Card
-                    key={submission.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setSelectedSubmission(submission)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium text-sm">
-                            {submission.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {submission.email}
-                          </p>
-                        </div>
-                        <Badge className={getStatusColor(submission.status)}>
-                          {submission.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                        {submission.message}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(submission.created_at)}
-                        </span>
-                        {renderMobileCardActions(submission)}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Desktop Table View */}
-              <table className="w-full caption-bottom text-sm hidden md:table">
-                <thead className="[&_tr]:border-b">
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Name
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Email
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Message
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Date
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                  {filteredAndSortedSubmissions.map((submission) => (
-                    <tr
-                      key={submission.id}
-                      className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer"
-                      onClick={() => setSelectedSubmission(submission)}
-                    >
-                      <td className="p-4 align-middle font-medium">
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="rounded-lg border border-red-100 overflow-hidden bg-white">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-red-50/50 bg-red-50/30">
+                <TableHead className="w-[250px]">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-red-600" />
+                    Name & Email
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-red-600" />
+                    Message
+                  </div>
+                </TableHead>
+                <TableHead className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-red-600" />
+                    Date
+                  </div>
+                </TableHead>
+                <TableHead className="w-[120px]">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-red-600" />
+                    Status
+                  </div>
+                </TableHead>
+                <TableHead className="w-[100px]">
+                  <div className="flex items-center gap-2">Actions</div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAndSortedSubmissions.map((submission) => (
+                <TableRow
+                  key={submission.id}
+                  className="group cursor-pointer hover:bg-red-50/50"
+                >
+                  <TableCell onClick={() => setSelectedSubmission(submission)}>
+                    <div>
+                      <p className="font-medium text-red-900">
                         {submission.name}
-                      </td>
-                      <td className="p-4 align-middle">{submission.email}</td>
-                      <td className="p-4 align-middle">
-                        <div className="max-w-[300px] truncate">
-                          {submission.message}
-                        </div>
-                      </td>
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        {formatDate(submission.created_at)}
-                      </td>
-                      <td className="p-4 align-middle">
-                        <Badge className={getStatusColor(submission.status)}>
-                          {submission.status}
-                        </Badge>
-                      </td>
-                      {renderTableActions(submission)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredAndSortedSubmissions.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No submissions found matching your criteria.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="new" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">New Submissions</CardTitle>
-              <CardDescription>
-                View and manage new contact form submissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {/* Mobile Card View */}
-              <div className="block md:hidden space-y-3">
-                {getSubmissionsByStatus("new").map((submission) => (
-                  <Card
-                    key={submission.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setSelectedSubmission(submission)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium text-sm">
-                            {submission.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {submission.email}
-                          </p>
-                        </div>
-                        <Badge className={getStatusColor(submission.status)}>
-                          {submission.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                        {submission.message}
                       </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(submission.created_at)}
-                        </span>
-                        {renderMobileCardActions(submission)}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Desktop Table View */}
-              <table className="w-full caption-bottom text-sm hidden md:table">
-                <thead className="[&_tr]:border-b">
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Name
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Email
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Message
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Date
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                  {getSubmissionsByStatus("new").map((submission) => (
-                    <tr
-                      key={submission.id}
-                      className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer"
-                      onClick={() => setSelectedSubmission(submission)}
-                    >
-                      <td className="p-4 align-middle font-medium">
-                        {submission.name}
-                      </td>
-                      <td className="p-4 align-middle">{submission.email}</td>
-                      <td className="p-4 align-middle">
-                        <div className="max-w-[300px] truncate">
-                          {submission.message}
-                        </div>
-                      </td>
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        {formatDate(submission.created_at)}
-                      </td>
-                      <td className="p-4 align-middle">
-                        <Badge className={getStatusColor(submission.status)}>
-                          {submission.status}
-                        </Badge>
-                      </td>
-                      {renderTableActions(submission)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {getSubmissionsByStatus("new").length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No new submissions found.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="replied" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Replied Submissions</CardTitle>
-              <CardDescription>
-                View submissions you&apos;ve already replied to
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {/* Mobile Card View */}
-              <div className="block md:hidden space-y-3">
-                {getSubmissionsByStatus("replied").map((submission) => (
-                  <Card
-                    key={submission.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setSelectedSubmission(submission)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium text-sm">
-                            {submission.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {submission.email}
-                          </p>
-                        </div>
-                        <Badge className={getStatusColor(submission.status)}>
-                          {submission.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                        {submission.message}
+                      <p className="text-sm text-muted-foreground">
+                        {submission.email}
                       </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(submission.created_at)}
-                        </span>
-                        {renderMobileCardActions(submission)}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Desktop Table View */}
-              <table className="w-full caption-bottom text-sm hidden md:table">
-                <thead className="[&_tr]:border-b">
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Name
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Email
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Message
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Date
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                  {getSubmissionsByStatus("replied").map((submission) => (
-                    <tr
-                      key={submission.id}
-                      className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer"
-                      onClick={() => setSelectedSubmission(submission)}
+                    </div>
+                  </TableCell>
+                  <TableCell onClick={() => setSelectedSubmission(submission)}>
+                    <p className="text-sm text-muted-foreground line-clamp-1">
+                      {submission.message}
+                    </p>
+                  </TableCell>
+                  <TableCell onClick={() => setSelectedSubmission(submission)}>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(submission.created_at), "MMM d, h:mm a")}
+                    </p>
+                  </TableCell>
+                  <TableCell onClick={() => setSelectedSubmission(submission)}>
+                    <Badge
+                      className={
+                        submission.status === "New"
+                          ? "bg-red-100 text-red-700 hover:bg-red-200"
+                          : "bg-green-100 text-green-700 hover:bg-green-200"
+                      }
                     >
-                      <td className="p-4 align-middle font-medium">
-                        {submission.name}
-                      </td>
-                      <td className="p-4 align-middle">{submission.email}</td>
-                      <td className="p-4 align-middle">
-                        <div className="max-w-[300px] truncate">
-                          {submission.message}
-                        </div>
-                      </td>
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        {formatDate(submission.created_at)}
-                      </td>
-                      <td className="p-4 align-middle">
-                        <Badge className={getStatusColor(submission.status)}>
-                          {submission.status}
-                        </Badge>
-                      </td>
-                      {renderTableActions(submission)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {getSubmissionsByStatus("replied").length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No replied submissions found.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                      {submission.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {submission.status !== "Replied" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 hover:bg-green-50 hover:text-green-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(submission.id, "Replied");
+                          }}
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 hover:bg-red-50 hover:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(submission);
+                        }}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
-      {/* Submission Detail Dialog */}
-      <Dialog
+      {/* Side Panel */}
+      <Sheet
         open={!!selectedSubmission}
         onOpenChange={() => setSelectedSubmission(null)}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+        <SheetContent className="w-full sm:max-w-xl">
+          <SheetHeader className="space-y-4 pb-6 border-b">
+            <SheetTitle className="text-xl font-semibold text-red-900">
               Submission Details
-            </DialogTitle>
-            <DialogDescription>
-              Full details of the form submission
-            </DialogDescription>
-          </DialogHeader>
+            </SheetTitle>
+            <SheetDescription>
+              View the complete submission information
+            </SheetDescription>
+            {selectedSubmission && (
+              <Badge
+                className={
+                  selectedSubmission.status === "New"
+                    ? "bg-red-100 text-red-700 hover:bg-red-200"
+                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                }
+              >
+                {selectedSubmission.status}
+              </Badge>
+            )}
+          </SheetHeader>
 
           {selectedSubmission && (
-            <div className="space-y-6">
-              {/* Status and Actions */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <Badge className={getStatusColor(selectedSubmission.status)}>
-                  {selectedSubmission.status}
-                </Badge>
-                {renderDialogActions(selectedSubmission)}
-              </div>
-
+            <div className="mt-6 space-y-6 pb-24">
               {/* Contact Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <User className="h-4 w-4" />
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <User className="w-4 h-4 text-red-600" />
                     Name
                   </div>
-                  <p className="text-sm text-muted-foreground pl-6">
-                    {selectedSubmission.name}
-                  </p>
+                  <p className="text-sm pl-6">{selectedSubmission.name}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Calendar className="h-4 w-4" />
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Calendar className="w-4 h-4 text-red-600" />
                     Date
                   </div>
-                  <p className="text-sm text-muted-foreground pl-6">
-                    {formatDate(selectedSubmission.created_at)}
+                  <p className="text-sm pl-6">
+                    {format(new Date(selectedSubmission.created_at), "PPP p")}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Mail className="h-4 w-4" />
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Mail className="w-4 h-4 text-red-600" />
                     Email
                   </div>
-                  <p className="text-sm text-muted-foreground pl-6 break-all">
+                  <p className="text-sm pl-6 break-all">
                     {selectedSubmission.email}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Phone className="h-4 w-4" />
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Phone className="w-4 h-4 text-red-600" />
                     Phone
                   </div>
-                  <p className="text-sm text-muted-foreground pl-6">
-                    {selectedSubmission.phone}
-                  </p>
+                  <p className="text-sm pl-6">{selectedSubmission.phone}</p>
                 </div>
               </div>
 
               {/* Message */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <MessageSquare className="h-4 w-4" />
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <MessageSquare className="w-4 h-4 text-red-600" />
                   Message
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4">
+                <div className="bg-red-50/50 rounded-lg p-4">
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
                     {selectedSubmission.message}
                   </p>
@@ -893,11 +639,79 @@ export default function SubmissionsPage() {
               </div>
 
               {/* Submission ID */}
-              <div className="text-xs text-muted-foreground border-t pt-4">
+              <div className="text-xs text-muted-foreground">
                 Submission ID: #{selectedSubmission.id}
               </div>
             </div>
           )}
+
+          <SheetFooter className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t">
+            <div className="flex flex-col sm:flex-row gap-2 w-full">
+              <Button
+                variant="outline"
+                className="w-full sm:flex-1 border-red-100 hover:bg-red-50"
+                onClick={() => setSelectedSubmission(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this submission? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 bg-red-50/50 rounded-lg p-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-red-600" />
+                <span className="text-sm font-medium">
+                  {submissionToDelete?.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-red-600" />
+                <span className="text-sm">{submissionToDelete?.email}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-red-600" />
+                <span className="text-sm">
+                  {submissionToDelete?.created_at &&
+                    format(new Date(submissionToDelete.created_at), "PPP")}
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <div className="flex flex-col sm:flex-row gap-2 w-full">
+              <Button
+                variant="outline"
+                className="flex-1 border-red-100"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                onClick={handleDeleteConfirm}
+              >
+                <Trash className="w-4 h-4 mr-2" />
+                Delete Submission
+              </Button>
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

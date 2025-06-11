@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -34,11 +35,57 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/admin/auth-context";
+import { createClient } from "@/utils/supabase/client";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
   const { role, hasPermission, isLoading } = useRole();
   const { profile, signOut } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const supabase = createClient();
+
+  // Fetch unread submissions count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("submissions")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "New");
+
+        if (error) {
+          console.error("Error fetching unread count:", error.message);
+          return;
+        }
+
+        setUnreadCount(count || 0);
+      } catch (error) {
+        console.error("Error fetching unread count:", error);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Subscribe to changes
+    const channel = supabase
+      .channel("submissions_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "submissions",
+        },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [supabase]);
 
   // Format role name for display (e.g., "super_admin" -> "Super Admin")
   const formatRoleName = (roleName: string | undefined) => {
@@ -78,7 +125,7 @@ export default function AdminSidebar() {
       icon: MessageSquare,
       permission: "manage_submissions",
       shortcut: "⌘M",
-      badge: 3,
+      badge: unreadCount > 0 ? unreadCount : null,
     },
     {
       title: "Newsletter",
@@ -281,11 +328,11 @@ export default function AdminSidebar() {
                       <item.icon className="h-5 w-5" />
                       <span className="flex-1 truncate">{item.title}</span>
                       {item.badge && (
-                        <Badge className="bg-red-500 hover:bg-red-600 text-white text-xs">
+                        <Badge className="ml-auto bg-red-100 hover:bg-red-200 text-red-700 text-xs px-2 py-0.5 rounded-full">
                           {item.badge}
                         </Badge>
                       )}
-                      {item.shortcut && (
+                      {item.shortcut && !item.badge && (
                         <kbd className="hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-70">
                           {item.shortcut}
                         </kbd>
