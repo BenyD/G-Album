@@ -147,7 +147,7 @@ export default function AdminSidebar() {
               className="flex items-center group w-full"
             >
               <Image
-                src="/G Album Logo (RED).svg"
+                src="/G Album Logo (RED).png"
                 alt="G Album Logo"
                 width={32}
                 height={32}
@@ -177,7 +177,7 @@ export default function AdminSidebar() {
               className="flex items-center group w-full"
             >
               <Image
-                src="/G Album Logo (RED).svg"
+                src="/G Album Logo (RED).png"
                 alt="G Album Logo"
                 width={32}
                 height={32}
@@ -207,7 +207,7 @@ export default function AdminSidebar() {
             className="flex items-center group w-full"
           >
             <Image
-              src="/G Album Logo (RED).svg"
+              src="/G Album Logo (RED).png"
               alt="G Album Logo"
               width={32}
               height={32}

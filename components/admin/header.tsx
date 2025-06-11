@@ -8,7 +8,6 @@ import {
   LogOut,
   Settings,
   User,
-  Home,
   Search,
   PlusCircle,
   MessageSquare,
@@ -177,7 +176,7 @@ export default function AdminHeader() {
                 className="flex items-center gap-2 font-semibold text-base lg:text-lg text-slate-900 hover:text-red-600 transition-colors"
               >
                 <Image
-                  src="/G Album Logo (RED).svg"
+                  src="/G Album Logo (RED).png"
                   alt="G Album Logo"
                   width={32}
                   height={32}
