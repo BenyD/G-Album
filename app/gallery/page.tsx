@@ -225,11 +225,11 @@ export default function GalleryPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen pt-16">
       <PageHero
         title="Our Gallery"
-        subtitle="Explore our collection of beautifully crafted photo albums showcasing precious memories"
-        className="py-20 md:py-32"
+        subtitle="Explore our collection of hand crafted photo albums"
+        className="py-20"
       />
 
       {/* Controls Section */}

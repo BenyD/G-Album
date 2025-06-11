@@ -20,6 +20,9 @@ import {
   Check,
   X,
   Trash,
+  Database,
+  CloudUpload,
+  CheckCircle2,
 } from "lucide-react";
 import Image from "next/image";
 import { useRole } from "@/components/admin/role-context";
@@ -33,7 +36,23 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-const steps = ["Album Details", "Manage Images", "Review"];
+const steps = [
+  {
+    title: "Album Details",
+    icon: Database,
+    description: "Update the basic information",
+  },
+  {
+    title: "Manage Images",
+    icon: CloudUpload,
+    description: "Add, remove, or reorder photos",
+  },
+  {
+    title: "Review",
+    icon: CheckCircle2,
+    description: "Review and save changes",
+  },
+];
 
 // Simple image preview component
 function ImagePreview({
@@ -146,7 +165,10 @@ export default function EditAlbumPage() {
 
   if (!hasPermission("manage_albums")) {
     return (
-      <Alert variant="destructive">
+      <Alert
+        variant="destructive"
+        className="max-w-lg mx-auto mt-8 animate-in fade-in slide-in-from-top-4"
+      >
         <AlertTitle>Access Denied</AlertTitle>
         <AlertDescription>
           You don&apos;t have permission to access this page.
@@ -157,10 +179,22 @@ export default function EditAlbumPage() {
 
   if (isLoading) {
     return (
-      <div className="container max-w-4xl mx-auto py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3" />
-          <div className="h-64 bg-gray-200 rounded" />
+      <div className="container max-w-5xl mx-auto space-y-8 py-6">
+        <div className="animate-pulse space-y-6">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-red-100" />
+            <div className="h-8 bg-red-100 rounded w-1/4" />
+          </div>
+          <div className="h-2 bg-red-100 rounded w-full" />
+          <div className="grid grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-3">
+                <div className="h-40 bg-red-100 rounded" />
+                <div className="h-4 bg-red-100 rounded w-3/4" />
+                <div className="h-4 bg-red-100 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -290,330 +324,263 @@ export default function EditAlbumPage() {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Edit Album</h1>
-        <div className="mt-4">
-          <div className="flex justify-between items-center">
-            {steps.map((step, index) => (
-              <div
-                key={step}
-                className={`flex items-center ${
-                  index < steps.length - 1 ? "flex-1" : ""
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    currentStep >= index
-                      ? "bg-red-600 text-white"
-                      : "bg-gray-200 text-gray-600"
-                  }`}
-                >
-                  {currentStep > index ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                {index < steps.length - 1 && (
-                  <div className="flex-1 h-1 mx-4 bg-gray-200">
-                    <div
-                      className="h-full bg-red-600 transition-all duration-300"
-                      style={{
-                        width: currentStep > index ? "100%" : "0%",
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-2">
-            {steps.map((step) => (
-              <span key={step} className="text-sm text-gray-600 font-medium">
-                {step}
-              </span>
-            ))}
-          </div>
+    <div className="container max-w-5xl mx-auto space-y-8 py-6">
+      {/* Header */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-red-600">
+          <button
+            onClick={() => router.back()}
+            className="hover:bg-red-50 p-2 rounded-full transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-2xl font-bold text-red-900">Edit Album</h1>
+        </div>
+        <div className="ml-9">
+          <p className="text-muted-foreground">
+            Make changes to your album and save when done
+          </p>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <AnimatePresence mode="wait">
-            {currentStep === 0 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
+      {/* Progress Steps */}
+      <div className="relative">
+        <div className="absolute left-0 right-0 top-[22px] h-0.5 bg-red-100" />
+        <div
+          className="absolute left-0 top-[22px] h-0.5 bg-red-600 transition-all duration-500"
+          style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+        />
+        <div className="relative flex justify-between">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            return (
+              <div
+                key={index}
+                className={cn(
+                  "flex flex-col items-center gap-2 transition-opacity duration-300",
+                  index > currentStep && "opacity-50"
+                )}
               >
+                <div
+                  className={cn(
+                    "w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300",
+                    index <= currentStep
+                      ? "bg-red-600 text-white shadow-lg shadow-red-100"
+                      : "bg-red-50 text-red-300"
+                  )}
+                >
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="text-center">
+                  <div className="font-medium text-sm">{step.title}</div>
+                  <div className="text-xs text-muted-foreground hidden md:block">
+                    {step.description}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="bg-white rounded-xl border border-red-100 shadow-sm overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="p-6"
+          >
+            {currentStep === 0 ? (
+              <div className="max-w-2xl mx-auto space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Album Title *</Label>
+                  <Label htmlFor="title" className="text-base">
+                    Album Title
+                  </Label>
                   <Input
                     id="title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter album title"
+                    placeholder="Enter album title..."
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description" className="text-base">
+                    Description
+                  </Label>
                   <Textarea
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Enter album description"
-                    rows={4}
+                    placeholder="Describe your album..."
+                    className="min-h-[120px] resize-none"
                   />
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-between pt-2">
+                  <div>
+                    <Label htmlFor="featured" className="text-base">
+                      Featured Album
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Display this album on the homepage
+                    </p>
+                  </div>
                   <Switch
                     id="featured"
                     checked={featured}
                     onCheckedChange={setFeatured}
                   />
-                  <Label htmlFor="featured">Featured Album</Label>
                 </div>
-              </motion.div>
-            )}
-
-            {currentStep === 1 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-                  <input
-                    type="file"
-                    id="images"
-                    multiple
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      e.target.files && handleImageUpload(e.target.files)
-                    }
-                  />
-                  <label
-                    htmlFor="images"
-                    className="cursor-pointer flex flex-col items-center"
-                  >
-                    <Upload className="w-12 h-12 text-gray-400 mb-4" />
-                    <span className="text-gray-600 font-medium">
-                      Click to upload new images
-                    </span>
-                    <span className="text-gray-400 text-sm mt-1">
-                      or drag and drop them here
-                    </span>
+              </div>
+            ) : currentStep === 1 ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Current Images</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {existingImages.length} images in album
+                    </p>
+                  </div>
+                  <label className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg cursor-pointer transition-colors duration-200 flex items-center gap-2 text-sm">
+                    <Upload className="w-4 h-4" />
+                    Add Images
+                    <input
+                      type="file"
+                      className="hidden"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) =>
+                        e.target.files && handleImageUpload(e.target.files)
+                      }
+                    />
                   </label>
                 </div>
 
                 {isUploading && (
                   <div className="space-y-2">
-                    <Progress value={uploadProgress} />
-                    <p className="text-sm text-gray-600 text-center">
-                      Uploading images...
-                    </p>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Uploading new images...</span>
+                      <span>{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
                   </div>
                 )}
 
-                {/* Existing Images Section */}
-                {existingImages.length > 0 && (
-                  <div className="space-y-4 bg-gray-50 rounded-lg p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">
-                          Existing Images
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {existingImages.length} image
-                          {existingImages.length !== 1 ? "s" : ""} in this album
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const firstImage = existingImages[0];
-                            if (firstImage) {
-                              setCoverImageUrl(firstImage.image_url);
-                            }
-                          }}
-                          disabled={existingImages.length === 0}
-                        >
-                          <ImageIcon className="w-4 h-4 mr-2" />
-                          Set First as Cover
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {existingImages.map((image, index) => (
-                        <div
-                          key={image.image_url}
-                          className="bg-white rounded-lg shadow-sm border"
-                        >
-                          <div className="relative">
-                            <ImagePreview
-                              src={image.image_url}
-                              isCover={coverImageUrl === image.image_url}
-                              onSetCover={() =>
-                                setCoverImageUrl(image.image_url)
-                              }
-                              onRemove={() =>
-                                removeExistingImage(image.image_url)
-                              }
-                            />
-                            <div className="absolute top-2 left-2">
-                              <Badge
-                                variant="secondary"
-                                className="bg-white/90"
-                              >
-                                #{index + 1}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="p-3 border-t">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                {coverImageUrl === image.image_url ? (
-                                  <Badge className="bg-red-600">
-                                    Cover Image
-                                  </Badge>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7"
-                                    onClick={() =>
-                                      setCoverImageUrl(image.image_url)
-                                    }
-                                  >
-                                    Set as Cover
-                                  </Button>
-                                )}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() =>
-                                  removeExistingImage(image.image_url)
-                                }
-                              >
-                                <Trash className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* New Images Section */}
-                {uploadedImages.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium text-gray-700">
-                        New Images
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {uploadedImages.length} image
-                        {uploadedImages.length !== 1 ? "s" : ""} to be added
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      {uploadedImages.map((image) => (
-                        <ImagePreview
-                          key={image.id}
-                          src={image.preview}
-                          isCover={false}
-                          onRemove={() => removeNewImage(image.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {currentStep === 2 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {existingImages.map((image) => (
+                    <ImagePreview
+                      key={image.id}
+                      src={image.image_url}
+                      isCover={image.image_url === coverImageUrl}
+                      onSetCover={() => setCoverImageUrl(image.image_url)}
+                      onRemove={() => removeExistingImage(image.image_url)}
+                    />
+                  ))}
+                  {uploadedImages.map((image) => (
+                    <ImagePreview
+                      key={image.id}
+                      src={image.preview}
+                      isCover={false}
+                      onRemove={() => removeNewImage(image.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-2xl mx-auto space-y-6">
                 <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium">Album Details</h3>
-                    <div className="mt-2 space-y-2">
-                      <p>
-                        <span className="font-medium">Title:</span> {title}
-                      </p>
-                      <p>
-                        <span className="font-medium">Description:</span>{" "}
-                        {description || "None"}
-                      </p>
-                      <p>
-                        <span className="font-medium">Featured:</span>{" "}
+                  <h3 className="font-medium">Review Changes</h3>
+                  <div className="bg-red-50/50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Title</span>
+                      <span className="font-medium">{title}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Description</span>
+                      <span className="font-medium">
+                        {description || "No description"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Featured</span>
+                      <span className="font-medium">
                         {featured ? "Yes" : "No"}
-                      </p>
+                      </span>
                     </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-700 mb-4">
-                      Images Preview
-                    </h3>
-                    <div className="grid grid-cols-4 gap-4">
-                      {existingImages.map((image) => (
-                        <ImagePreview
-                          key={image.image_url}
-                          src={image.image_url}
-                          isCover={coverImageUrl === image.image_url}
-                        />
-                      ))}
-                      {uploadedImages.map((image) => (
-                        <ImagePreview
-                          key={image.id}
-                          src={image.preview}
-                          isCover={false}
-                        />
-                      ))}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Images</span>
+                      <span className="font-medium">
+                        {existingImages.length + uploadedImages.length} total
+                      </span>
                     </div>
+                    {imagesToDelete.length > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>To be removed</span>
+                        <span>{imagesToDelete.length} images</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </motion.div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {existingImages.map((image) => (
+                    <ImagePreview
+                      key={image.id}
+                      src={image.image_url}
+                      isCover={image.image_url === coverImageUrl}
+                    />
+                  ))}
+                  {uploadedImages.map((image) => (
+                    <ImagePreview
+                      key={image.id}
+                      src={image.preview}
+                      isCover={false}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
+          </motion.div>
+        </AnimatePresence>
 
-      <div className="mt-6 flex justify-between">
-        <Button
-          variant="outline"
-          onClick={prevStep}
-          disabled={currentStep === 0 || isSubmitting}
-        >
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
-
-        {currentStep < steps.length - 1 ? (
-          <Button onClick={nextStep}>
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
+        {/* Navigation */}
+        <div className="flex items-center justify-between border-t border-red-100 p-4 bg-red-50/30">
+          <Button
+            variant="ghost"
+            onClick={prevStep}
+            disabled={currentStep === 0}
+            className="text-red-600 hover:text-red-700 hover:bg-red-100"
+          >
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Back
           </Button>
-        ) : (
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Updating Album..." : "Update Album"}
+          <Button
+            onClick={currentStep === steps.length - 1 ? handleSubmit : nextStep}
+            disabled={currentStep === 0 && !title}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            {isSubmitting ? (
+              <>
+                <Upload className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : currentStep === steps.length - 1 ? (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            ) : (
+              <>
+                Next
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </>
+            )}
           </Button>
-        )}
+        </div>
       </div>
     </div>
   );

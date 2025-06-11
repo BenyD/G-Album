@@ -6,12 +6,14 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Search, Star, Eye, Calendar } from "lucide-react";
 
 const navigation = [
   { name: "Home", href: "/" },
   { name: "About", href: "/about" },
   { name: "Albums", href: "/albums" },
   { name: "Gallery", href: "/gallery" },
+  { name: "Contact", href: "/contact" },
 ];
 
 export default function Header() {
@@ -48,10 +50,18 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   // Don't render anything until mounted
   if (!mounted) {
     return null;
   }
+
+  // Determine if we should show the red version
+  const shouldShowRed = scrolled || mobileMenuOpen;
 
   return (
     <motion.header
@@ -61,7 +71,7 @@ export default function Header() {
         y: 0,
       }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled
+        shouldShowRed
           ? "bg-white/95 backdrop-blur-md shadow-sm py-2"
           : "bg-transparent py-4"
       }`}
@@ -69,11 +79,11 @@ export default function Header() {
       <nav className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center group">
+          <Link href="/" className="flex items-center group relative z-50">
             <div className="relative">
               <Image
                 src={
-                  scrolled
+                  shouldShowRed
                     ? "/G Album Logo (RED).png"
                     : "/G Album Logo (WHITE).png"
                 }
@@ -87,7 +97,7 @@ export default function Header() {
             </div>
             <span
               className={`ml-3 text-xl font-bold transition-colors duration-500 ${
-                scrolled ? "text-red-900" : "text-white"
+                shouldShowRed ? "text-red-900" : "text-white"
               } group-hover:text-red-600`}
             >
               G Album
@@ -101,7 +111,7 @@ export default function Header() {
                 key={item.name}
                 href={item.href}
                 className={`relative font-medium transition-all duration-300 group ${
-                  scrolled
+                  shouldShowRed
                     ? "text-slate-700 hover:text-red-600"
                     : "text-white hover:text-white/80"
                 }`}
@@ -117,7 +127,7 @@ export default function Header() {
             <Button
               asChild
               className={`relative overflow-hidden transition-all duration-300 ${
-                scrolled
+                shouldShowRed
                   ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-sm hover:shadow-md"
                   : "bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20"
               }`}
@@ -142,116 +152,145 @@ export default function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="mobile-menu"
-              className={`relative z-50 p-3 -mr-3 transition-colors duration-300 ${
-                mobileMenuOpen
-                  ? "text-red-600"
-                  : scrolled
-                  ? "text-red-900 hover:text-red-700"
-                  : "text-white hover:text-white/80"
-              }`}
-            >
-              <div className="w-6 h-6 relative">
-                <span
-                  className={`absolute left-0 top-1/2 w-6 h-0.5 transform transition-all duration-300 ${
-                    mobileMenuOpen
-                      ? "rotate-45 bg-current"
-                      : "-translate-y-1.5 bg-current"
-                  }`}
-                />
-                <span
-                  className={`absolute left-0 top-1/2 w-6 h-0.5 bg-current transform transition-all duration-300 ${
-                    mobileMenuOpen
-                      ? "opacity-0 scale-0"
-                      : "opacity-100 scale-100"
-                  }`}
-                />
-                <span
-                  className={`absolute left-0 top-1/2 w-6 h-0.5 transform transition-all duration-300 ${
-                    mobileMenuOpen
-                      ? "-rotate-45 bg-current"
-                      : "translate-y-1.5 bg-current"
-                  }`}
-                />
-              </div>
-            </Button>
-          </div>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-menu"
+            className={`relative z-50 p-3 -mr-3 md:hidden group ${
+              mobileMenuOpen
+                ? "text-red-600"
+                : shouldShowRed
+                ? "text-red-900"
+                : "text-white"
+            }`}
+          >
+            <div className="relative w-6 h-5">
+              <motion.span
+                initial={false}
+                animate={{
+                  top: mobileMenuOpen ? "50%" : "0%",
+                  rotate: mobileMenuOpen ? 45 : 0,
+                  translateY: mobileMenuOpen ? "-50%" : "0%",
+                  width: mobileMenuOpen ? "24px" : "16px",
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 350,
+                  damping: 25,
+                }}
+                className="absolute right-0 h-0.5 bg-current transform origin-center"
+              />
+              <motion.span
+                initial={false}
+                animate={{
+                  opacity: mobileMenuOpen ? 0 : 1,
+                  width: "24px",
+                  x: mobileMenuOpen ? 8 : 0,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 350,
+                  damping: 25,
+                }}
+                className="absolute top-1/2 right-0 h-0.5 bg-current -translate-y-1/2"
+              />
+              <motion.span
+                initial={false}
+                animate={{
+                  bottom: mobileMenuOpen ? "50%" : "0%",
+                  rotate: mobileMenuOpen ? -45 : 0,
+                  translateY: mobileMenuOpen ? "50%" : "0%",
+                  width: mobileMenuOpen ? "24px" : "20px",
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 350,
+                  damping: 25,
+                }}
+                className="absolute right-0 h-0.5 bg-current transform origin-center"
+              />
+            </div>
+          </button>
         </div>
 
         {/* Mobile Menu */}
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {mobileMenuOpen && (
-            <motion.div
-              className="fixed inset-0 z-40 md:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
+            <>
               {/* Backdrop */}
               <motion.div
-                className="fixed inset-0 bg-black/30 backdrop-blur-sm"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
                 onClick={() => setMobileMenuOpen(false)}
+                aria-hidden="true"
               />
 
               {/* Menu Content */}
               <motion.div
-                id="mobile-menu"
-                role="dialog"
-                aria-modal="true"
-                className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl"
-                initial={{ x: "100%", opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: "100%", opacity: 0 }}
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
                 transition={{
                   type: "spring",
-                  stiffness: 300,
-                  damping: 30,
-                  opacity: { duration: 0.2 },
+                  stiffness: 350,
+                  damping: 25,
+                }}
+                className="fixed inset-x-4 top-[4.5rem] p-6 rounded-2xl bg-white shadow-2xl z-40 md:hidden overflow-hidden"
+                style={{
+                  maxHeight: "calc(100vh - 6rem)",
+                  willChange: "transform, opacity",
                 }}
               >
-                <div className="flex flex-col h-full overflow-y-auto pb-safe">
-                  <div className="flex-1 px-6 py-20 space-y-6">
-                    {navigation.map((item, i) => (
-                      <motion.div
-                        key={item.name}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{
-                          duration: 0.3,
-                          delay: i * 0.05,
-                        }}
-                      >
-                        <Link
-                          href={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`block py-4 text-lg font-medium transition-colors relative group ${
-                            pathname === item.href
-                              ? "text-red-600"
-                              : "text-slate-700 hover:text-red-600"
-                          }`}
+                <div className="flex flex-col h-full">
+                  {/* Navigation Links */}
+                  <div className="flex-1 overflow-y-auto -mx-2 px-2">
+                    <nav className="space-y-1">
+                      {navigation.map((item, i) => (
+                        <motion.div
+                          key={item.name}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{
+                            duration: 0.3,
+                            delay: i * 0.1,
+                            ease: "easeOut",
+                          }}
                         >
-                          {item.name}
-                          <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full" />
-                        </Link>
-                      </motion.div>
-                    ))}
+                          <Link
+                            href={item.href}
+                            className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-base font-medium transition-all duration-300 group ${
+                              pathname === item.href
+                                ? "bg-red-50 text-red-600"
+                                : "text-slate-700 hover:bg-slate-50"
+                            }`}
+                          >
+                            <span>{item.name}</span>
+                            <motion.span
+                              initial={false}
+                              animate={{
+                                x: pathname === item.href ? 0 : -8,
+                                opacity: pathname === item.href ? 1 : 0,
+                              }}
+                              className="text-red-600"
+                            >
+                              →
+                            </motion.span>
+                          </Link>
+                        </motion.div>
+                      ))}
+                    </nav>
                   </div>
+
+                  {/* Action Button */}
                   <motion.div
-                    className="p-6 bg-slate-50 border-t border-slate-200"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.2 }}
+                    transition={{ duration: 0.3, delay: 0.3 }}
+                    className="pt-6 mt-6 border-t border-slate-200"
                   >
                     <Button
                       asChild
@@ -259,15 +298,26 @@ export default function Header() {
                     >
                       <Link
                         href="/contact"
-                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-center"
                       >
                         Get in Touch
+                        <motion.span
+                          animate={{ x: [0, 5, 0] }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: Infinity,
+                            repeatType: "reverse",
+                          }}
+                          className="ml-2"
+                        >
+                          →
+                        </motion.span>
                       </Link>
                     </Button>
                   </motion.div>
                 </div>
               </motion.div>
-            </motion.div>
+            </>
           )}
         </AnimatePresence>
       </nav>
