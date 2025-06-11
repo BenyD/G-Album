@@ -54,10 +54,15 @@ export default function LoginPage() {
         <Card className="border-0 shadow-lg">
           <CardHeader className="space-y-1 pb-6">
             <div className="flex justify-center mb-2">
-              <div className="relative h-16 w-16 rounded-full overflow-hidden bg-red-600 ring-4 ring-red-100">
-                <div className="absolute inset-0 flex items-center justify-center text-white text-2xl font-bold">
-                  G
-                </div>
+              <div className="relative h-16 w-16 rounded-full overflow-hidden bg-red-600">
+                <Image
+                  src="/G Album Logo (WHITE).png"
+                  alt="G Album Logo"
+                  width={64}
+                  height={64}
+                  className="object-contain p-2"
+                  priority
+                />
               </div>
             </div>
             <CardTitle className="text-2xl font-bold text-center">
