@@ -1,25 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  LogOut,
-  Settings,
-  User,
-  Search,
-  BarChart3,
-  LayoutDashboard,
-  ExternalLink,
-  ImageIcon,
-  Mail,
-  Newspaper,
-  ShoppingCart,
-  Users,
-  History,
-  Home,
-} from "lucide-react";
+import { LogOut, Settings, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,113 +19,11 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/components/admin/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { useRole } from "./role-context";
-import {
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from "@/components/ui/command";
-
-// Define navigation items for the command menu
-const commandMenuItems = [
-  {
-    title: "Dashboard",
-    href: "/admin/dashboard",
-    icon: LayoutDashboard,
-    shortcut: "⌘D",
-    permission: "view_dashboard",
-  },
-  {
-    title: "Albums",
-    href: "/admin/albums",
-    icon: Image,
-    shortcut: "⌘A",
-    permission: "view_albums",
-  },
-  {
-    title: "Gallery",
-    href: "/admin/gallery",
-    icon: ImageIcon,
-    shortcut: "⌘G",
-    permission: "view_gallery",
-  },
-  {
-    title: "Form Submissions",
-    href: "/admin/submissions",
-    icon: Mail,
-    shortcut: "⌘M",
-    permission: "view_submissions",
-  },
-  {
-    title: "Newsletter",
-    href: "/admin/newsletter",
-    icon: Newspaper,
-    shortcut: "⌘N",
-    permission: "view_newsletter",
-  },
-  {
-    title: "Analytics",
-    href: "/admin/analytics",
-    icon: BarChart3,
-    shortcut: "⌘V",
-    permission: "view_analytics",
-  },
-  {
-    title: "Customers",
-    href: "/admin/customers",
-    icon: Users,
-    shortcut: "⌘C",
-    permission: "view_customers",
-  },
-  {
-    title: "Orders",
-    href: "/admin/orders",
-    icon: ShoppingCart,
-    shortcut: "⌘O",
-    permission: "view_orders",
-  },
-  {
-    title: "Users",
-    href: "/admin/users",
-    icon: User,
-    permission: "view_users",
-  },
-  {
-    title: "Activity Log",
-    href: "/admin/settings/activity",
-    icon: History,
-    permission: "view_activity_log",
-  },
-  {
-    title: "Profile",
-    href: "/admin/settings/profile",
-    icon: User,
-    permission: "view_profile",
-  },
-  {
-    title: "Back to Website",
-    href: "/",
-    icon: Home,
-  },
-];
 
 export default function AdminHeader() {
   const pathname = usePathname();
-  const router = useRouter();
   const { profile, signOut } = useAuth();
-  const { hasPermission } = useRole();
   const [scrolled, setScrolled] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isMac, setIsMac] = useState(true);
 
   // Handle scroll effect for header
   useEffect(() => {
@@ -150,31 +33,6 @@ export default function AdminHeader() {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Detect OS for shortcut display
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const platform = window.navigator.platform.toLowerCase();
-      setIsMac(platform.includes("mac"));
-    }
-  }, []);
-
-  // Handle keyboard shortcut
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if focus is on input/textarea/select
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
-
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setIsSearchOpen(true);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Get the current page title based on the pathname
@@ -217,12 +75,6 @@ export default function AdminHeader() {
   };
 
   const breadcrumbs = getBreadcrumbs();
-
-  // Filter items based on permissions
-  const filteredItems = commandMenuItems.filter((item) => {
-    if (!item.permission) return true;
-    return hasPermission(item.permission);
-  });
 
   // Get user initials for avatar fallback
   const getInitials = () => {
@@ -292,58 +144,6 @@ export default function AdminHeader() {
               </h1>
             </div>
           </div>
-
-          {/* Command Search - Desktop Only */}
-          <div className="hidden lg:flex flex-1 items-center justify-center px-4 max-w-md">
-            <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-between text-sm text-slate-500 font-normal h-9 px-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <Search className="h-4 w-4" />
-                    <span>Search...</span>
-                  </div>
-                  <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                    <span className="text-xs">{isMac ? "⌘" : "Ctrl+"}</span>K
-                  </kbd>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[520px] p-0" align="center">
-                <div className="p-2 border-b">
-                  <div className="flex items-center px-3 py-2">
-                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                    <Input
-                      placeholder="Search commands, pages, and more..."
-                      className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0"
-                    />
-                  </div>
-                </div>
-                <div className="p-2">
-                  <div className="grid gap-2">
-                    {filteredItems.map((item) => (
-                      <Link
-                        key={item.title}
-                        href={item.href}
-                        className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span className="flex-1">{item.title}</span>
-                        {item.shortcut ? (
-                          <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-100 flex">
-                            {isMac
-                              ? item.shortcut
-                              : item.shortcut.replace("⌘", "Ctrl+")}
-                          </kbd>
-                        ) : null}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
         </div>
 
         {/* Right Section */}
@@ -360,6 +160,18 @@ export default function AdminHeader() {
               <span>Visit Website</span>
             </Link>
           </Button>
+
+          {/* Command Bar Shortcut Hint */}
+          <div className="hidden md:flex items-center mr-2 text-xs text-slate-500 bg-slate-100 rounded px-2 py-1 select-none">
+            <span className="font-mono">
+              {typeof window !== "undefined" &&
+              window.navigator.platform.toLowerCase().includes("mac")
+                ? "⌘"
+                : "Ctrl+"}
+              K
+            </span>
+            <span className="ml-1">to open command bar</span>
+          </div>
 
           {/* User Menu */}
           <DropdownMenu>
@@ -415,59 +227,6 @@ export default function AdminHeader() {
           </DropdownMenu>
         </div>
       </div>
-
-      <CommandDialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Navigation">
-            {filteredItems.map((item) => (
-              <CommandItem
-                key={item.href}
-                onSelect={() => {
-                  router.push(item.href);
-                  setIsSearchOpen(false);
-                }}
-              >
-                <item.icon className="mr-2 h-4 w-4" />
-                <span>{item.title}</span>
-                {item.shortcut ? (
-                  <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-100">
-                    {isMac
-                      ? item.shortcut
-                      : item.shortcut.replace("⌘", "Ctrl+")}
-                  </kbd>
-                ) : null}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          {profile && (
-            <CommandGroup heading="Account">
-              <CommandItem
-                onSelect={() => {
-                  router.push("/admin/settings/profile");
-                  setIsSearchOpen(false);
-                }}
-              >
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-                <span className="ml-auto text-xs text-slate-500">
-                  {profile.full_name}
-                </span>
-              </CommandItem>
-              <CommandItem
-                onSelect={() => {
-                  router.push("/admin/settings/activity");
-                  setIsSearchOpen(false);
-                }}
-              >
-                <History className="mr-2 h-4 w-4" />
-                <span>Activity Log</span>
-              </CommandItem>
-            </CommandGroup>
-          )}
-        </CommandList>
-      </CommandDialog>
     </header>
   );
 }

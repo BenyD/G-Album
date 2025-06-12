@@ -309,25 +309,6 @@ export default function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="flex-1 overflow-y-auto">
-        {/* Quick Actions */}
-        <div className="px-3 py-2">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Back to Website">
-                <Link
-                  href="/"
-                  className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-slate-600 hover:text-red-600"
-                >
-                  <Home className="h-5 w-5" />
-                  <span>Back to Website</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </div>
-
-        <SidebarSeparator className="my-2" />
-
         {/* Main Navigation */}
         <div className="px-3 py-2">
           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">

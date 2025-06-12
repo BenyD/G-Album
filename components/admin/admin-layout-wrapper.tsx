@@ -9,6 +9,7 @@ import { useAuth } from "@/components/admin/auth-context";
 import { usePathname } from "next/navigation";
 import AdminLoading from "@/app/admin/loading";
 import { useEffect } from "react";
+import AdminCommandMenu from "./command-menu";
 
 interface AdminLayoutWrapperProps {
   children: React.ReactNode;
@@ -59,6 +60,7 @@ export default function AdminLayoutWrapper({
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
         <div className="flex-1 flex flex-col min-h-screen w-full">
+          <AdminCommandMenu />
           <AdminHeader />
           <main className="flex-1 p-4 sm:p-6 md:p-8 w-full max-w-[1920px] mx-auto">
             {children}
