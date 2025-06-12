@@ -72,3 +72,4 @@ export interface UpdateOrderSettingsInput {
   prefix?: string;
   last_sequence_number?: number;
 }
+ 

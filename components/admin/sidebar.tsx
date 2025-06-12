@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -39,10 +39,51 @@ import { createClient } from "@/utils/supabase/client";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { role, hasPermission, isLoading } = useRole();
   const { profile, signOut } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isMac, setIsMac] = useState(true);
   const supabase = createClient();
+
+  // Detect OS for shortcut display
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const platform = window.navigator.platform.toLowerCase();
+      setIsMac(platform.includes("mac"));
+    }
+  }, []);
+
+  // Keyboard shortcut navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if focus is on input/textarea/select
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+
+      const metaOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+      if (!metaOrCtrl) return;
+
+      // Map shortcut keys to hrefs
+      const shortcutMap: Record<string, string> = {
+        d: "/admin/dashboard",
+        a: "/admin/albums",
+        g: "/admin/gallery",
+        m: "/admin/submissions",
+        n: "/admin/newsletter",
+        v: "/admin/analytics",
+        c: "/admin/customers",
+        o: "/admin/orders",
+      };
+      const key = e.key.toLowerCase();
+      if (shortcutMap[key]) {
+        e.preventDefault();
+        router.push(shortcutMap[key]);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMac, router]);
 
   // Fetch unread submissions count
   useEffect(() => {
@@ -265,21 +306,6 @@ export default function AdminSidebar() {
             </span>
           </Link>
         </div>
-        <div className="px-3 mt-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8 h-9 bg-slate-50 border-slate-200 focus-visible:ring-red-500"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-              <kbd className="hidden md:inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-100">
-                <span className="text-xs">⌘</span>K
-              </kbd>
-            </div>
-          </div>
-        </div>
       </SidebarHeader>
 
       <SidebarContent className="flex-1 overflow-y-auto">
@@ -334,7 +360,9 @@ export default function AdminSidebar() {
                       )}
                       {item.shortcut && !item.badge && (
                         <kbd className="hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-70">
-                          {item.shortcut}
+                          {isMac
+                            ? item.shortcut
+                            : item.shortcut.replace("⌘", "Ctrl+")}
                         </kbd>
                       )}
                     </Link>
@@ -376,7 +404,9 @@ export default function AdminSidebar() {
                           <span className="flex-1 truncate">{item.title}</span>
                           {item.shortcut && (
                             <kbd className="hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-70">
-                              {item.shortcut}
+                              {isMac
+                                ? item.shortcut
+                                : item.shortcut.replace("⌘", "Ctrl+")}
                             </kbd>
                           )}
                         </Link>

@@ -906,14 +906,14 @@ export default function OrdersPage() {
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 w-4 h-4" />
-              <Input
+                <Input
                 type="search"
                 placeholder="Search orders..."
                 className="pl-10 border-red-100 focus:border-red-200 focus:ring-red-100"
-                value={searchTerm}
+                  value={searchTerm}
                 onChange={handleSearchChange}
-              />
-            </div>
+                />
+              </div>
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1075,12 +1075,12 @@ export default function OrdersPage() {
                         {order.order_number}
                       </TableCell>
                       <TableCell>
-                        <div>
+                          <div>
                           <p className="font-medium">{order.customer_name}</p>
                           <p className="text-sm text-muted-foreground">
                             {order.customer_email}
-                          </p>
-                        </div>
+                            </p>
+                          </div>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -1200,7 +1200,7 @@ export default function OrdersPage() {
               <CardContent className="py-16 flex flex-col items-center text-center">
                 <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
                   <ShoppingBag className="w-8 h-8 text-red-600" />
-                </div>
+                                      </div>
                 <h3 className="text-lg font-semibold text-red-900 mb-2">
                   No Completed Orders
                 </h3>
@@ -1235,12 +1235,12 @@ export default function OrdersPage() {
                         {order.order_number}
                       </TableCell>
                       <TableCell>
-                        <div>
+                                      <div>
                           <p className="font-medium">{order.customer_name}</p>
                           <p className="text-sm text-muted-foreground">
                             {order.customer_email}
-                          </p>
-                        </div>
+                                        </p>
+                                      </div>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -1395,16 +1395,16 @@ export default function OrdersPage() {
                             <div className="flex items-center gap-3 p-3 rounded-md border border-red-200 bg-red-50 animate-fade-in">
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
                                 <User className="h-4 w-4 text-red-600" />
-                              </div>
+                                        </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-red-900 truncate">
                                   {selected.studio_name}
-                                </div>
+                                      </div>
                                 <div className="text-sm text-muted-foreground truncate">
                                   {selected.email}
-                                </div>
-                              </div>
-                              <Button
+                                      </div>
+                                    </div>
+                                      <Button
                                 type="button"
                                 size="icon"
                                 variant="ghost"
@@ -1427,7 +1427,7 @@ export default function OrdersPage() {
                                     d="M18 6 6 18M6 6l12 12"
                                   />
                                 </svg>
-                              </Button>
+                                      </Button>
                             </div>
                           );
                         })()
@@ -1449,14 +1449,14 @@ export default function OrdersPage() {
                                 <div className="p-4 text-center text-sm text-muted-foreground">
                                   No customers found
                                   <br />
-                                  <Button
-                                    size="sm"
+                                      <Button
+                                        size="sm"
                                     className="mt-2 bg-red-600 hover:bg-red-700 text-white"
                                     onClick={() => setIsAddCustomerOpen(true)}
-                                  >
+                                      >
                                     <Plus className="w-4 h-4 mr-1" /> Create New
                                     Customer
-                                  </Button>
+                                      </Button>
                                 </div>
                               ) : (
                                 filteredCustomers.map((customer) => (
@@ -1470,10 +1470,10 @@ export default function OrdersPage() {
                                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
                                       <User className="h-4 w-4 text-red-600" />
                                     </div>
-                                    <div>
+                                              <div>
                                       <div className="font-medium text-red-900">
                                         {customer.studio_name}
-                                      </div>
+                                              </div>
                                       <div className="text-sm text-muted-foreground">
                                         {customer.email}
                                       </div>
@@ -1485,17 +1485,17 @@ export default function OrdersPage() {
                                       >
                                         <AlertTriangle className="w-3 h-3 mr-1" />
                                         Flagged
-                                      </Badge>
+                                              </Badge>
                                     )}
-                                  </div>
+                                            </div>
                                 ))
-                              )}
-                            </div>
+                                          )}
+                                        </div>
                           )}
                         </div>
                       )}
-                    </div>
-                  </div>
+                                    </div>
+                                  </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="order_number" className="text-red-900">
@@ -1549,9 +1549,9 @@ export default function OrdersPage() {
                         }}
                         className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
                       />
-                    </div>
-                  </div>
-                </div>
+                                      </div>
+                                      </div>
+                                      </div>
 
                 <div className="space-y-4">
                   <div className="grid gap-2">
@@ -1580,7 +1580,7 @@ export default function OrdersPage() {
                       className="border-red-100 focus:border-red-200 focus:ring-red-100"
                       placeholder="Select delivery date"
                     />
-                  </div>
+                                    </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="amount_paid" className="text-red-900">
@@ -1588,12 +1588,12 @@ export default function OrdersPage() {
                     </Label>
                     <div className="relative">
                       <IndianRupee className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
+                                            <Input
                         id="amount_paid"
-                        type="number"
+                                              type="number"
                         min="0"
                         step="0.01"
-                        placeholder="5000"
+                                              placeholder="5000"
                         value={
                           newOrder.amount_paid === undefined
                             ? ""
@@ -1610,8 +1610,8 @@ export default function OrdersPage() {
                           handleAmountPaidChange(e.target.value);
                         }}
                         className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
-                      />
-                    </div>
+                                            />
+                                          </div>
                   </div>
 
                   {newOrder.amount_paid && newOrder.amount_paid > 0 ? (
@@ -1657,16 +1657,16 @@ export default function OrdersPage() {
                     id="notes"
                     placeholder="Add any additional notes about the order..."
                     value={newOrder.notes || ""}
-                    onChange={(e) =>
+                                              onChange={(e) =>
                       setNewOrder({ ...newOrder, notes: e.target.value })
-                    }
+                                              }
                     className="pl-9 min-h-[120px] border-red-100 focus:border-red-200 focus:ring-red-100"
-                  />
-                </div>
-              </div>
+                                            />
+                                          </div>
+                                        </div>
             </div>
             <DialogFooter className="mt-6">
-              <Button
+                                        <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
@@ -1679,7 +1679,7 @@ export default function OrdersPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={
+                                          disabled={
                   isAddCustomerOpen ||
                   !newOrder.customer_id ||
                   !newOrder.total_amount ||
@@ -1694,7 +1694,7 @@ export default function OrdersPage() {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Create Order
-              </Button>
+                                        </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1742,7 +1742,7 @@ export default function OrdersPage() {
                   }
                   className="border-red-100 focus:border-red-200 focus:ring-red-100"
                 />
-              </div>
+                                              </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="payment_method" className="text-red-900">
@@ -1765,7 +1765,7 @@ export default function OrdersPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+                                      </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="payment_notes" className="text-red-900">
@@ -1780,8 +1780,8 @@ export default function OrdersPage() {
                   }
                   className="border-red-100 focus:border-red-200 focus:ring-red-100"
                 />
-              </div>
-            </div>
+                                  </div>
+                                </div>
             <DialogFooter>
               <Button
                 type="button"
@@ -1872,15 +1872,15 @@ export default function OrdersPage() {
                         {selectedOrder.status.charAt(0).toUpperCase() +
                           selectedOrder.status.slice(1).replace("_", " ")}
                       </Badge>
+                      </div>
                     </div>
-                  </div>
-                </div>
+            </div>
 
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <User className="w-4 h-4 mr-2" />
                     <span>{selectedOrder.customer_name}</span>
-                  </div>
+                        </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Mail className="w-4 h-4 mr-2" />
                     <a
@@ -1889,7 +1889,7 @@ export default function OrdersPage() {
                     >
                       {selectedOrder.customer_email}
                     </a>
-                  </div>
+                          </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Phone className="w-4 h-4 mr-2" />
                     <a
@@ -1898,14 +1898,14 @@ export default function OrdersPage() {
                     >
                       {selectedOrder.customer_phone}
                     </a>
-                  </div>
+                          </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2" />
                     <span>
                       Created:{" "}
                       {format(new Date(selectedOrder.created_at), "PPpp")}
                     </span>
-                  </div>
+                          </div>
                   {selectedOrder.estimated_delivery_date && (
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Clock className="w-4 h-4 mr-2" />
@@ -1916,15 +1916,15 @@ export default function OrdersPage() {
                           "PPpp"
                         )}
                       </span>
-                    </div>
+                          </div>
                   )}
-                </div>
-              </SheetHeader>
+                          </div>
+                            </SheetHeader>
 
               <Separator className="my-4" />
 
               <div className="space-y-6">
-                <div>
+                                  <div>
                   <h3 className="text-sm font-medium flex items-center mb-3">
                     <IndianRupee className="w-4 h-4 mr-2" />
                     Payment Information
@@ -1933,37 +1933,37 @@ export default function OrdersPage() {
                     <div className="rounded-lg border p-3">
                       <div className="text-sm text-muted-foreground mb-1">
                         Total Amount
-                      </div>
+                                      </div>
                       <div className="text-2xl font-bold flex items-center">
                         <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
                         {selectedOrder.total_amount.toLocaleString()}
-                      </div>
-                    </div>
+                                      </div>
+                                      </div>
                     <div className="rounded-lg border p-3">
                       <div className="text-sm text-muted-foreground mb-1">
                         Amount Paid
-                      </div>
+                                      </div>
                       <div className="text-2xl font-bold flex items-center">
                         <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
                         {selectedOrder.amount_paid.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
+                                    </div>
+                                  </div>
+                                      </div>
                   <div className="mt-4 rounded-lg border p-3">
                     <div className="text-sm text-muted-foreground mb-1">
                       Balance Amount
-                    </div>
+                                      </div>
                     <div className="text-2xl font-bold flex items-center">
                       <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
                       {selectedOrder.balance_amount.toLocaleString()}
-                    </div>
-                  </div>
-                </div>
+                                      </div>
+                                    </div>
+                                  </div>
 
                 {selectedOrder.notes && (
                   <>
-                    <Separator />
-                    <div>
+                                  <Separator />
+                                  <div>
                       <h3 className="text-sm font-medium flex items-center mb-3">
                         <FileText className="w-4 h-4 mr-2" />
                         Order Notes
@@ -1972,14 +1972,14 @@ export default function OrdersPage() {
                         <p className="text-sm whitespace-pre-wrap">
                           {selectedOrder.notes}
                         </p>
-                      </div>
-                    </div>
+                                              </div>
+                                            </div>
                   </>
-                )}
+                                          )}
 
-                <Separator />
+                                  <Separator />
 
-                <div>
+                                  <div>
                   <h3 className="text-sm font-medium flex items-center mb-3">
                     <Clock className="w-4 h-4 mr-2" />
                     Activity Log
@@ -1998,7 +1998,7 @@ export default function OrdersPage() {
                           ) : (
                             <Clock className="w-4 h-4 text-muted-foreground" />
                           )}
-                        </div>
+                                      </div>
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium leading-none">
                             {log.action === "status_update"
@@ -2013,12 +2013,12 @@ export default function OrdersPage() {
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(log.created_at), "PPpp")}
                           </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                  </div>
+                                </div>
 
               <Separator className="my-4" />
 
@@ -2053,9 +2053,9 @@ export default function OrdersPage() {
                 )}
               </SheetFooter>
             </>
-          )}
-        </SheetContent>
-      </Sheet>
+                            )}
+                          </SheetContent>
+                        </Sheet>
 
       {/* Update Status Dialog */}
       <Dialog open={isUpdateStatusOpen} onOpenChange={setIsUpdateStatusOpen}>
@@ -2157,7 +2157,7 @@ export default function OrdersPage() {
                 <span>Delivered</span>
               </Button>
             </div>
-          </div>
+            </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -2187,7 +2187,7 @@ export default function OrdersPage() {
                   You are about to create an order for{" "}
                   <strong>{flaggedCustomerInfo?.name}</strong>, who has been
                   flagged.
-                </div>
+    </div>
                 <div className="rounded-md bg-red-50 p-4">
                   <div className="flex">
                     <div className="flex-shrink-0">

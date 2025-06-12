@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -9,11 +9,16 @@ import {
   Settings,
   User,
   Search,
-  PlusCircle,
-  MessageSquare,
   BarChart3,
   LayoutDashboard,
   ExternalLink,
+  ImageIcon,
+  Mail,
+  Newspaper,
+  ShoppingCart,
+  Users,
+  History,
+  Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,12 +40,107 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { useRole } from "./role-context";
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
+
+// Define navigation items for the command menu
+const commandMenuItems = [
+  {
+    title: "Dashboard",
+    href: "/admin/dashboard",
+    icon: LayoutDashboard,
+    shortcut: "⌘D",
+    permission: "view_dashboard",
+  },
+  {
+    title: "Albums",
+    href: "/admin/albums",
+    icon: Image,
+    shortcut: "⌘A",
+    permission: "view_albums",
+  },
+  {
+    title: "Gallery",
+    href: "/admin/gallery",
+    icon: ImageIcon,
+    shortcut: "⌘G",
+    permission: "view_gallery",
+  },
+  {
+    title: "Form Submissions",
+    href: "/admin/submissions",
+    icon: Mail,
+    shortcut: "⌘M",
+    permission: "view_submissions",
+  },
+  {
+    title: "Newsletter",
+    href: "/admin/newsletter",
+    icon: Newspaper,
+    shortcut: "⌘N",
+    permission: "view_newsletter",
+  },
+  {
+    title: "Analytics",
+    href: "/admin/analytics",
+    icon: BarChart3,
+    shortcut: "⌘V",
+    permission: "view_analytics",
+  },
+  {
+    title: "Customers",
+    href: "/admin/customers",
+    icon: Users,
+    shortcut: "⌘C",
+    permission: "view_customers",
+  },
+  {
+    title: "Orders",
+    href: "/admin/orders",
+    icon: ShoppingCart,
+    shortcut: "⌘O",
+    permission: "view_orders",
+  },
+  {
+    title: "Users",
+    href: "/admin/users",
+    icon: User,
+    permission: "view_users",
+  },
+  {
+    title: "Activity Log",
+    href: "/admin/settings/activity",
+    icon: History,
+    permission: "view_activity_log",
+  },
+  {
+    title: "Profile",
+    href: "/admin/settings/profile",
+    icon: User,
+    permission: "view_profile",
+  },
+  {
+    title: "Back to Website",
+    href: "/",
+    icon: Home,
+  },
+];
 
 export default function AdminHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const { profile, signOut } = useAuth();
+  const { hasPermission } = useRole();
   const [scrolled, setScrolled] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMac, setIsMac] = useState(true);
 
   // Handle scroll effect for header
   useEffect(() => {
@@ -52,13 +152,24 @@ export default function AdminHeader() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Handle keyboard shortcuts
+  // Detect OS for shortcut display
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const platform = window.navigator.platform.toLowerCase();
+      setIsMac(platform.includes("mac"));
+    }
+  }, []);
+
+  // Handle keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Command/Ctrl + K to open search
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      // Ignore if focus is on input/textarea/select
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setSearchOpen((prev) => !prev);
+        setIsSearchOpen(true);
       }
     };
 
@@ -107,52 +218,20 @@ export default function AdminHeader() {
 
   const breadcrumbs = getBreadcrumbs();
 
-  // Quick actions for the header
-  const quickActions = [
-    {
-      name: "Dashboard",
-      href: "/admin/dashboard",
-      icon: LayoutDashboard,
-      shortcut: "D",
-    },
-    {
-      name: "New Album",
-      href: "/admin/albums",
-      icon: PlusCircle,
-      shortcut: "A",
-    },
-    {
-      name: "Messages",
-      href: "/admin/submissions",
-      icon: MessageSquare,
-      shortcut: "M",
-    },
-    {
-      name: "Analytics",
-      href: "/admin/analytics",
-      icon: BarChart3,
-      shortcut: "G",
-    },
-  ];
+  // Filter items based on permissions
+  const filteredItems = commandMenuItems.filter((item) => {
+    if (!item.permission) return true;
+    return hasPermission(item.permission);
+  });
 
   // Get user initials for avatar fallback
   const getInitials = () => {
     if (!profile?.full_name) return "GA";
     return profile.full_name
       .split(" ")
-      .map((n) => n[0])
+      .map((n: string) => n[0])
       .join("")
       .toUpperCase();
-  };
-
-  // Format role name for display
-  const formatRoleName = (roleName: string) => {
-    if (!roleName) return "";
-    // Convert snake_case to Title Case and handle special cases
-    return roleName
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
   };
 
   return (
@@ -181,6 +260,7 @@ export default function AdminHeader() {
                   width={32}
                   height={32}
                   className="transition-transform hover:scale-105"
+                  priority
                 />
                 <span className="hidden lg:inline">G Album</span>
               </Link>
@@ -215,7 +295,7 @@ export default function AdminHeader() {
 
           {/* Command Search - Desktop Only */}
           <div className="hidden lg:flex flex-1 items-center justify-center px-4 max-w-md">
-            <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+            <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -226,7 +306,7 @@ export default function AdminHeader() {
                     <span>Search...</span>
                   </div>
                   <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                    <span className="text-xs">⌘</span>K
+                    <span className="text-xs">{isMac ? "⌘" : "Ctrl+"}</span>K
                   </kbd>
                 </Button>
               </PopoverTrigger>
@@ -242,17 +322,21 @@ export default function AdminHeader() {
                 </div>
                 <div className="p-2">
                   <div className="grid gap-2">
-                    {quickActions.map((action) => (
+                    {filteredItems.map((item) => (
                       <Link
-                        key={action.name}
-                        href={action.href}
+                        key={item.title}
+                        href={item.href}
                         className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
                       >
-                        <action.icon className="h-4 w-4" />
-                        <span className="flex-1">{action.name}</span>
-                        <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-100 flex">
-                          ⌘{action.shortcut}
-                        </kbd>
+                        <item.icon className="h-4 w-4" />
+                        <span className="flex-1">{item.title}</span>
+                        {item.shortcut ? (
+                          <kbd className="pointer-events-none h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-100 flex">
+                            {isMac
+                              ? item.shortcut
+                              : item.shortcut.replace("⌘", "Ctrl+")}
+                          </kbd>
+                        ) : null}
                       </Link>
                     ))}
                   </div>
@@ -297,7 +381,7 @@ export default function AdminHeader() {
                     {profile?.full_name}
                   </p>
                   <p className="text-xs leading-none text-slate-500">
-                    {formatRoleName(profile?.role?.name || "")}
+                    {profile?.role?.name || ""}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -331,6 +415,59 @@ export default function AdminHeader() {
           </DropdownMenu>
         </div>
       </div>
+
+      <CommandDialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <CommandInput placeholder="Type a command or search..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Navigation">
+            {filteredItems.map((item) => (
+              <CommandItem
+                key={item.href}
+                onSelect={() => {
+                  router.push(item.href);
+                  setIsSearchOpen(false);
+                }}
+              >
+                <item.icon className="mr-2 h-4 w-4" />
+                <span>{item.title}</span>
+                {item.shortcut ? (
+                  <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-medium opacity-100">
+                    {isMac
+                      ? item.shortcut
+                      : item.shortcut.replace("⌘", "Ctrl+")}
+                  </kbd>
+                ) : null}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          {profile && (
+            <CommandGroup heading="Account">
+              <CommandItem
+                onSelect={() => {
+                  router.push("/admin/settings/profile");
+                  setIsSearchOpen(false);
+                }}
+              >
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+                <span className="ml-auto text-xs text-slate-500">
+                  {profile.full_name}
+                </span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => {
+                  router.push("/admin/settings/activity");
+                  setIsSearchOpen(false);
+                }}
+              >
+                <History className="mr-2 h-4 w-4" />
+                <span>Activity Log</span>
+              </CommandItem>
+            </CommandGroup>
+          )}
+        </CommandList>
+      </CommandDialog>
     </header>
   );
 }
