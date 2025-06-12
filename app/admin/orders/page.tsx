@@ -1,1529 +1,1503 @@
-"use client"
+"use client";
 
-import { useState, useMemo } from "react"
+import { useState, useCallback, useMemo } from "react";
 import {
   Plus,
   Search,
-  Download,
-  Eye,
-  DollarSign,
-  Package,
+  Filter,
+  ArrowUpDown,
+  MoreHorizontal,
+  Trash,
+  ShoppingBag,
+  RefreshCw,
+  Loader2,
   Clock,
-  CheckCircle,
-  AlertCircle,
+  CreditCard,
+  Receipt,
+  CheckCircle2,
+  CircleDollarSign,
+  AlertTriangle,
+  User,
+  Calendar,
+  FileText,
+  IndianRupee,
   Mail,
-  Send,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+  Phone,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { useToast } from "@/hooks/use-toast"
-import { useRole } from "@/components/admin/role-context"
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/utils/supabase/client";
+import { debounce } from "lodash";
+import type { Customer } from "@/lib/types/customer";
+import type {
+  OrderStatus,
+  OrderSummary,
+  PaymentMethod,
+  CreateOrderInput,
+  UpdateOrderInput,
+  CreateOrderPaymentInput,
+} from "@/lib/types/order";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Mock data for orders
-const mockOrders = [
-  {
-    id: "ORD-2024-001",
-    customerId: "CUST-001",
-    customerName: "Rajesh Kumar",
-    customerEmail: "rajesh@example.com",
-    customerPhone: "+91 98765 43210",
-    totalAmount: 25000,
-    advancePaid: 10000,
-    remainingAmount: 15000,
-    status: "In Progress" as const,
-    paymentStatus: "Partially Paid" as const,
-    orderDate: "2024-01-15",
-    expectedDelivery: "2024-02-15",
-    description: "Wedding album with 100 photos, premium binding",
-    logs: [
-      {
-        id: 1,
-        action: "Order created",
-        timestamp: "2024-01-15 10:30 AM",
-        user: "Admin",
-        details: "Initial order creation with ₹10,000 advance",
-      },
-      {
-        id: 2,
-        action: "Email sent",
-        timestamp: "2024-01-15 10:31 AM",
-        user: "System",
-        details: "Order confirmation email sent to rajesh@example.com",
-      },
-    ],
-    emailHistory: [
-      {
-        id: 1,
-        type: "order_created",
-        subject: "Order Confirmation - ORD-2024-001",
-        sentAt: "2024-01-15 10:31 AM",
-        status: "sent",
-      },
-    ],
-  },
-  {
-    id: "ORD-2024-002",
-    customerId: "CUST-002",
-    customerName: "Priya Sharma",
-    customerEmail: "priya@example.com",
-    customerPhone: "+91 87654 32109",
-    totalAmount: 15000,
-    advancePaid: 15000,
-    remainingAmount: 0,
-    status: "Delivered" as const,
-    paymentStatus: "Fully Paid" as const,
-    orderDate: "2024-01-10",
-    expectedDelivery: "2024-02-10",
-    deliveredDate: "2024-02-08",
-    description: "Birthday photo album with custom design",
-    logs: [
-      {
-        id: 1,
-        action: "Order created",
-        timestamp: "2024-01-10 02:15 PM",
-        user: "Admin",
-        details: "Order created with full payment",
-      },
-      {
-        id: 2,
-        action: "Email sent",
-        timestamp: "2024-01-10 02:16 PM",
-        user: "System",
-        details: "Order confirmation email sent to priya@example.com",
-      },
-      {
-        id: 3,
-        action: "Status updated",
-        timestamp: "2024-01-25 11:00 AM",
-        user: "Admin",
-        details: "Status changed to Finished",
-      },
-      {
-        id: 4,
-        action: "Email sent",
-        timestamp: "2024-01-25 11:01 AM",
-        user: "System",
-        details: "Order finished notification sent to priya@example.com",
-      },
-      {
-        id: 5,
-        action: "Order delivered",
-        timestamp: "2024-02-08 04:30 PM",
-        user: "Admin",
-        details: "Order delivered to customer",
-      },
-      {
-        id: 6,
-        action: "Email sent",
-        timestamp: "2024-02-08 04:31 PM",
-        user: "System",
-        details: "Order delivered notification sent to priya@example.com",
-      },
-    ],
-    emailHistory: [
-      {
-        id: 1,
-        type: "order_created",
-        subject: "Order Confirmation - ORD-2024-002",
-        sentAt: "2024-01-10 02:16 PM",
-        status: "sent",
-      },
-      {
-        id: 2,
-        type: "status_finished",
-        subject: "Your Order is Ready - ORD-2024-002",
-        sentAt: "2024-01-25 11:01 AM",
-        status: "sent",
-      },
-      {
-        id: 3,
-        type: "status_delivered",
-        subject: "Order Delivered - ORD-2024-002",
-        sentAt: "2024-02-08 04:31 PM",
-        status: "sent",
-      },
-    ],
-  },
-  {
-    id: "ORD-2024-003",
-    customerId: "CUST-003",
-    customerName: "Amit Patel",
-    customerEmail: "amit@example.com",
-    customerPhone: "+91 76543 21098",
-    totalAmount: 35000,
-    advancePaid: 5000,
-    remainingAmount: 30000,
-    status: "In Progress" as const,
-    paymentStatus: "Partially Paid" as const,
-    orderDate: "2024-01-20",
-    expectedDelivery: "2024-03-20",
-    description: "Corporate event photo album with 200+ photos",
-    logs: [
-      {
-        id: 1,
-        action: "Order created",
-        timestamp: "2024-01-20 09:45 AM",
-        user: "Admin",
-        details: "Large corporate order with ₹5,000 advance",
-      },
-      {
-        id: 2,
-        action: "Email sent",
-        timestamp: "2024-01-20 09:46 AM",
-        user: "System",
-        details: "Order confirmation email sent to amit@example.com",
-      },
-    ],
-    emailHistory: [
-      {
-        id: 1,
-        type: "order_created",
-        subject: "Order Confirmation - ORD-2024-003",
-        sentAt: "2024-01-20 09:46 AM",
-        status: "sent",
-      },
-    ],
-  },
-]
+const supabase = createClient();
 
-// Mock customers data
-const mockCustomers = [
-  { id: "CUST-001", name: "Rajesh Kumar", email: "rajesh@example.com", phone: "+91 98765 43210" },
-  { id: "CUST-002", name: "Priya Sharma", email: "priya@example.com", phone: "+91 87654 32109" },
-  { id: "CUST-003", name: "Amit Patel", email: "amit@example.com", phone: "+91 76543 21098" },
-  { id: "CUST-004", name: "Sneha Reddy", email: "sneha@example.com", phone: "+91 65432 10987" },
-  { id: "CUST-005", name: "Vikram Singh", email: "vikram@example.com", phone: "+91 54321 09876" },
-]
+const defaultOrderInput: CreateOrderInput = {
+  customer_id: "",
+  total_amount: 0,
+  amount_paid: undefined,
+  payment_method: undefined,
+  notes: "",
+};
 
-type OrderStatus = "In Progress" | "Finished" | "Delivered"
-type PaymentStatus = "Unpaid" | "Partially Paid" | "Fully Paid"
-type EmailType = "order_created" | "status_in_progress" | "status_finished" | "status_delivered" | "payment_received"
+const paymentMethods = ["Cash", "UPI", "Bank Transfer", "Card", "Other"];
 
-// Email templates
-const emailTemplates = {
-  order_created: {
-    subject: "Order Confirmation - {orderId}",
-    content: `Dear {customerName},
+const orderStatusBadgeVariants: Record<
+  OrderStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  pending: "secondary",
+  in_progress: "secondary",
+  completed: "default",
+  delivered: "default",
+};
 
-Thank you for your order! We have received your order and are excited to work with you.
+// Add type for OrderPayment
+interface OrderPayment {
+  id: string;
+  order_id: string;
+  amount: number;
+  payment_method: PaymentMethod;
+  payment_date: string;
+  notes?: string;
+  created_by: string;
+}
 
-Order Details:
-- Order ID: {orderId}
-- Total Amount: ₹{totalAmount}
-- Advance Paid: ₹{advancePaid}
-- Remaining: ₹{remainingAmount}
-- Expected Delivery: {expectedDelivery}
-
-Description: {description}
-
-We will keep you updated on the progress of your order. If you have any questions, please don't hesitate to contact us.
-
-Best regards,
-Photo Album Team`,
-  },
-  status_in_progress: {
-    subject: "Order Update - Work Started on {orderId}",
-    content: `Dear {customerName},
-
-Great news! We have started working on your order {orderId}.
-
-Our team is now processing your photos and creating your beautiful album. We will notify you once it's ready for delivery.
-
-Expected completion: {expectedDelivery}
-
-Thank you for your patience!
-
-Best regards,
-Photo Album Team`,
-  },
-  status_finished: {
-    subject: "Your Order is Ready - {orderId}",
-    content: `Dear {customerName},
-
-Excellent news! Your order {orderId} is now ready for pickup/delivery.
-
-Your beautiful photo album has been completed and is ready to be delivered. Please let us know your preferred delivery time.
-
-Order Details:
-- Order ID: {orderId}
-- Status: Ready for Delivery
-- Remaining Payment: ₹{remainingAmount}
-
-We're excited for you to see the final result!
-
-Best regards,
-Photo Album Team`,
-  },
-  status_delivered: {
-    subject: "Order Delivered - {orderId}",
-    content: `Dear {customerName},
-
-Your order {orderId} has been successfully delivered!
-
-We hope you love your beautiful photo album. Thank you for choosing us for your precious memories.
-
-If you have any feedback or need any assistance, please don't hesitate to reach out.
-
-We look forward to serving you again in the future!
-
-Best regards,
-Photo Album Team`,
-  },
-  payment_received: {
-    subject: "Payment Received - {orderId}",
-    content: `Dear {customerName},
-
-We have received your payment for order {orderId}.
-
-Payment Details:
-- Amount Received: ₹{paymentAmount}
-- Total Paid: ₹{totalPaid}
-- Remaining Balance: ₹{remainingAmount}
-
-Thank you for your payment!
-
-Best regards,
-Photo Album Team`,
-  },
+// Add OrderLog interface
+interface OrderLog {
+  id: string;
+  order_id: string;
+  action: string;
+  details: string;
+  created_at: string;
+  created_by: string;
 }
 
 export default function OrdersPage() {
-  const { hasPermission } = useRole()
-  const { toast } = useToast()
-  const [orders, setOrders] = useState(mockOrders)
-  const [customers] = useState(mockCustomers)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [paymentFilter, setPaymentFilter] = useState<string>("all")
-  const [sortBy, setSortBy] = useState<string>("date-desc")
-  const [selectedOrder, setSelectedOrder] = useState<(typeof mockOrders)[0] | null>(null)
-  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false)
-  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("active")
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
-  const [selectedEmailType, setSelectedEmailType] = useState<EmailType>("order_created")
-  const [customEmailContent, setCustomEmailContent] = useState("")
-  const [customEmailSubject, setCustomEmailSubject] = useState("")
-
-  // New order form state
-  const [newOrder, setNewOrder] = useState({
-    customerId: "",
-    customerName: "",
-    totalAmount: "",
-    advancePaid: "",
-    orderId: "",
-    description: "",
-    expectedDelivery: "",
-  })
-
-  // Payment form state
-  const [paymentForm, setPaymentForm] = useState({
-    amount: "",
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | OrderStatus>("all");
+  const [sortBy, setSortBy] = useState<
+    "newest" | "oldest" | "amount-high" | "amount-low"
+  >("newest");
+  const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderSummary | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<OrderSummary | null>(null);
+  const [newOrder, setNewOrder] = useState<CreateOrderInput>(defaultOrderInput);
+  const [newPayment, setNewPayment] = useState<CreateOrderPaymentInput>({
+    order_id: "",
+    amount: 0,
+    payment_method: "Cash",
     notes: "",
-  })
+  });
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] =
+    useState<OrderSummary | null>(null);
+  const [isUpdateStatusOpen, setIsUpdateStatusOpen] = useState(false);
+
+  // Handle search debounce
+  const debouncedSearch = useCallback(
+    debounce((value: string) => {
+      setDebouncedSearchTerm(value);
+    }, 500),
+    []
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    debouncedSearch(value);
+  };
+
+  // Fetch orders
+  const { data: ordersData, isLoading: isLoadingOrders } = useQuery({
+    queryKey: ["orders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_summary")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as OrderSummary[];
+    },
+  });
+
+  // Fetch customers for the add order form
+  const { data: customers } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("is_active", true)
+        .order("studio_name", { ascending: true });
+
+      if (error) throw error;
+      return data as Customer[];
+    },
+  });
+
+  // Filter customers based on search
+  const filteredCustomers = useMemo(() => {
+    if (!customers || !customerSearchTerm) return customers;
+
+    const searchLower = customerSearchTerm.toLowerCase();
+    return customers.filter(
+      (customer) =>
+        customer.studio_name.toLowerCase().includes(searchLower) ||
+        customer.email.toLowerCase().includes(searchLower)
+    );
+  }, [customers, customerSearchTerm]);
+
+  // Handle amount paid change
+  const handleAmountPaidChange = (value: string) => {
+    const numValue = value === "" ? undefined : parseFloat(value);
+    setNewOrder({
+      ...newOrder,
+      amount_paid: numValue,
+      // Reset payment method if amount is cleared or 0
+      payment_method:
+        numValue && numValue > 0 ? newOrder.payment_method : undefined,
+    });
+  };
+
+  // Add order mutation
+  const addOrderMutation = useMutation({
+    mutationFn: async (input: CreateOrderInput) => {
+      let order_number = input.order_number;
+
+      if (!order_number) {
+        // Generate order number if not provided
+        const { data: numberData, error: numberError } = await supabase.rpc(
+          "generate_order_number"
+        );
+        if (numberError) throw numberError;
+        order_number = numberData;
+      }
+
+      // Create the order
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert([
+          {
+            customer_id: input.customer_id,
+            order_number,
+            status: "pending" as const,
+            total_amount: input.total_amount,
+            amount_paid: input.amount_paid || 0,
+            notes: input.notes,
+            estimated_delivery_date: input.estimated_delivery_date,
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+            updated_by: (await supabase.auth.getUser()).data.user?.id,
+          },
+        ])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // If there's an initial payment, create a payment record
+      if (input.amount_paid && input.amount_paid > 0 && input.payment_method) {
+        const { error: paymentError } = await supabase
+          .from("order_payments")
+          .insert([
+            {
+              order_id: order.id,
+              amount: input.amount_paid,
+              payment_method: input.payment_method,
+              notes: "Initial payment",
+              created_by: (await supabase.auth.getUser()).data.user?.id,
+            },
+          ]);
+
+        if (paymentError) throw paymentError;
+      }
+
+      return order;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setIsAddOrderOpen(false);
+      setNewOrder(defaultOrderInput);
+      toast.success("Order created successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to create order: " + error.message);
+    },
+  });
+
+  // Update order mutation
+  const updateOrderMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateOrderInput;
+    }) => {
+      const { error } = await supabase.from("orders").update(data).eq("id", id);
+
+      if (error) throw error;
+
+      // Log the status change
+      if (data.status) {
+        await logOrderAction(
+          id,
+          "status_update",
+          `Order status changed to ${data.status}`
+        );
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order-logs"] });
+      toast.success("Order updated successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to update order: " + error.message);
+    },
+  });
+
+  // Delete order mutation
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete the order (cascade will handle related records)
+      const { error } = await supabase.from("orders").delete().eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setOrderToDelete(null);
+      toast.success("Order deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Error deleting order:", error);
+      toast.error("Failed to delete order: " + error.message);
+      setOrderToDelete(null);
+    },
+  });
+
+  // Add payment mutation
+  const addPaymentMutation = useMutation({
+    mutationFn: async (input: CreateOrderPaymentInput) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .select("amount_paid, total_amount, status")
+        .eq("id", input.order_id)
+        .single();
+
+      if (orderError) throw orderError;
+
+      const newAmountPaid = (order.amount_paid || 0) + input.amount;
+      const isFullyPaid = newAmountPaid >= order.total_amount;
+
+      // Insert payment
+      const { data, error: paymentError } = await supabase
+        .from("order_payments")
+        .insert({
+          ...input,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (paymentError) throw paymentError;
+
+      // Update order amount_paid and status if fully paid
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({
+          amount_paid: newAmountPaid,
+          status:
+            isFullyPaid && order.status === "completed"
+              ? "delivered"
+              : undefined,
+        })
+        .eq("id", input.order_id);
+
+      if (updateError) throw updateError;
+
+      // Log the payment
+      await logOrderAction(
+        input.order_id,
+        "payment_added",
+        `Payment of ₹${input.amount} added via ${input.payment_method}`
+      );
+
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({
+        queryKey: ["orderLogs", selectedOrder?.id],
+      });
+      setIsAddPaymentOpen(false);
+      setNewPayment({
+        order_id: "",
+        amount: 0,
+        payment_method: "Cash",
+        notes: "",
+      });
+      toast.success("Payment added successfully");
+    },
+    onError: (error) => {
+      console.error("Error adding payment:", error);
+      toast.error("Failed to add payment: " + error.message);
+    },
+  });
+
+  // Fetch payments for selected order
+  const { data: orderPayments } = useQuery({
+    queryKey: ["order-payments", selectedOrder?.id],
+    queryFn: async () => {
+      if (!selectedOrder?.id) return [];
+
+      const { data, error } = await supabase
+        .from("order_payments")
+        .select("*")
+        .eq("order_id", selectedOrder.id)
+        .order("payment_date", { ascending: false });
+
+      if (error) throw error;
+      return data as OrderPayment[];
+    },
+    enabled: !!selectedOrder?.id,
+  });
+
+  // Fetch order logs
+  const { data: orderLogs } = useQuery({
+    queryKey: ["orderLogs", selectedOrder?.id],
+    queryFn: async () => {
+      if (!selectedOrder?.id) return [];
+
+      const { data, error } = await supabase
+        .from("order_logs")
+        .select("*")
+        .eq("order_id", selectedOrder.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as OrderLog[];
+    },
+    enabled: !!selectedOrder?.id,
+  });
 
   // Filter and sort orders
   const filteredOrders = useMemo(() => {
-    const filtered = orders.filter((order) => {
-      const matchesSearch =
-        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!ordersData) return [];
 
-      const matchesStatus = statusFilter === "all" || order.status === statusFilter
-      const matchesPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter
+    let filtered = [...ordersData];
 
-      // Active orders: not delivered or not fully paid
-      const isActive = order.status !== "Delivered" || order.paymentStatus !== "Fully Paid"
-      const matchesTab = activeTab === "active" ? isActive : !isActive
+    // Apply search filter
+    if (debouncedSearchTerm) {
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (order) =>
+          order.order_number.toLowerCase().includes(searchLower) ||
+          order.customer_name.toLowerCase().includes(searchLower) ||
+          order.customer_email.toLowerCase().includes(searchLower)
+      );
+    }
 
-      return matchesSearch && matchesStatus && matchesPayment && matchesTab
-    })
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((order) => order.status === statusFilter);
+    }
 
-    // Sort orders
+    // Apply sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case "date-desc":
-          return new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
-        case "date-asc":
-          return new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime()
-        case "amount-desc":
-          return b.totalAmount - a.totalAmount
-        case "amount-asc":
-          return a.totalAmount - b.totalAmount
-        case "customer":
-          return a.customerName.localeCompare(b.customerName)
-        default:
-          return 0
+        case "oldest":
+          return (
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        case "amount-high":
+          return b.total_amount - a.total_amount;
+        case "amount-low":
+          return a.total_amount - b.total_amount;
+        default: // newest
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
       }
-    })
+    });
 
-    return filtered
-  }, [orders, searchTerm, statusFilter, paymentFilter, sortBy, activeTab])
+    return filtered;
+  }, [ordersData, debouncedSearchTerm, statusFilter, sortBy]);
 
   // Calculate statistics
   const stats = useMemo(() => {
-    const activeOrders = orders.filter((order) => order.status !== "Delivered" || order.paymentStatus !== "Fully Paid")
-    const completedOrders = orders.filter(
-      (order) => order.status === "Delivered" && order.paymentStatus === "Fully Paid",
-    )
-    const totalRevenue = orders.reduce((sum, order) => sum + order.advancePaid, 0)
-    const pendingPayments = orders.reduce((sum, order) => sum + order.remainingAmount, 0)
+    if (!ordersData)
+      return {
+        totalOrders: 0,
+        activeOrders: 0,
+        totalAmount: 0,
+        amountPaid: 0,
+        pendingAmount: 0,
+      };
+
+    const totalOrders = ordersData.length;
+    const activeOrders = ordersData.filter(
+      (order) => order.status !== "delivered"
+    ).length;
+    const totalAmount = ordersData.reduce(
+      (sum, order) => sum + order.total_amount,
+      0
+    );
+    const amountPaid = ordersData.reduce(
+      (sum, order) => sum + order.amount_paid,
+      0
+    );
+    const pendingAmount = totalAmount - amountPaid;
 
     return {
-      totalOrders: orders.length,
-      activeOrders: activeOrders.length,
-      completedOrders: completedOrders.length,
-      totalRevenue,
-      pendingPayments,
+      totalOrders,
+      activeOrders,
+      totalAmount,
+      amountPaid,
+      pendingAmount,
+    };
+  }, [ordersData]);
+
+  // Update the table row click handler
+  const handleRowClick = (order: OrderSummary) => {
+    setSelectedOrder(order);
+    setSelectedOrderDetails(order);
+    setIsDetailsOpen(true);
+  };
+
+  // Add function to log order actions
+  const logOrderAction = async (
+    orderId: string,
+    action: string,
+    details: string
+  ) => {
+    const { error } = await supabase.from("order_logs").insert([
+      {
+        order_id: orderId,
+        action,
+        details,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+      },
+    ]);
+
+    if (error) {
+      console.error("Failed to log order action:", error);
     }
-  }, [orders])
-
-  // Email sending function (mock)
-  const sendEmail = async (order: any, emailType: EmailType, customContent?: string, customSubject?: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const template = emailTemplates[emailType]
-    const subject =
-      customSubject || template.subject.replace("{orderId}", order.id).replace("{customerName}", order.customerName)
-
-    const content =
-      customContent ||
-      template.content
-        .replace(/\{orderId\}/g, order.id)
-        .replace(/\{customerName\}/g, order.customerName)
-        .replace(/\{totalAmount\}/g, order.totalAmount.toLocaleString())
-        .replace(/\{advancePaid\}/g, order.advancePaid.toLocaleString())
-        .replace(/\{remainingAmount\}/g, order.remainingAmount.toLocaleString())
-        .replace(/\{expectedDelivery\}/g, new Date(order.expectedDelivery).toLocaleDateString())
-        .replace(/\{description\}/g, order.description)
-
-    // Add email to history
-    const emailRecord = {
-      id: (order.emailHistory?.length || 0) + 1,
-      type: emailType,
-      subject,
-      sentAt: new Date().toLocaleString(),
-      status: "sent" as const,
-    }
-
-    // Add log entry
-    const logEntry = {
-      id: order.logs.length + 1,
-      action: "Email sent",
-      timestamp: new Date().toLocaleString(),
-      user: "Admin",
-      details: `${emailType.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())} email sent to ${order.customerEmail}`,
-    }
-
-    return { emailRecord, logEntry, subject, content }
-  }
-
-  const getStatusBadge = (status: OrderStatus) => {
-    const variants = {
-      "In Progress": "bg-blue-100 text-blue-800",
-      Finished: "bg-green-100 text-green-800",
-      Delivered: "bg-gray-100 text-gray-800",
-    }
-    return <Badge className={variants[status]}>{status}</Badge>
-  }
-
-  const getPaymentBadge = (status: PaymentStatus) => {
-    const variants = {
-      Unpaid: "bg-red-100 text-red-800",
-      "Partially Paid": "bg-yellow-100 text-yellow-800",
-      "Fully Paid": "bg-green-100 text-green-800",
-    }
-    return <Badge className={variants[status]}>{status}</Badge>
-  }
-
-  const handleCreateOrder = async () => {
-    const orderId = newOrder.orderId || `ORD-2024-${String(orders.length + 1).padStart(3, "0")}`
-    const customer = customers.find((c) => c.id === newOrder.customerId)
-
-    if (!customer) return
-
-    const order = {
-      id: orderId,
-      customerId: customer.id,
-      customerName: customer.name,
-      customerEmail: customer.email,
-      customerPhone: customer.phone,
-      totalAmount: Number.parseInt(newOrder.totalAmount),
-      advancePaid: Number.parseInt(newOrder.advancePaid),
-      remainingAmount: Number.parseInt(newOrder.totalAmount) - Number.parseInt(newOrder.advancePaid),
-      status: "In Progress" as const,
-      paymentStatus: (Number.parseInt(newOrder.advancePaid) === 0
-        ? "Unpaid"
-        : Number.parseInt(newOrder.advancePaid) === Number.parseInt(newOrder.totalAmount)
-          ? "Fully Paid"
-          : "Partially Paid") as PaymentStatus,
-      orderDate: new Date().toISOString().split("T")[0],
-      expectedDelivery: newOrder.expectedDelivery,
-      description: newOrder.description,
-      logs: [
-        {
-          id: 1,
-          action: "Order created",
-          timestamp: new Date().toLocaleString(),
-          user: "Admin",
-          details: `Order created with ₹${newOrder.advancePaid} advance payment`,
-        },
-      ],
-      emailHistory: [],
-    }
-
-    try {
-      // Send order creation email automatically
-      const emailResult = await sendEmail(order, "order_created")
-
-      // Add email record and log to order
-      order.emailHistory = [emailResult.emailRecord]
-      order.logs.push(emailResult.logEntry)
-
-      setOrders([...orders, order])
-      setNewOrder({
-        customerId: "",
-        customerName: "",
-        totalAmount: "",
-        advancePaid: "",
-        orderId: "",
-        description: "",
-        expectedDelivery: "",
-      })
-      setIsCreateOrderOpen(false)
-
-      toast({
-        title: "Order Created Successfully",
-        description: `Order ${orderId} has been created and confirmation email sent to ${customer.email}`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create order or send email",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleAddPayment = async () => {
-    if (!selectedOrder || !paymentForm.amount) return
-
-    const amount = Number.parseInt(paymentForm.amount)
-    const updatedOrder = {
-      ...selectedOrder,
-      advancePaid: selectedOrder.advancePaid + amount,
-      remainingAmount: selectedOrder.remainingAmount - amount,
-      logs: [
-        ...selectedOrder.logs,
-        {
-          id: selectedOrder.logs.length + 1,
-          action: "Payment received",
-          timestamp: new Date().toLocaleString(),
-          user: "Admin",
-          details: `Payment of ₹${amount} received. ${paymentForm.notes ? `Notes: ${paymentForm.notes}` : ""}`,
-        },
-      ],
-    }
-
-    // Update payment status
-    if (updatedOrder.remainingAmount <= 0) {
-      updatedOrder.paymentStatus = "Fully Paid"
-      updatedOrder.remainingAmount = 0
-    } else if (updatedOrder.advancePaid > 0) {
-      updatedOrder.paymentStatus = "Partially Paid"
-    }
-
-    try {
-      // Send payment received email automatically
-      const emailResult = await sendEmail(updatedOrder, "payment_received")
-
-      // Add email record and log
-      updatedOrder.emailHistory = [...(updatedOrder.emailHistory || []), emailResult.emailRecord]
-      updatedOrder.logs.push(emailResult.logEntry)
-
-      setOrders(orders.map((order) => (order.id === selectedOrder.id ? updatedOrder : order)))
-      setSelectedOrder(updatedOrder)
-      setPaymentForm({ amount: "", notes: "" })
-
-      toast({
-        title: "Payment Added Successfully",
-        description: `Payment of ₹${amount} added and notification email sent to ${updatedOrder.customerEmail}`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add payment or send email",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleStatusUpdate = async (newStatus: OrderStatus) => {
-    if (!selectedOrder) return
-
-    const updatedOrder = {
-      ...selectedOrder,
-      status: newStatus,
-      ...(newStatus === "Delivered" && { deliveredDate: new Date().toISOString().split("T")[0] }),
-      logs: [
-        ...selectedOrder.logs,
-        {
-          id: selectedOrder.logs.length + 1,
-          action: "Status updated",
-          timestamp: new Date().toLocaleString(),
-          user: "Admin",
-          details: `Order status changed to ${newStatus}`,
-        },
-      ],
-    }
-
-    try {
-      // Send status update email automatically
-      let emailType: EmailType = "status_in_progress"
-      if (newStatus === "Finished") emailType = "status_finished"
-      if (newStatus === "Delivered") emailType = "status_delivered"
-
-      const emailResult = await sendEmail(updatedOrder, emailType)
-
-      // Add email record and log
-      updatedOrder.emailHistory = [...(updatedOrder.emailHistory || []), emailResult.emailRecord]
-      updatedOrder.logs.push(emailResult.logEntry)
-
-      setOrders(orders.map((order) => (order.id === selectedOrder.id ? updatedOrder : order)))
-      setSelectedOrder(updatedOrder)
-
-      toast({
-        title: "Status Updated Successfully",
-        description: `Order status changed to ${newStatus} and notification email sent to ${updatedOrder.customerEmail}`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update status or send email",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleResendEmail = async (emailType: EmailType, customContent?: string, customSubject?: string) => {
-    if (!selectedOrder) return
-
-    try {
-      const emailResult = await sendEmail(selectedOrder, emailType, customContent, customSubject)
-
-      // Add email record and log
-      const updatedOrder = {
-        ...selectedOrder,
-        emailHistory: [...(selectedOrder.emailHistory || []), emailResult.emailRecord],
-        logs: [
-          ...selectedOrder.logs,
-          {
-            id: selectedOrder.logs.length + 1,
-            action: "Email resent",
-            timestamp: new Date().toLocaleString(),
-            user: "Admin",
-            details: `${emailType.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())} email resent to ${selectedOrder.customerEmail}`,
-          },
-        ],
-      }
-
-      setOrders(orders.map((order) => (order.id === selectedOrder.id ? updatedOrder : order)))
-      setSelectedOrder(updatedOrder)
-      setIsEmailDialogOpen(false)
-      setCustomEmailContent("")
-      setCustomEmailSubject("")
-
-      toast({
-        title: "Email Sent Successfully",
-        description: `Email sent to ${selectedOrder.customerEmail}`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send email",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const openEmailDialog = (emailType: EmailType) => {
-    setSelectedEmailType(emailType)
-    if (selectedOrder) {
-      const template = emailTemplates[emailType]
-      setCustomEmailSubject(
-        template.subject.replace("{orderId}", selectedOrder.id).replace("{customerName}", selectedOrder.customerName),
-      )
-      setCustomEmailContent(
-        template.content
-          .replace(/\{orderId\}/g, selectedOrder.id)
-          .replace(/\{customerName\}/g, selectedOrder.customerName)
-          .replace(/\{totalAmount\}/g, selectedOrder.totalAmount.toLocaleString())
-          .replace(/\{advancePaid\}/g, selectedOrder.advancePaid.toLocaleString())
-          .replace(/\{remainingAmount\}/g, selectedOrder.remainingAmount.toLocaleString())
-          .replace(/\{expectedDelivery\}/g, new Date(selectedOrder.expectedDelivery).toLocaleDateString())
-          .replace(/\{description\}/g, selectedOrder.description),
-      )
-    }
-    setIsEmailDialogOpen(true)
-  }
-
-  if (!hasPermission("manage_orders")) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-600">You don't have permission to manage orders.</p>
-        </div>
-      </div>
-    )
-  }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto space-y-8 py-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Orders Management</h1>
-          <p className="text-gray-600">Manage customer orders and track payments</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Dialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Order
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Order</DialogTitle>
-                <DialogDescription>
-                  Add a new order for a customer. A confirmation email will be sent automatically.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="customer">Customer</Label>
-                    <Select
-                      value={newOrder.customerId}
-                      onValueChange={(value) => {
-                        const customer = customers.find((c) => c.id === value)
-                        setNewOrder({
-                          ...newOrder,
-                          customerId: value,
-                          customerName: customer?.name || "",
-                        })
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select customer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name} - {customer.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="orderId">Order ID (Optional)</Label>
-                    <Input
-                      id="orderId"
-                      placeholder="Auto-generated if empty"
-                      value={newOrder.orderId}
-                      onChange={(e) => setNewOrder({ ...newOrder, orderId: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="totalAmount">Total Amount (₹)</Label>
-                    <Input
-                      id="totalAmount"
-                      type="number"
-                      placeholder="25000"
-                      value={newOrder.totalAmount}
-                      onChange={(e) => setNewOrder({ ...newOrder, totalAmount: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="advancePaid">Advance Paid (₹)</Label>
-                    <Input
-                      id="advancePaid"
-                      type="number"
-                      placeholder="10000"
-                      value={newOrder.advancePaid}
-                      onChange={(e) => setNewOrder({ ...newOrder, advancePaid: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expectedDelivery">Expected Delivery</Label>
-                  <Input
-                    id="expectedDelivery"
-                    type="date"
-                    value={newOrder.expectedDelivery}
-                    onChange={(e) => setNewOrder({ ...newOrder, expectedDelivery: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Wedding album with 100 photos, premium binding..."
-                    value={newOrder.description}
-                    onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsCreateOrderOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateOrder} disabled={!newOrder.customerId || !newOrder.totalAmount}>
-                  Create Order & Send Email
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+      <div className="flex flex-col gap-2 relative">
+        <h1 className="text-2xl font-bold text-red-900">Orders</h1>
+        <p className="text-muted-foreground">
+          Manage customer orders and payments
+        </p>
+        <div className="absolute -bottom-1 left-0 w-12 h-1 bg-red-600 rounded-full" />
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingOrders ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                stats.totalOrders
+              )}
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-orange-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.activeOrders}</p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
+            <Clock className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingOrders ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                stats.activeOrders
+              )}
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.completedOrders}</p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+            <Receipt className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingOrders ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                `₹${stats.totalAmount.toLocaleString()}`
+              )}
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">₹{stats.totalRevenue.toLocaleString()}</p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Amount Paid</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingOrders ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                `₹${stats.amountPaid.toLocaleString()}`
+              )}
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">₹{stats.pendingPayments.toLocaleString()}</p>
-              </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Pending Amount
+            </CardTitle>
+            <CircleDollarSign className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoadingOrders ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                `₹${stats.pendingAmount.toLocaleString()}`
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters and Search */}
-      <Card>
+      {/* Search and Filters */}
+      <Card className="border-red-100">
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search orders by ID or customer name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 w-4 h-4" />
+              <Input
+                type="search"
+                placeholder="Search orders..."
+                className="pl-10 border-red-100 focus:border-red-200 focus:ring-red-100"
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
             </div>
-            <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Finished">Finished</SelectItem>
-                  <SelectItem value="Delivered">Delivered</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Payment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Payments</SelectItem>
-                  <SelectItem value="Unpaid">Unpaid</SelectItem>
-                  <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                  <SelectItem value="Fully Paid">Fully Paid</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date-desc">Newest First</SelectItem>
-                  <SelectItem value="date-asc">Oldest First</SelectItem>
-                  <SelectItem value="amount-desc">Highest Amount</SelectItem>
-                  <SelectItem value="amount-asc">Lowest Amount</SelectItem>
-                  <SelectItem value="customer">Customer Name</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-100 hover:bg-red-600 hover:text-white transition-colors group"
+                  >
+                    <Filter className="mr-2 h-4 w-4 text-red-600 group-hover:text-white transition-colors" />
+                    {statusFilter === "all"
+                      ? "All Status"
+                      : statusFilter.charAt(0).toUpperCase() +
+                        statusFilter.slice(1)}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[200px]">
+                  <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                    All Status
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("pending")}>
+                    Pending
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setStatusFilter("in_progress")}
+                  >
+                    In Progress
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setStatusFilter("completed")}
+                  >
+                    Completed
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setStatusFilter("delivered")}
+                  >
+                    Delivered
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-100 hover:bg-red-600 hover:text-white transition-colors group"
+                  >
+                    <ArrowUpDown className="mr-2 h-4 w-4 text-red-600 group-hover:text-white transition-colors" />
+                    Sort
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[200px]">
+                  <DropdownMenuItem onClick={() => setSortBy("newest")}>
+                    Newest First
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("oldest")}>
+                    Oldest First
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("amount-high")}>
+                    Highest Amount
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("amount-low")}>
+                    Lowest Amount
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                onClick={() => setIsAddOrderOpen(true)}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Order
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Orders Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="active">Active Orders ({stats.activeOrders})</TabsTrigger>
-          <TabsTrigger value="past">Past Orders ({stats.completedOrders})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="active" className="space-y-4">
-          {filteredOrders.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No active orders found</h3>
-                <p className="text-gray-600 mb-4">
-                  {searchTerm || statusFilter !== "all" || paymentFilter !== "all"
-                    ? "Try adjusting your search or filters"
-                    : "Create your first order to get started"}
-                </p>
-                {!searchTerm && statusFilter === "all" && paymentFilter === "all" && (
-                  <Button onClick={() => setIsCreateOrderOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create First Order
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
+      {/* Orders Table */}
+      {filteredOrders.length === 0 ? (
+        <Card className="border-red-100">
+          <CardContent className="py-16 flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+              <ShoppingBag className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-red-900 mb-2">
+              No Orders Found
+            </h3>
+            <p className="text-muted-foreground max-w-sm mb-6">
+              {searchTerm || statusFilter !== "all"
+                ? "No orders match your current filters. Try adjusting your search criteria or clearing filters."
+                : "There are no orders yet. Create your first order to get started."}
+            </p>
+            {(searchTerm || statusFilter !== "all") && (
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="border-red-100 hover:bg-red-50"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("all");
+                  }}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-red-100">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-red-50/50">
+                <TableHead>Order Number</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Total Amount</TableHead>
+                <TableHead>Amount Paid</TableHead>
+                <TableHead>Balance</TableHead>
+                <TableHead>Created At</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredOrders.map((order) => (
-                <Card key={order.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-gray-900">{order.id}</h3>
-                          {getStatusBadge(order.status)}
-                          {getPaymentBadge(order.paymentStatus)}
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {order.emailHistory?.length || 0} emails
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-600">Customer</p>
-                            <p className="font-medium">{order.customerName}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Total Amount</p>
-                            <p className="font-medium">₹{order.totalAmount.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Paid / Remaining</p>
-                            <p className="font-medium">
-                              ₹{order.advancePaid.toLocaleString()} / ₹{order.remainingAmount.toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Order Date</p>
-                            <p className="font-medium">{new Date(order.orderDate).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Sheet
-                          open={isOrderDetailsOpen && selectedOrder?.id === order.id}
-                          onOpenChange={(open) => {
-                            setIsOrderDetailsOpen(open)
-                            if (!open) setSelectedOrder(null)
+                <TableRow
+                  key={order.id}
+                  className="cursor-pointer hover:bg-red-50/50"
+                  onClick={() => handleRowClick(order)}
+                >
+                  <TableCell className="font-medium">
+                    {order.order_number}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{order.customer_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {order.customer_email}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={orderStatusBadgeVariants[order.status]}
+                      className="mr-2"
+                    >
+                      {order.status.charAt(0).toUpperCase() +
+                        order.status.slice(1).replace("_", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>₹{order.total_amount.toLocaleString()}</TableCell>
+                  <TableCell>₹{order.amount_paid.toLocaleString()}</TableCell>
+                  <TableCell>
+                    ₹{(order.total_amount - order.amount_paid).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(order.created_at), "PPp")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0 hover:bg-red-50"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedOrder(order);
+                            setIsAddPaymentOpen(true);
                           }}
                         >
-                          <SheetTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </Button>
-                          </SheetTrigger>
-                          <SheetContent className="w-[700px] sm:max-w-[700px]">
-                            <SheetHeader>
-                              <SheetTitle>Order Details - {selectedOrder?.id}</SheetTitle>
-                              <SheetDescription>
-                                Manage order information, payments, and email communications
-                              </SheetDescription>
-                            </SheetHeader>
-                            {selectedOrder && (
-                              <ScrollArea className="h-[calc(100vh-120px)]">
-                                <div className="space-y-6 py-4 pr-4">
-                                  {/* Customer Information */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Customer Information</h4>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div>
-                                        <p className="text-gray-600">Name</p>
-                                        <p className="font-medium">{selectedOrder.customerName}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Email</p>
-                                        <p className="font-medium">{selectedOrder.customerEmail}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Phone</p>
-                                        <p className="font-medium">{selectedOrder.customerPhone}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Customer ID</p>
-                                        <p className="font-medium">{selectedOrder.customerId}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <Separator />
-
-                                  {/* Order Information */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Order Information</h4>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div>
-                                        <p className="text-gray-600">Order Date</p>
-                                        <p className="font-medium">
-                                          {new Date(selectedOrder.orderDate).toLocaleDateString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Expected Delivery</p>
-                                        <p className="font-medium">
-                                          {new Date(selectedOrder.expectedDelivery).toLocaleDateString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Status</p>
-                                        <div className="flex items-center gap-2">
-                                          {getStatusBadge(selectedOrder.status)}
-                                          <Select value={selectedOrder.status} onValueChange={handleStatusUpdate}>
-                                            <SelectTrigger className="w-[120px] h-8">
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="In Progress">In Progress</SelectItem>
-                                              <SelectItem value="Finished">Finished</SelectItem>
-                                              <SelectItem value="Delivered">Delivered</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Payment Status</p>
-                                        <p>{getPaymentBadge(selectedOrder.paymentStatus)}</p>
-                                      </div>
-                                    </div>
-                                    <div className="mt-4">
-                                      <p className="text-gray-600 text-sm">Description</p>
-                                      <p className="font-medium">{selectedOrder.description}</p>
-                                    </div>
-                                  </div>
-
-                                  <Separator />
-
-                                  {/* Email Actions */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Email Communications</h4>
-                                    <div className="grid grid-cols-2 gap-2 mb-4">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openEmailDialog("order_created")}
-                                        className="justify-start"
-                                      >
-                                        <Mail className="h-4 w-4 mr-2" />
-                                        Resend Order Confirmation
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openEmailDialog("status_in_progress")}
-                                        className="justify-start"
-                                      >
-                                        <Send className="h-4 w-4 mr-2" />
-                                        Send Progress Update
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openEmailDialog("status_finished")}
-                                        className="justify-start"
-                                      >
-                                        <Send className="h-4 w-4 mr-2" />
-                                        Send Ready Notification
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openEmailDialog("status_delivered")}
-                                        className="justify-start"
-                                      >
-                                        <Send className="h-4 w-4 mr-2" />
-                                        Send Delivery Confirmation
-                                      </Button>
-                                    </div>
-
-                                    {/* Email History */}
-                                    <div className="bg-gray-50 rounded-lg p-3">
-                                      <h5 className="font-medium mb-2">Email History</h5>
-                                      <ScrollArea className="h-[120px]">
-                                        <div className="space-y-2">
-                                          {selectedOrder.emailHistory?.map((email) => (
-                                            <div key={email.id} className="flex justify-between items-center text-sm">
-                                              <div>
-                                                <p className="font-medium">{email.subject}</p>
-                                                <p className="text-gray-600 text-xs">{email.sentAt}</p>
-                                              </div>
-                                              <Badge variant="outline" className="bg-green-50 text-green-700">
-                                                {email.status}
-                                              </Badge>
-                                            </div>
-                                          ))}
-                                          {(!selectedOrder.emailHistory || selectedOrder.emailHistory.length === 0) && (
-                                            <p className="text-gray-500 text-sm">No emails sent yet</p>
-                                          )}
-                                        </div>
-                                      </ScrollArea>
-                                    </div>
-                                  </div>
-
-                                  <Separator />
-
-                                  {/* Payment Information */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Payment Information</h4>
-                                    <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                                      <div>
-                                        <p className="text-gray-600">Total Amount</p>
-                                        <p className="font-medium text-lg">
-                                          ₹{selectedOrder.totalAmount.toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Amount Paid</p>
-                                        <p className="font-medium text-lg text-green-600">
-                                          ₹{selectedOrder.advancePaid.toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Remaining</p>
-                                        <p className="font-medium text-lg text-red-600">
-                                          ₹{selectedOrder.remainingAmount.toLocaleString()}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    {selectedOrder.remainingAmount > 0 && (
-                                      <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                                        <h5 className="font-medium">Add Payment</h5>
-                                        <div className="grid grid-cols-2 gap-3">
-                                          <div>
-                                            <Label htmlFor="paymentAmount">Amount (₹)</Label>
-                                            <Input
-                                              id="paymentAmount"
-                                              type="number"
-                                              placeholder="5000"
-                                              value={paymentForm.amount}
-                                              onChange={(e) =>
-                                                setPaymentForm({ ...paymentForm, amount: e.target.value })
-                                              }
-                                              max={selectedOrder.remainingAmount}
-                                            />
-                                          </div>
-                                          <div>
-                                            <Label htmlFor="paymentNotes">Notes (Optional)</Label>
-                                            <Input
-                                              id="paymentNotes"
-                                              placeholder="Payment method, reference..."
-                                              value={paymentForm.notes}
-                                              onChange={(e) =>
-                                                setPaymentForm({ ...paymentForm, notes: e.target.value })
-                                              }
-                                            />
-                                          </div>
-                                        </div>
-                                        <Button
-                                          onClick={handleAddPayment}
-                                          disabled={
-                                            !paymentForm.amount ||
-                                            Number.parseInt(paymentForm.amount) > selectedOrder.remainingAmount
-                                          }
-                                          className="w-full"
-                                        >
-                                          Add Payment & Send Email
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <Separator />
-
-                                  {/* Order Logs */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Order History</h4>
-                                    <ScrollArea className="h-[200px]">
-                                      <div className="space-y-3">
-                                        {selectedOrder.logs.map((log) => (
-                                          <div key={log.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-medium text-sm">{log.action}</p>
-                                                <Badge variant="outline" className="text-xs">
-                                                  {log.user}
-                                                </Badge>
-                                              </div>
-                                              <p className="text-sm text-gray-600">{log.details}</p>
-                                              <p className="text-xs text-gray-500 mt-1">{log.timestamp}</p>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
-                                  </div>
-                                </div>
-                              </ScrollArea>
-                            )}
-                          </SheetContent>
-                        </Sheet>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="past" className="space-y-4">
-          {filteredOrders.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No completed orders found</h3>
-                <p className="text-gray-600">
-                  {searchTerm || statusFilter !== "all" || paymentFilter !== "all"
-                    ? "Try adjusting your search or filters"
-                    : "Completed orders will appear here"}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {filteredOrders.map((order) => (
-                <Card key={order.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-gray-900">{order.id}</h3>
-                          {getStatusBadge(order.status)}
-                          {getPaymentBadge(order.paymentStatus)}
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {order.emailHistory?.length || 0} emails
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-600">Customer</p>
-                            <p className="font-medium">{order.customerName}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Total Amount</p>
-                            <p className="font-medium">₹{order.totalAmount.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Order Date</p>
-                            <p className="font-medium">{new Date(order.orderDate).toLocaleDateString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Delivered Date</p>
-                            <p className="font-medium">
-                              {order.deliveredDate ? new Date(order.deliveredDate).toLocaleDateString() : "-"}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Revenue</p>
-                            <p className="font-medium text-green-600">₹{order.advancePaid.toLocaleString()}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Sheet
-                          open={isOrderDetailsOpen && selectedOrder?.id === order.id}
-                          onOpenChange={(open) => {
-                            setIsOrderDetailsOpen(open)
-                            if (!open) setSelectedOrder(null)
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Add Payment
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateOrderMutation.mutate({
+                              id: order.id,
+                              data: {
+                                status:
+                                  order.status === "pending"
+                                    ? "in_progress"
+                                    : order.status === "in_progress"
+                                    ? "completed"
+                                    : order.status === "completed" &&
+                                      order.total_amount <= order.amount_paid
+                                    ? "delivered"
+                                    : order.status,
+                              },
+                            });
                           }}
+                          disabled={
+                            order.status === "delivered" ||
+                            (order.status === "completed" &&
+                              order.total_amount > order.amount_paid)
+                          }
                         >
-                          <SheetTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </Button>
-                          </SheetTrigger>
-                          <SheetContent className="w-[700px] sm:max-w-[700px]">
-                            <SheetHeader>
-                              <SheetTitle>Order Details - {selectedOrder?.id}</SheetTitle>
-                              <SheetDescription>View completed order information and email history</SheetDescription>
-                            </SheetHeader>
-                            {selectedOrder && (
-                              <ScrollArea className="h-[calc(100vh-120px)]">
-                                <div className="space-y-6 py-4 pr-4">
-                                  {/* Customer Information */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Customer Information</h4>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div>
-                                        <p className="text-gray-600">Name</p>
-                                        <p className="font-medium">{selectedOrder.customerName}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Email</p>
-                                        <p className="font-medium">{selectedOrder.customerEmail}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Phone</p>
-                                        <p className="font-medium">{selectedOrder.customerPhone}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Customer ID</p>
-                                        <p className="font-medium">{selectedOrder.customerId}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <Separator />
-
-                                  {/* Order Information */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Order Information</h4>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div>
-                                        <p className="text-gray-600">Order Date</p>
-                                        <p className="font-medium">
-                                          {new Date(selectedOrder.orderDate).toLocaleDateString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Delivered Date</p>
-                                        <p className="font-medium">
-                                          {selectedOrder.deliveredDate
-                                            ? new Date(selectedOrder.deliveredDate).toLocaleDateString()
-                                            : "-"}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Status</p>
-                                        <p>{getStatusBadge(selectedOrder.status)}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Payment Status</p>
-                                        <p>{getPaymentBadge(selectedOrder.paymentStatus)}</p>
-                                      </div>
-                                    </div>
-                                    <div className="mt-4">
-                                      <p className="text-gray-600 text-sm">Description</p>
-                                      <p className="font-medium">{selectedOrder.description}</p>
-                                    </div>
-                                  </div>
-
-                                  <Separator />
-
-                                  {/* Email History */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Email Communications</h4>
-                                    <div className="bg-gray-50 rounded-lg p-4">
-                                      <ScrollArea className="h-[150px]">
-                                        <div className="space-y-3">
-                                          {selectedOrder.emailHistory?.map((email) => (
-                                            <div key={email.id} className="flex justify-between items-center">
-                                              <div>
-                                                <p className="font-medium text-sm">{email.subject}</p>
-                                                <p className="text-gray-600 text-xs">{email.sentAt}</p>
-                                              </div>
-                                              <Badge variant="outline" className="bg-green-50 text-green-700">
-                                                {email.status}
-                                              </Badge>
-                                            </div>
-                                          ))}
-                                          {(!selectedOrder.emailHistory || selectedOrder.emailHistory.length === 0) && (
-                                            <p className="text-gray-500 text-sm">No emails sent</p>
-                                          )}
-                                        </div>
-                                      </ScrollArea>
-                                    </div>
-                                  </div>
-
-                                  <Separator />
-
-                                  {/* Payment Summary */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Payment Summary</h4>
-                                    <div className="grid grid-cols-3 gap-4 text-sm">
-                                      <div>
-                                        <p className="text-gray-600">Total Amount</p>
-                                        <p className="font-medium text-lg">
-                                          ₹{selectedOrder.totalAmount.toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Amount Paid</p>
-                                        <p className="font-medium text-lg text-green-600">
-                                          ₹{selectedOrder.advancePaid.toLocaleString()}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-gray-600">Remaining</p>
-                                        <p className="font-medium text-lg">
-                                          ₹{selectedOrder.remainingAmount.toLocaleString()}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <Separator />
-
-                                  {/* Order Logs */}
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Order History</h4>
-                                    <ScrollArea className="h-[200px]">
-                                      <div className="space-y-3">
-                                        {selectedOrder.logs.map((log) => (
-                                          <div key={log.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-medium text-sm">{log.action}</p>
-                                                <Badge variant="outline" className="text-xs">
-                                                  {log.user}
-                                                </Badge>
-                                              </div>
-                                              <p className="text-sm text-gray-600">{log.details}</p>
-                                              <p className="text-xs text-gray-500 mt-1">{log.timestamp}</p>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
-                                  </div>
-                                </div>
-                              </ScrollArea>
-                            )}
-                          </SheetContent>
-                        </Sheet>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          {order.status === "pending"
+                            ? "Mark In Progress"
+                            : order.status === "in_progress"
+                            ? "Mark Completed"
+                            : order.status === "completed"
+                            ? "Mark Delivered"
+                            : "Status"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOrderToDelete(order);
+                          }}
+                          className="text-red-600"
+                          disabled={order.status !== "pending"}
+                        >
+                          <Trash className="w-4 h-4 mr-2" />
+                          Delete Order
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            </TableBody>
+          </Table>
+        </Card>
+      )}
 
-      {/* Email Dialog */}
-      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-        <DialogContent className="max-w-2xl">
+      {/* Add Order Dialog */}
+      <Dialog open={isAddOrderOpen} onOpenChange={setIsAddOrderOpen}>
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
-            <DialogTitle>Send Email</DialogTitle>
-            <DialogDescription>Customize and send email to {selectedOrder?.customerEmail}</DialogDescription>
+            <DialogTitle className="text-xl font-bold text-red-900">
+              Create New Order
+            </DialogTitle>
+            <DialogDescription>
+              Create a new order and assign it to a customer.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="emailSubject">Subject</Label>
-              <Input
-                id="emailSubject"
-                value={customEmailSubject}
-                onChange={(e) => setCustomEmailSubject(e.target.value)}
-              />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              addOrderMutation.mutate(newOrder);
+            }}
+          >
+            <div className="grid gap-6 py-4 md:grid-cols-2">
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="customer_id" className="text-red-900">
+                    Customer *
+                  </Label>
+                  <Select
+                    value={newOrder.customer_id}
+                    onValueChange={(value) =>
+                      setNewOrder({ ...newOrder, customer_id: value })
+                    }
+                  >
+                    <SelectTrigger className="border-red-100 focus:border-red-200 focus:ring-red-100">
+                      <SelectValue placeholder="Select a customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <div className="p-2 pb-0">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-red-400" />
+                          <Input
+                            type="search"
+                            placeholder="Search customers..."
+                            value={customerSearchTerm}
+                            onChange={(e) =>
+                              setCustomerSearchTerm(e.target.value)
+                            }
+                            className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
+                          />
+                        </div>
+                      </div>
+                      <div className="relative max-h-[300px] overflow-y-auto">
+                        {filteredCustomers?.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            {customer.studio_name} - {customer.email}
+                          </SelectItem>
+                        ))}
+                        {filteredCustomers?.length === 0 && (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            No customers found
+                          </div>
+                        )}
+                      </div>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="order_number" className="text-red-900">
+                    Order Number (Optional)
+                  </Label>
+                  <Input
+                    id="order_number"
+                    placeholder="Leave empty for auto-generation"
+                    value={newOrder.order_number || ""}
+                    onChange={(e) =>
+                      setNewOrder({ ...newOrder, order_number: e.target.value })
+                    }
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="total_amount" className="text-red-900">
+                    Total Amount (₹) *
+                  </Label>
+                  <Input
+                    id="total_amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="25000"
+                    value={newOrder.total_amount || ""}
+                    onChange={(e) =>
+                      setNewOrder({
+                        ...newOrder,
+                        total_amount: parseFloat(e.target.value),
+                        // Reset amount_paid if it's greater than new total
+                        amount_paid:
+                          newOrder.amount_paid &&
+                          newOrder.amount_paid > parseFloat(e.target.value)
+                            ? undefined
+                            : newOrder.amount_paid,
+                      })
+                    }
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor="estimated_delivery_date"
+                    className="text-red-900"
+                  >
+                    Estimated Delivery Date *
+                  </Label>
+                  <Input
+                    id="estimated_delivery_date"
+                    type="date"
+                    min={new Date().toISOString().split("T")[0]}
+                    value={newOrder.estimated_delivery_date || ""}
+                    onChange={(e) =>
+                      setNewOrder({
+                        ...newOrder,
+                        estimated_delivery_date: e.target.value,
+                      })
+                    }
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                  {newOrder.estimated_delivery_date &&
+                    new Date(newOrder.estimated_delivery_date) <=
+                      new Date() && (
+                      <p className="text-sm text-red-600">
+                        Delivery date must be in the future
+                      </p>
+                    )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="amount_paid" className="text-red-900">
+                    Initial Payment Amount (₹)
+                  </Label>
+                  <Input
+                    id="amount_paid"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="5000"
+                    value={
+                      newOrder.amount_paid === undefined
+                        ? ""
+                        : newOrder.amount_paid
+                    }
+                    onChange={(e) => handleAmountPaidChange(e.target.value)}
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                  {newOrder.amount_paid !== undefined &&
+                    newOrder.amount_paid > (newOrder.total_amount || 0) && (
+                      <p className="text-sm text-red-600">
+                        Initial payment cannot exceed total amount
+                      </p>
+                    )}
+                </div>
+
+                {newOrder.amount_paid && newOrder.amount_paid > 0 ? (
+                  <div className="grid gap-2">
+                    <Label htmlFor="payment_method" className="text-red-900">
+                      Payment Method *
+                    </Label>
+                    <Select
+                      value={newOrder.payment_method}
+                      onValueChange={(value: PaymentMethod) =>
+                        setNewOrder({ ...newOrder, payment_method: value })
+                      }
+                    >
+                      <SelectTrigger className="border-red-100 focus:border-red-200 focus:ring-red-100">
+                        <SelectValue placeholder="Select payment method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentMethods.map((method) => (
+                          <SelectItem
+                            key={method}
+                            value={method as PaymentMethod}
+                          >
+                            {method}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+
+                <div className="grid gap-2">
+                  <Label htmlFor="notes" className="text-red-900">
+                    Notes (Optional)
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Add any additional notes about the order..."
+                    value={newOrder.notes || ""}
+                    onChange={(e) =>
+                      setNewOrder({ ...newOrder, notes: e.target.value })
+                    }
+                    className="min-h-[120px] border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="emailContent">Email Content</Label>
-              <Textarea
-                id="emailContent"
-                rows={12}
-                value={customEmailContent}
-                onChange={(e) => setCustomEmailContent(e.target.value)}
-                placeholder="Enter your email content here..."
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => handleResendEmail(selectedEmailType, customEmailContent, customEmailSubject)}>
-              <Send className="h-4 w-4 mr-2" />
-              Send Email
-            </Button>
-          </div>
+            <DialogFooter className="mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsAddOrderOpen(false);
+                  setNewOrder(defaultOrderInput);
+                }}
+                className="border-red-100 hover:bg-red-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  !newOrder.customer_id ||
+                  !newOrder.total_amount ||
+                  !newOrder.estimated_delivery_date ||
+                  new Date(newOrder.estimated_delivery_date) <= new Date() ||
+                  (newOrder.amount_paid !== undefined &&
+                    newOrder.amount_paid > (newOrder.total_amount || 0)) ||
+                  (newOrder.amount_paid !== undefined &&
+                    newOrder.amount_paid > 0 &&
+                    !newOrder.payment_method)
+                }
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Create Order
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
+
+      {/* Add Payment Dialog */}
+      <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-900">
+              Add Payment
+            </DialogTitle>
+            <DialogDescription>
+              Add a new payment for order {selectedOrder?.order_number}.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (selectedOrder) {
+                addPaymentMutation.mutate({
+                  ...newPayment,
+                  order_id: selectedOrder.id,
+                });
+              }
+            }}
+          >
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="amount" className="text-red-900">
+                  Amount (₹) *
+                </Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="5000"
+                  value={newPayment.amount || ""}
+                  onChange={(e) =>
+                    setNewPayment({
+                      ...newPayment,
+                      amount: parseFloat(e.target.value),
+                    })
+                  }
+                  className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="payment_method" className="text-red-900">
+                  Payment Method *
+                </Label>
+                <Select
+                  value={newPayment.payment_method}
+                  onValueChange={(value: PaymentMethod) =>
+                    setNewPayment({ ...newPayment, payment_method: value })
+                  }
+                >
+                  <SelectTrigger className="border-red-100 focus:border-red-200 focus:ring-red-100">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((method) => (
+                      <SelectItem key={method} value={method as PaymentMethod}>
+                        {method}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="payment_notes" className="text-red-900">
+                  Notes (Optional)
+                </Label>
+                <Textarea
+                  id="payment_notes"
+                  placeholder="Add any notes about the payment..."
+                  value={newPayment.notes || ""}
+                  onChange={(e) =>
+                    setNewPayment({ ...newPayment, notes: e.target.value })
+                  }
+                  className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsAddPaymentOpen(false);
+                  setNewPayment({
+                    order_id: "",
+                    amount: 0,
+                    payment_method: "Cash",
+                    notes: "",
+                  });
+                }}
+                className="border-red-100 hover:bg-red-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!newPayment.amount || !newPayment.payment_method}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Add Payment
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Order Confirmation */}
+      <AlertDialog
+        open={!!orderToDelete}
+        onOpenChange={(open) => {
+          if (!open) setOrderToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete order{" "}
+              {orderToDelete?.order_number}? This action cannot be undone. All
+              associated data will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setOrderToDelete(null)}
+              className="border-red-100 hover:bg-red-50"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (orderToDelete) {
+                  deleteOrderMutation.mutate(orderToDelete.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Order Details Side Panel */}
+      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <SheetContent className="sm:max-w-xl overflow-y-auto">
+          {selectedOrder && (
+            <>
+              <SheetHeader className="space-y-4 pb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <SheetTitle className="text-2xl font-bold">
+                      Order #{selectedOrder.order_number}
+                    </SheetTitle>
+                    <div className="flex items-center mt-1">
+                      <Badge
+                        variant={orderStatusBadgeVariants[selectedOrder.status]}
+                        className="mr-2"
+                      >
+                        {selectedOrder.status.charAt(0).toUpperCase() +
+                          selectedOrder.status.slice(1).replace("_", " ")}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <User className="w-4 h-4 mr-2" />
+                    <span>{selectedOrder.customer_name}</span>
+                  </div>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Mail className="w-4 h-4 mr-2" />
+                    <a
+                      href={`mailto:${selectedOrder.customer_email}`}
+                      className="hover:underline"
+                    >
+                      {selectedOrder.customer_email}
+                    </a>
+                  </div>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Phone className="w-4 h-4 mr-2" />
+                    <a
+                      href={`tel:${selectedOrder.customer_phone}`}
+                      className="hover:underline"
+                    >
+                      {selectedOrder.customer_phone}
+                    </a>
+                  </div>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    <span>
+                      Created:{" "}
+                      {format(new Date(selectedOrder.created_at), "PPpp")}
+                    </span>
+                  </div>
+                  {selectedOrder.estimated_delivery_date && (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4 mr-2" />
+                      <span>
+                        Delivery:{" "}
+                        {format(
+                          new Date(selectedOrder.estimated_delivery_date),
+                          "PPpp"
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </SheetHeader>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-sm font-medium flex items-center mb-3">
+                    <IndianRupee className="w-4 h-4 mr-2" />
+                    Payment Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-lg border p-3">
+                      <div className="text-sm text-muted-foreground mb-1">
+                        Total Amount
+                      </div>
+                      <div className="text-2xl font-bold flex items-center">
+                        <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
+                        {selectedOrder.total_amount.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="text-sm text-muted-foreground mb-1">
+                        Amount Paid
+                      </div>
+                      <div className="text-2xl font-bold flex items-center">
+                        <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
+                        {selectedOrder.amount_paid.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-lg border p-3">
+                    <div className="text-sm text-muted-foreground mb-1">
+                      Balance Amount
+                    </div>
+                    <div className="text-2xl font-bold flex items-center">
+                      <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
+                      {selectedOrder.balance_amount.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedOrder.notes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-sm font-medium flex items-center mb-3">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Order Notes
+                      </h3>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-sm whitespace-pre-wrap">
+                          {selectedOrder.notes}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-sm font-medium flex items-center mb-3">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Activity Log
+                  </h3>
+                  <div className="space-y-4">
+                    {orderLogs?.map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex items-start space-x-3 text-sm"
+                      >
+                        <div className="mt-0.5">
+                          {log.action === "status_update" ? (
+                            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+                          ) : log.action === "payment_added" ? (
+                            <IndianRupee className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-medium leading-none">
+                            {log.action === "status_update"
+                              ? "Status Updated"
+                              : log.action === "payment_added"
+                              ? "Payment Added"
+                              : "Order Created"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {log.details}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(log.created_at), "PPpp")}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              <SheetFooter className="flex-row gap-2 sm:flex-row">
+                <Button
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => setIsAddPaymentOpen(true)}
+                >
+                  <IndianRupee className="w-4 h-4 mr-2" />
+                  Add Payment
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 border-red-100 hover:bg-red-50"
+                  onClick={() => setIsUpdateStatusOpen(true)}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Update Status
+                </Button>
+                {selectedOrder.status === "pending" && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-red-100 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                    onClick={() => {
+                      setOrderToDelete(selectedOrder);
+                      setIsDetailsOpen(false);
+                    }}
+                  >
+                    <Trash className="w-4 h-4 mr-2" />
+                    Delete Order
+                  </Button>
+                )}
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
-  )
+  );
 }

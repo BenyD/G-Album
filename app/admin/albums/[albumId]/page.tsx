@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   ChevronLeft,
@@ -19,14 +18,12 @@ import {
   Image as ImageIcon,
   Check,
   X,
-  Trash,
   Database,
   CloudUpload,
   CheckCircle2,
 } from "lucide-react";
-import Image from "next/image";
 import { useRole } from "@/components/admin/role-context";
-import type { Album, UploadedImage } from "@/lib/types/albums";
+import type { UploadedImage } from "@/lib/types/albums";
 import {
   getAlbumById,
   updateAlbum,
@@ -34,7 +31,6 @@ import {
   deleteImage,
 } from "@/lib/services/albums";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 
 const steps = [
   {

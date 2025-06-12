@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   ChevronLeft,
@@ -22,7 +21,6 @@ import {
   CloudUpload,
   Database,
   CheckCircle2,
-  X,
 } from "lucide-react";
 import { useRole } from "@/components/admin/role-context";
 import type { UploadedImage } from "@/lib/types/albums";
