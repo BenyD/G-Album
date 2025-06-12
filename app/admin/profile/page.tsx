@@ -1,6 +1,10 @@
 "use client";
 
-import { useAuth } from "@/components/admin/auth-context";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { Session } from "@supabase/supabase-js";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,343 +14,604 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Save, Upload, Shield, Clock, Edit } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState } from "react";
-import { updateProfile, uploadProfilePicture } from "./actions";
-import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  Shield,
+  User,
+  Clock,
+  Upload,
+  Mail,
+  Calendar,
+  Activity,
+  Settings,
+  Key,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+type Profile = {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  role?: {
+    name: string;
+    role_permissions?: {
+      permission: {
+        name: string;
+        description: string;
+      };
+    }[];
+  };
+  email: string;
+  created_at: string;
+  user?: {
+    email: string;
+  };
+};
+
+type ActivityLog = {
+  id: string;
+  action: string;
+  details: Record<string, unknown>;
+  created_at: string;
+};
+
+const roleBadgeColors = {
+  super_admin: "bg-red-600",
+  admin: "bg-orange-600",
+  editor: "bg-blue-600",
+  viewer: "bg-gray-600",
+};
+
+const roleIcons = {
+  super_admin: Shield,
+  admin: Shield,
+  editor: User,
+  viewer: User,
+};
+
+const formatRoleName = (role: string | undefined | null) => {
+  if (!role) return "Unknown Role";
+  return role
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
 
 export default function ProfilePage() {
-  const { user, profile, role, permissions } = useAuth();
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [userName, setUserName] = useState(profile?.full_name || "");
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const supabase = createClient();
 
-  // Format role name for display
-  const formatRoleName = (roleName: string | undefined) => {
-    if (!roleName) return "";
-    return roleName
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  };
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+        if (!currentSession) {
+          router.push("/login");
+          return;
+        }
+        setSession(currentSession);
 
-  // Get role badge color
-  const getRoleBadgeColor = (roleName: string | undefined) => {
-    if (!roleName) return "bg-slate-100 text-slate-800";
-    switch (roleName.toLowerCase()) {
-      case "super_admin":
-        return "bg-red-100 text-red-800";
-      case "admin":
-        return "bg-blue-100 text-blue-800";
-      case "accounts":
-        return "bg-green-100 text-green-800";
-      case "employee":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-slate-100 text-slate-800";
+        const { data: profileData, error: profileError } = await supabase
+          .from("admin_profiles")
+          .select(
+            `
+            *,
+            role:roles (
+              name,
+              role_permissions (
+                permission:permissions (
+                  name,
+                  description
+                )
+              )
+            )
+          `
+          )
+          .eq("id", currentSession.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        setProfile({
+          ...profileData,
+          email: currentSession.user.email,
+        });
+
+        const { data: logs, error: logsError } = await supabase
+          .from("activity_logs")
+          .select("*")
+          .eq("user_id", currentSession.user.id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        if (logsError) throw logsError;
+        setActivityLogs(logs);
+      } catch (error) {
+        console.error("Error loading profile:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load profile data",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
-  };
 
-  const handleNameSave = async () => {
-    if (!user) return;
-    setIsLoading(true);
+    loadProfile();
+  }, [router, toast, supabase]);
+
+  const handleUpdateProfile = async () => {
+    if (!profile || !session) return;
+
     try {
-      await updateProfile(user.id, { full_name: userName });
-      setIsEditingName(false);
-      toast.success("Name updated successfully");
+      const { error } = await supabase
+        .from("admin_profiles")
+        .update({ full_name: profile.full_name })
+        .eq("id", session.user.id);
+
+      if (error) throw error;
+
+      // Log the activity
+      await supabase.rpc("log_activity", {
+        action: "update_profile",
+        details: { field: "full_name", new_value: profile.full_name },
+      });
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
     } catch (error) {
-      toast.error("Failed to update name");
-      console.error("Error updating name:", error);
-    } finally {
-      setIsLoading(false);
+      console.error("Error updating profile:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update profile",
+      });
     }
   };
 
-  const handleProfilePictureUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (!user || !e.target.files?.length) return;
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !session) return;
 
     const file = e.target.files[0];
-    if (!file) return;
 
-    // Validate file type
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Image size should be less than 2MB",
+      });
+      return;
+    }
+
+    // Check file type
     if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please upload an image file",
+      });
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size should be less than 5MB");
-      return;
-    }
+    const fileExt = file.name.split(".").pop() || "jpg";
+    const fileName = `${session.user.id}/${Date.now()}.${fileExt}`;
 
-    setIsLoading(true);
     try {
-      await uploadProfilePicture(user.id, file);
-      toast.success("Profile picture updated successfully");
+      // Delete previous avatar if it exists
+      if (profile?.avatar_url) {
+        try {
+          // Extract the path from the URL
+          const url = new URL(profile.avatar_url);
+          const pathParts = url.pathname.split("/");
+          const bucketIndex = pathParts.indexOf("avatars");
+          if (bucketIndex !== -1) {
+            const filePath = pathParts.slice(bucketIndex + 1).join("/");
+            const { error: deleteError } = await supabase.storage
+              .from("avatars")
+              .remove([filePath]);
+
+            if (deleteError) {
+              console.error("Error deleting previous avatar:", deleteError);
+              // Continue with upload even if delete fails
+            }
+          }
+        } catch (error) {
+          console.error("Error parsing previous avatar URL:", error);
+          // Continue with upload even if delete fails
+        }
+      }
+
+      // Create a canvas to resize the image
+      const img = new Image();
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Set maximum dimensions
+      const MAX_WIDTH = 400;
+      const MAX_HEIGHT = 400;
+
+      // Create a promise to handle image loading and resizing
+      const resizeImage = () =>
+        new Promise<Blob>((resolve, reject) => {
+          img.onload = () => {
+            // Calculate new dimensions while maintaining aspect ratio
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width = Math.round((width * MAX_HEIGHT) / height);
+                height = MAX_HEIGHT;
+              }
+            }
+
+            // Set canvas dimensions
+            canvas.width = width;
+            canvas.height = height;
+
+            // Draw and resize image
+            ctx?.drawImage(img, 0, 0, width, height);
+
+            // Convert to blob
+            canvas.toBlob(
+              (blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("Failed to resize image"));
+              },
+              "image/jpeg",
+              0.9
+            );
+          };
+
+          img.onerror = () => reject(new Error("Failed to load image"));
+          img.src = URL.createObjectURL(file);
+        });
+
+      // Resize the image
+      const resizedBlob = await resizeImage();
+
+      // Upload image to storage
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, resizedBlob, {
+          cacheControl: "3600",
+          upsert: true,
+          contentType: "image/jpeg",
+        });
+
+      if (uploadError) {
+        console.error("Upload error details:", uploadError);
+        throw uploadError;
+      }
+
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(fileName);
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from("admin_profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", session.user.id);
+
+      if (updateError) {
+        console.error("Profile update error details:", updateError);
+        throw updateError;
+      }
+
+      // Update local state
+      setProfile((prev) => (prev ? { ...prev, avatar_url: publicUrl } : null));
+
+      // Log the activity
+      await supabase.rpc("log_activity", {
+        action: "update_avatar",
+        details: { avatar_url: publicUrl },
+      });
+
+      toast({
+        title: "Success",
+        description: "Avatar updated successfully",
+      });
     } catch (error) {
-      toast.error("Failed to upload profile picture");
-      console.error("Error uploading profile picture:", error);
-    } finally {
-      setIsLoading(false);
+      console.error("Error uploading avatar:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to upload avatar",
+      });
     }
   };
 
-  // Get user initials for avatar fallback
-  const getInitials = () => {
-    if (!profile?.full_name) return "U";
-    return profile.full_name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
 
-  // Format permission name
-  const formatPermissionName = (permissionName: string) => {
-    return permissionName
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  };
+  if (!profile || !session) {
+    return null;
+  }
 
-  // Get formatted permissions list
-  const getFormattedPermissions = () => {
-    if (!profile?.role?.role_permissions) return [];
-
-    return profile.role.role_permissions.map((rp) => ({
-      id: rp.permission.id,
-      name: formatPermissionName(rp.permission.name),
-      description: rp.permission.description,
-    }));
-  };
+  const RoleIcon =
+    roleIcons[(profile.role?.name || "viewer") as keyof typeof roleIcons] ||
+    User;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Profile Settings</h2>
+    <div className="container mx-auto space-y-8 py-6">
+      {/* Header */}
+      <div className="flex flex-col gap-2 relative">
+        <h1 className="text-2xl font-bold text-red-900">Profile Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your account settings and preferences
+        </p>
+        <div className="absolute -bottom-1 left-0 w-12 h-1 bg-red-600 rounded-full" />
       </div>
 
-      <div className="space-y-6">
-        {/* Profile Information Card */}
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Role</CardTitle>
+            <Shield className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatRoleName(profile.role?.name)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your current role in the system
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Permissions</CardTitle>
+            <Key className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {profile.role?.role_permissions?.length || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total permissions granted
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Member Since</CardTitle>
+            <Calendar className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Date(profile.created_at).toLocaleDateString()}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your account creation date
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Recent Activity
+            </CardTitle>
+            <Activity className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activityLogs.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Actions in the last 24 hours
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Profile Information */}
+        <Card className="border-red-100">
           <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-red-600" />
+              Profile Information
+            </CardTitle>
             <CardDescription>
-              Your personal information and role
+              Update your personal information and profile picture
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center text-center">
-            <div className="relative mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage
-                  src={profile?.avatar_url || ""}
-                  alt={profile?.full_name || "User"}
-                />
-                <AvatarFallback>{getInitials()}</AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-2 -right-2">
-                <Input
+          <CardContent className="space-y-6">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative group">
+                <Avatar className="w-24 h-24 border-2 border-red-100">
+                  <AvatarImage src={profile.avatar_url || ""} />
+                  <AvatarFallback className="bg-red-50 text-red-600 text-2xl">
+                    {profile.full_name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <label
+                  htmlFor="avatar-upload"
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"
+                >
+                  <Upload className="w-6 h-6 text-white" />
+                </label>
+                <input
+                  id="avatar-upload"
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  id="avatar-upload"
-                  onChange={handleProfilePictureUpload}
-                  disabled={isLoading}
+                  onChange={handleAvatarUpload}
                 />
-                <label htmlFor="avatar-upload">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 w-8 rounded-full p-0"
-                    disabled={isLoading}
-                    asChild
-                  >
-                    <span>
-                      <Upload className="h-4 w-4" />
-                    </span>
-                  </Button>
-                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "text-white",
+                    roleBadgeColors[
+                      (profile.role?.name ||
+                        "viewer") as keyof typeof roleBadgeColors
+                    ]
+                  )}
+                >
+                  <RoleIcon className="w-3.5 h-3.5 mr-1" />
+                  {formatRoleName(profile.role?.name || "viewer")}
+                </Badge>
               </div>
             </div>
 
-            <div className="w-full max-w-sm mb-4">
-              {isEditingName ? (
-                <div className="flex items-center gap-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <div className="flex gap-2">
                   <Input
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="text-center"
-                    disabled={isLoading}
-                    placeholder="Enter your name"
+                    id="name"
+                    value={profile.full_name}
+                    onChange={(e) =>
+                      setProfile({ ...profile, full_name: e.target.value })
+                    }
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
                   />
                   <Button
-                    size="sm"
-                    onClick={handleNameSave}
-                    disabled={isLoading}
+                    onClick={handleUpdateProfile}
+                    className="bg-red-600 hover:bg-red-700"
                   >
-                    <Save className="h-4 w-4" />
+                    Save
                   </Button>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2">
-                  <h3 className="text-xl font-semibold">
-                    {profile?.full_name || "Set your name"}
-                  </h3>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsEditingName(true)}
-                    className="h-6 w-6 p-0"
-                    disabled={isLoading}
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col items-center gap-3 w-full max-w-sm">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-slate-500" />
-                <span className="text-slate-600">{user?.email}</span>
               </div>
-              <Badge className={getRoleBadgeColor(profile?.role?.name)}>
-                {formatRoleName(profile?.role?.name)}
-              </Badge>
-              <div className="text-sm text-slate-500 flex gap-4">
-                <p>
-                  Joined:{" "}
-                  {new Date(user?.created_at || "").toLocaleDateString()}
-                </p>
-                <p>
-                  Updated:{" "}
-                  {profile?.updated_at
-                    ? new Date(profile.updated_at).toLocaleDateString()
-                    : "Never"}
-                </p>
+
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <div className="flex items-center gap-2 p-2 bg-red-50 rounded-md">
+                  <Mail className="w-4 h-4 text-red-600" />
+                  <span className="text-sm text-red-900">{profile.email}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Member Since</Label>
+                <div className="flex items-center gap-2 p-2 bg-red-50 rounded-md">
+                  <Calendar className="w-4 h-4 text-red-600" />
+                  <span className="text-sm text-red-900">
+                    {new Date(profile.created_at).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Account Details Card */}
-        <Card>
+        {/* Account Details */}
+        <Card className="border-red-100">
           <CardHeader>
-            <CardTitle>Account Details</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-red-600" />
+              Account Details
+            </CardTitle>
             <CardDescription>
-              View your permissions and activity history
+              View your account permissions and recent activity
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="permissions" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="bg-red-50">
                 <TabsTrigger
                   value="permissions"
-                  className="flex items-center gap-2"
+                  className="data-[state=active]:bg-white"
                 >
-                  <Shield className="h-4 w-4" />
+                  <Shield className="w-4 h-4 mr-2" />
                   Permissions
                 </TabsTrigger>
                 <TabsTrigger
                   value="activity"
-                  className="flex items-center gap-2"
+                  className="data-[state=active]:bg-white"
                 >
-                  <Clock className="h-4 w-4" />
-                  Activity History
+                  <Activity className="w-4 h-4 mr-2" />
+                  Recent Activity
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="permissions" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Shield className="h-5 w-5 text-slate-600" />
-                    <h4 className="font-medium text-slate-700">
-                      Your Permissions
-                    </h4>
-                  </div>
-
-                  <div className="border border-slate-200 rounded-lg p-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {profile?.role?.role_permissions?.map((rp: any) => (
-                        <div
-                          key={rp.permission.id}
-                          className="flex items-center gap-2 text-sm text-slate-600"
-                        >
-                          <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div>
-                          <span
-                            className="truncate"
-                            title={rp.permission.description}
-                          >
-                            {rp.permission.name
-                              ? formatPermissionName(rp.permission.name)
-                              : "Unknown Permission"}
-                          </span>
-                        </div>
-                      ))}
-                      {(!profile?.role?.role_permissions ||
-                        profile.role.role_permissions.length === 0) && (
-                        <div className="col-span-2 text-sm text-slate-500 text-center py-2">
-                          No permissions assigned
-                        </div>
-                      )}
+                <div className="grid gap-3">
+                  {profile.role?.role_permissions?.map(({ permission }) => (
+                    <div
+                      key={permission.name}
+                      className="flex items-center gap-2 p-3 rounded-lg bg-red-50/50"
+                    >
+                      <Shield className="w-4 h-4 text-red-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-red-900">
+                          {permission.name
+                            .split("_")
+                            .map(
+                              (word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            )
+                            .join(" ")}
+                        </p>
+                        <p className="text-xs text-red-600">
+                          {permission.description}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </TabsContent>
 
               <TabsContent value="activity" className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Clock className="h-5 w-5 text-slate-600" />
-                    <h4 className="font-medium text-slate-700">
-                      Recent Activity
-                    </h4>
-                  </div>
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {/* Profile Update Activity */}
-                    {profile?.updated_at && (
-                      <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
-                        <div className="shrink-0 mt-1">
-                          <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900">
-                            Profile Updated
-                          </p>
-                          <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {new Date(profile.updated_at).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {/* Account Creation Activity */}
-                    <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
-                      <div className="shrink-0 mt-1">
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900">
-                          Account Created
+                {activityLogs.length > 0 ? (
+                  activityLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="flex items-start gap-3 p-3 bg-red-50/50 rounded-lg"
+                    >
+                      <Clock className="w-4 h-4 text-red-600 mt-1" />
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-medium text-red-900">
+                          {log.action
+                            .split("_")
+                            .map(
+                              (word) =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            )
+                            .join(" ")}
                         </p>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(user?.created_at || "").toLocaleString()}
-                          </span>
-                        </div>
+                        <p className="text-xs text-red-600">
+                          {new Date(log.created_at).toLocaleString()}
+                        </p>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No recent activity
                   </div>
-                </div>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
