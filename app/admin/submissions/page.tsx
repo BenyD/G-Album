@@ -57,7 +57,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { RoleBasedContent } from "@/components/admin/role-based-content";
 import { useState, useMemo, useEffect } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient, logActivity } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -171,6 +171,30 @@ export default function SubmissionsPage() {
       if (error) {
         throw error;
       }
+
+      // Fetch submission details for logging
+      const { data: submissionDetails, error: fetchDetailsError } =
+        await supabase
+          .from("contact_submissions")
+          .select("*")
+          .eq("id", id)
+          .single();
+      if (fetchDetailsError) throw fetchDetailsError;
+
+      // Get current user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Could not get current user");
+
+      // Log the activity
+      await logActivity("submission_marked_as_replied", {
+        submission_id: id,
+        name: submissionDetails.name,
+        email: submissionDetails.email,
+        marked_by: user.id,
+      });
 
       // Update local state
       setSubmissions((prev) =>

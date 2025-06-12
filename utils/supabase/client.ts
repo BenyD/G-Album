@@ -6,3 +6,17 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
+
+export async function logActivity(
+  action: string,
+  details?: Record<string, any> | string
+) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("log_activity", {
+    action,
+    details: details ?? null,
+  });
+  if (error) {
+    console.error("Failed to log global activity:", error);
+  }
+}

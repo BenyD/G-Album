@@ -31,6 +31,8 @@ import {
   deleteImage,
 } from "@/lib/services/albums";
 import { cn } from "@/lib/utils";
+import { logActivity } from "@/utils/supabase/client";
+import { createClient } from "@/utils/supabase/client";
 
 const steps = [
   {
@@ -281,6 +283,24 @@ export default function EditAlbumPage() {
             order_index: existingImages.length + index,
           })),
         ],
+      });
+
+      // Get current user
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Could not get current user");
+
+      // Log the activity
+      await logActivity("album_updated", {
+        album_id: albumId,
+        title,
+        description,
+        featured,
+        cover_image_url: coverImageUrl,
+        updated_by: user.id,
       });
 
       toast({

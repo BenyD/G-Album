@@ -27,7 +27,7 @@ import type { UploadedImage } from "@/lib/types/albums";
 import { createAlbum, uploadImage } from "@/lib/services/albums";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { createClient } from "@/utils/supabase/client";
+import { createClient, logActivity } from "@/utils/supabase/client";
 
 const steps = [
   {
@@ -322,8 +322,7 @@ export default function NewAlbumPage() {
         uploadedUrls[
           uploadedImages.findIndex((img) => img.id === coverImageId)
         ];
-
-      await createAlbum({
+      const album = await createAlbum({
         title,
         description,
         featured,
@@ -332,6 +331,16 @@ export default function NewAlbumPage() {
           image_url: url,
           order_index: index,
         })),
+      });
+
+      // Log the activity
+      await logActivity("album_created", {
+        album_id: album.id,
+        title: album.title,
+        description: album.description,
+        featured: album.featured,
+        cover_image_url: album.cover_image_url,
+        created_by: user.id,
       });
 
       setCreationProgress({

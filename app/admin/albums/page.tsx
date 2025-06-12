@@ -23,6 +23,8 @@ import { DeleteAlbumDialog } from "@/components/admin/albums/delete-album-dialog
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { logActivity } from "@/utils/supabase/client";
+import { createClient } from "@/utils/supabase/client";
 
 export default function AlbumsPage() {
   const router = useRouter();
@@ -59,6 +61,19 @@ export default function AlbumsPage() {
   const handleDelete = async (album: Album) => {
     try {
       await deleteAlbum(album.id);
+      // Get current user
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Could not get current user");
+      // Log the activity
+      await logActivity("album_deleted", {
+        album_id: album.id,
+        title: album.title,
+        deleted_by: user.id,
+      });
       toast({
         title: "Success",
         description: "Album deleted successfully",

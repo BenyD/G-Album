@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { createClient, logActivity } from "@/utils/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -162,9 +162,10 @@ export default function ProfilePage() {
       if (error) throw error;
 
       // Log the activity
-      await supabase.rpc("log_activity", {
-        action: "update_profile",
-        details: { field: "full_name", new_value: profile.full_name },
+      await logActivity("profile_updated", {
+        user_id: session.user.id,
+        field: "full_name",
+        new_value: profile.full_name,
       });
 
       toast({
@@ -322,9 +323,9 @@ export default function ProfilePage() {
       setProfile((prev) => (prev ? { ...prev, avatar_url: publicUrl } : null));
 
       // Log the activity
-      await supabase.rpc("log_activity", {
-        action: "update_avatar",
-        details: { avatar_url: publicUrl },
+      await logActivity("profile_avatar_updated", {
+        user_id: session.user.id,
+        avatar_url: publicUrl,
       });
 
       toast({

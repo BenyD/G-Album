@@ -64,7 +64,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/utils/supabase/client";
+import { createClient, logActivity } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import type {
@@ -278,6 +278,15 @@ export default function CustomersPage() {
         .single();
 
       if (error) throw error;
+
+      // Log customer creation
+      await logActivity("customer_created", {
+        customer_id: data.id,
+        studio_name: data.studio_name,
+        email: data.email,
+        phone: data.phone,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -301,6 +310,15 @@ export default function CustomersPage() {
   // Delete customer mutation
   const deleteCustomerMutation = useMutation({
     mutationFn: async (customerId: string) => {
+      // Fetch customer details before deletion for logging
+      const { data: customerDetails, error: fetchError } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("id", customerId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from("customers")
         .delete()
@@ -310,6 +328,16 @@ export default function CustomersPage() {
         console.error("Delete error:", error);
         throw error;
       }
+
+      // Log customer deletion
+      await logActivity("customer_deleted", {
+        customer_id: customerId,
+        studio_name: customerDetails.studio_name,
+        email: customerDetails.email,
+        phone: customerDetails.phone,
+        total_orders: customerDetails.total_orders,
+        total_spent: customerDetails.total_spent,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
@@ -326,6 +354,15 @@ export default function CustomersPage() {
   // Update customer mutation
   const updateCustomerMutation = useMutation({
     mutationFn: async (customer: Customer) => {
+      // Fetch current customer data for comparison
+      const { data: currentCustomer, error: fetchError } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("id", customer.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from("customers")
         .update({
@@ -340,6 +377,27 @@ export default function CustomersPage() {
         .eq("id", customer.id);
 
       if (error) throw error;
+
+      // Log customer update
+      await logActivity("customer_updated", {
+        customer_id: customer.id,
+        studio_name: customer.studio_name,
+        email: customer.email,
+        phone: customer.phone,
+        previous_status: currentCustomer.is_active,
+        new_status: customer.is_active,
+        changes: {
+          studio_name: currentCustomer.studio_name !== customer.studio_name,
+          email: currentCustomer.email !== customer.email,
+          phone: currentCustomer.phone !== customer.phone,
+          address: currentCustomer.address !== customer.address,
+          reference_name:
+            currentCustomer.reference_name !== customer.reference_name,
+          reference_phone:
+            currentCustomer.reference_phone !== customer.reference_phone,
+          status: currentCustomer.is_active !== customer.is_active,
+        },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
@@ -361,10 +419,28 @@ export default function CustomersPage() {
         error: userError,
       } = await supabase.auth.getUser();
       if (userError || !user) throw new Error("Could not get current user");
+
+      // Fetch customer details for logging
+      const { data: customerDetails, error: fetchError } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("id", input.customer_id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from("customer_flags")
         .insert([{ ...input, created_by: user.id }]);
       if (error) throw error;
+
+      // Log customer flag
+      await logActivity("customer_flagged", {
+        customer_id: input.customer_id,
+        studio_name: customerDetails.studio_name,
+        reason: input.reason,
+        flagged_by: user.id,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["active-flags"] });
@@ -392,6 +468,15 @@ export default function CustomersPage() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Fetch flag and customer details for logging
+      const { data: flagDetails, error: fetchError } = await supabase
+        .from("customer_flags")
+        .select("*, customers(*)")
+        .eq("id", flagId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from("customer_flags")
         .update({
@@ -402,6 +487,16 @@ export default function CustomersPage() {
         .eq("id", flagId);
 
       if (error) throw error;
+
+      // Log flag resolution
+      await logActivity("customer_flag_resolved", {
+        customer_id: flagDetails.customer_id,
+        studio_name: flagDetails.customers.studio_name,
+        flag_id: flagId,
+        reason: flagDetails.reason,
+        resolution_note: resolutionNote,
+        resolved_by: user.id,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["active-flags"] });

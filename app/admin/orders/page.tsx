@@ -74,7 +74,7 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/utils/supabase/client";
+import { createClient, logActivity } from "@/utils/supabase/client";
 import { debounce } from "lodash";
 import type { Customer } from "@/lib/types/customer";
 import type {
@@ -383,6 +383,15 @@ export default function OrdersPage() {
         if (paymentError) throw paymentError;
       }
 
+      // Log global activity
+      await logActivity("order_created", {
+        order_id: order.id,
+        order_number: order.order_number,
+        customer_id: order.customer_id,
+        total_amount: order.total_amount,
+        amount_paid: order.amount_paid,
+      });
+
       return order;
     },
     onSuccess: () => {
@@ -416,6 +425,11 @@ export default function OrdersPage() {
           "status_update",
           `Order status changed to ${data.status}`
         );
+        // Log global activity
+        await logActivity("order_status_update", {
+          order_id: id,
+          new_status: data.status,
+        });
       }
     },
     onSuccess: (_data, variables) => {
@@ -433,6 +447,15 @@ export default function OrdersPage() {
   // Delete order mutation
   const deleteOrderMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Fetch order details before deletion for logging
+      const { data: orderDetails, error: fetchError } = await supabase
+        .from("orders")
+        .select("*, customers(studio_name)")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       // Delete order payments
       const { error: paymentsError } = await supabase
         .from("order_payments")
@@ -456,6 +479,18 @@ export default function OrdersPage() {
         .eq("id", id);
 
       if (orderError) throw orderError;
+
+      // Log global activity with order details
+      await logActivity("order_deleted", {
+        order_id: id,
+        order_number: orderDetails.order_number,
+        customer_id: orderDetails.customer_id,
+        customer_name: orderDetails.customers?.studio_name,
+        total_amount: orderDetails.total_amount,
+        amount_paid: orderDetails.amount_paid,
+        status: orderDetails.status,
+        created_at: orderDetails.created_at,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -521,6 +556,12 @@ export default function OrdersPage() {
         "payment_added",
         `Payment of ₹${input.amount} added via ${input.payment_method}`
       );
+      // Log global activity
+      await logActivity("order_payment_added", {
+        order_id: input.order_id,
+        amount: input.amount,
+        payment_method: input.payment_method,
+      });
 
       return data;
     },
