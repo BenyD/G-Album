@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import {
   Plus,
   Search,
@@ -100,6 +100,14 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { useRole } from "@/components/admin/role-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
+import {
+  Dialog as Modal,
+  DialogContent as ModalContent,
+  DialogHeader as ModalHeader,
+  DialogFooter as ModalFooter,
+  DialogTitle as ModalTitle,
+} from "@/components/ui/dialog";
+import { AddCustomerDialog } from "@/components/admin/customers/AddCustomerDialog";
 
 const supabase = createClient();
 
@@ -187,6 +195,17 @@ export default function OrdersPage() {
   const searchParams = useSearchParams();
   const customerFilter = searchParams.get("customer");
   const [ordersTab, setOrdersTab] = useState("active");
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    studio_name: "",
+    email: "",
+    phone: "",
+    address: "",
+    reference_name: "",
+    reference_phone: "",
+  });
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const customerSelectRef = useRef<HTMLDivElement>(null);
 
   // Add query for general settings
   const { data: settings } = useQuery({
@@ -334,6 +353,9 @@ export default function OrdersPage() {
   // Add order mutation
   const addOrderMutation = useMutation({
     mutationFn: async (input: CreateOrderInput) => {
+      if (!input.customer_id || input.customer_id.trim() === "") {
+        throw new Error("Please select a customer before creating an order.");
+      }
       let order_number = input.order_number;
 
       if (!order_number) {
@@ -753,6 +775,38 @@ export default function OrdersPage() {
     (order) =>
       order.status === "delivered" && order.amount_paid >= order.total_amount
   );
+
+  // Add customer mutation for inline creation
+  const addCustomerInlineMutation = useMutation({
+    mutationFn: async (input: typeof newCustomerForm) => {
+      const { data, error } = await supabase
+        .from("customers")
+        .insert([input])
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (customer) => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setIsAddCustomerOpen(false);
+      setNewCustomerForm({
+        studio_name: "",
+        email: "",
+        phone: "",
+        address: "",
+        reference_name: "",
+        reference_phone: "",
+      });
+      setNewOrder((prev) => ({ ...prev, customer_id: customer.id }));
+      setSelectedCustomerName(customer.studio_name);
+      setCustomerSearchTerm("");
+      toast.success("Customer created and selected!");
+    },
+    onError: (error) => {
+      toast.error("Failed to create customer: " + error.message);
+    },
+  });
 
   return (
     <div className="container mx-auto space-y-8 py-6">
@@ -1315,6 +1369,10 @@ export default function OrdersPage() {
           </DialogHeader>
           <form
             onSubmit={(e) => {
+              if (isAddCustomerOpen) {
+                e.preventDefault();
+                return;
+              }
               e.preventDefault();
               addOrderMutation.mutate(newOrder);
             }}
@@ -1326,7 +1384,7 @@ export default function OrdersPage() {
                     <Label htmlFor="customer_id" className="text-red-900">
                       Customer *
                     </Label>
-                    <div className="relative">
+                    <div className="relative" ref={customerSelectRef}>
                       {newOrder.customer_id && customers ? (
                         (() => {
                           const selected = customers.find(
@@ -1390,6 +1448,15 @@ export default function OrdersPage() {
                               {filteredCustomers.length === 0 ? (
                                 <div className="p-4 text-center text-sm text-muted-foreground">
                                   No customers found
+                                  <br />
+                                  <Button
+                                    size="sm"
+                                    className="mt-2 bg-red-600 hover:bg-red-700 text-white"
+                                    onClick={() => setIsAddCustomerOpen(true)}
+                                  >
+                                    <Plus className="w-4 h-4 mr-1" /> Create New
+                                    Customer
+                                  </Button>
                                 </div>
                               ) : (
                                 filteredCustomers.map((customer) => (
@@ -1613,6 +1680,7 @@ export default function OrdersPage() {
               <Button
                 type="submit"
                 disabled={
+                  isAddCustomerOpen ||
                   !newOrder.customer_id ||
                   !newOrder.total_amount ||
                   !newOrder.estimated_delivery_date ||
@@ -2166,6 +2234,24 @@ export default function OrdersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Customer Dialog */}
+      <AddCustomerDialog
+        open={isAddCustomerOpen}
+        onOpenChange={setIsAddCustomerOpen}
+        onCustomerCreated={(customer) => {
+          setNewOrder((prev) => ({ ...prev, customer_id: customer.id }));
+          setSelectedCustomerName(customer.studio_name);
+          setCustomerSearchTerm("");
+          setTimeout(() => {
+            customerSelectRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          }, 100);
+        }}
+        initialValues={undefined}
+      />
     </div>
   );
 }
