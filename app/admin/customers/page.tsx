@@ -29,6 +29,8 @@ import {
   Pencil,
   Loader2,
   UserX,
+  CheckCircle2,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,6 +94,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const supabase = createClient();
 
@@ -141,10 +150,12 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [customerFilter, setCustomerFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [isFlagCustomerOpen, setIsFlagCustomerOpen] = useState(false);
+  const [isResolveFlagOpen, setIsResolveFlagOpen] = useState(false);
+  const [resolveNote, setResolveNote] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
@@ -227,7 +238,12 @@ export default function CustomersPage() {
 
     const stats = new Map<
       string,
-      { totalOrders: number; totalSpent: number; activeOrders: number }
+      {
+        totalOrders: number;
+        totalSpent: number;
+        activeOrders: number;
+        pendingAmount: number;
+      }
     >();
 
     allCustomerOrders.forEach((order) => {
@@ -236,6 +252,7 @@ export default function CustomersPage() {
         totalOrders: 0,
         totalSpent: 0,
         activeOrders: 0,
+        pendingAmount: 0,
       };
 
       stats.set(customerId, {
@@ -243,6 +260,8 @@ export default function CustomersPage() {
         totalSpent: currentStats.totalSpent + order.amount_paid,
         activeOrders:
           currentStats.activeOrders + (order.status !== "delivered" ? 1 : 0),
+        pendingAmount:
+          currentStats.pendingAmount + (order.total_amount - order.amount_paid),
       });
     });
 
@@ -359,6 +378,42 @@ export default function CustomersPage() {
     },
   });
 
+  // Add resolve flag mutation
+  const resolveFlagMutation = useMutation({
+    mutationFn: async ({
+      flagId,
+      resolutionNote,
+    }: {
+      flagId: string;
+      resolutionNote: string;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("customer_flags")
+        .update({
+          resolved_at: new Date().toISOString(),
+          resolved_by: user.id,
+          resolution_note: resolutionNote,
+        })
+        .eq("id", flagId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active-flags"] });
+      setIsResolveFlagOpen(false);
+      setResolveNote("");
+      toast.success("Customer flag resolved successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to resolve flag: " + error.message);
+    },
+  });
+
   const handleAddCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     addCustomerMutation.mutate(newCustomer);
@@ -378,6 +433,21 @@ export default function CustomersPage() {
     flagCustomerMutation.mutate({
       customer_id: selectedCustomer.id,
       reason: flagReason,
+    });
+  };
+
+  const handleResolveFlag = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+
+    const activeFlag = activeFlags?.find(
+      (flag) => flag.customer_id === selectedCustomer.id
+    );
+    if (!activeFlag) return;
+
+    resolveFlagMutation.mutate({
+      flagId: activeFlag.id,
+      resolutionNote: resolveNote,
     });
   };
 
@@ -408,11 +478,15 @@ export default function CustomersPage() {
       );
     }
 
-    // Apply status filter
-    if (statusFilter !== "All") {
-      filtered = filtered.filter((customer) =>
-        statusFilter === "Active" ? customer.is_active : !customer.is_active
-      );
+    // Apply customer filter
+    if (customerFilter === "active") {
+      filtered = filtered.filter((customer) => customer.is_active);
+    } else if (customerFilter === "inactive") {
+      filtered = filtered.filter((customer) => !customer.is_active);
+    } else if (customerFilter === "flagged") {
+      filtered = filtered.filter((customer) => isCustomerFlagged(customer.id));
+    } else if (customerFilter === "unflagged") {
+      filtered = filtered.filter((customer) => !isCustomerFlagged(customer.id));
     }
 
     // Apply sorting
@@ -428,6 +502,16 @@ export default function CustomersPage() {
           return b.studio_name.localeCompare(a.studio_name);
         case "most-orders":
           return b.total_orders - a.total_orders;
+        case "balance-high":
+          return (
+            (customerStats.get(b.id)?.pendingAmount ?? 0) -
+            (customerStats.get(a.id)?.pendingAmount ?? 0)
+          );
+        case "balance-low":
+          return (
+            (customerStats.get(a.id)?.pendingAmount ?? 0) -
+            (customerStats.get(b.id)?.pendingAmount ?? 0)
+          );
         default: // newest
           return (
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -436,7 +520,7 @@ export default function CustomersPage() {
     });
 
     return filtered;
-  }, [customersData, debouncedSearchTerm, statusFilter, sortBy]);
+  }, [customersData, debouncedSearchTerm, customerFilter, sortBy]);
 
   const handleDeleteCustomer = () => {
     if (!customerToDelete?.id) {
@@ -625,18 +709,43 @@ export default function CustomersPage() {
                     className="border-red-100 hover:bg-red-600 hover:text-white transition-colors group"
                   >
                     <Filter className="mr-2 h-4 w-4 text-red-600 group-hover:text-white transition-colors" />
-                    {statusFilter}
+                    {(() => {
+                      switch (customerFilter) {
+                        case "active":
+                          return "Active";
+                        case "inactive":
+                          return "Inactive";
+                        case "flagged":
+                          return "Flagged";
+                        case "unflagged":
+                          return "Unflagged";
+                        default:
+                          return "All";
+                      }
+                    })()}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
-                  <DropdownMenuItem onClick={() => setStatusFilter("All")}>
+                  <DropdownMenuItem onClick={() => setCustomerFilter("all")}>
                     All Customers
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter("Active")}>
+                  <DropdownMenuItem onClick={() => setCustomerFilter("active")}>
                     Active Customers
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter("Inactive")}>
+                  <DropdownMenuItem
+                    onClick={() => setCustomerFilter("inactive")}
+                  >
                     Inactive Customers
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setCustomerFilter("flagged")}
+                  >
+                    Flagged Customers
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setCustomerFilter("unflagged")}
+                  >
+                    Unflagged Customers
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -668,6 +777,12 @@ export default function CustomersPage() {
                   <DropdownMenuItem onClick={() => setSortBy("most-orders")}>
                     Most Orders
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("balance-high")}>
+                    Pending Amount High-Low
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("balance-low")}>
+                    Pending Amount Low-High
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -695,18 +810,18 @@ export default function CustomersPage() {
               No Customers Found
             </h3>
             <p className="text-muted-foreground max-w-sm mb-6">
-              {searchTerm || statusFilter !== "All"
+              {searchTerm || customerFilter !== "all"
                 ? "No customers match your current filters. Try adjusting your search criteria or clearing filters."
                 : "There are no customers yet. Add your first customer to get started."}
             </p>
-            {(searchTerm || statusFilter !== "All") && (
+            {(searchTerm || customerFilter !== "all") && (
               <div className="flex gap-3">
                 <Button
                   variant="outline"
                   className="border-red-100 hover:bg-red-50"
                   onClick={() => {
                     setSearchTerm("");
-                    setStatusFilter("All");
+                    setCustomerFilter("all");
                   }}
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
@@ -727,6 +842,7 @@ export default function CustomersPage() {
                 <TableHead>Status</TableHead>
                 <TableHead>Orders</TableHead>
                 <TableHead>Total Spent</TableHead>
+                <TableHead>Pending Amount</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -779,6 +895,12 @@ export default function CustomersPage() {
                       .get(customer.id)
                       ?.totalSpent.toLocaleString() ?? 0}
                   </TableCell>
+                  <TableCell>
+                    ₹
+                    {(
+                      customerStats.get(customer.id)?.pendingAmount ?? 0
+                    ).toLocaleString()}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -806,6 +928,24 @@ export default function CustomersPage() {
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
+                            handleStatusChange(customer);
+                          }}
+                        >
+                          {customer.is_active ? (
+                            <>
+                              <UserX className="w-4 h-4 mr-2" />
+                              Mark Inactive
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="w-4 h-4 mr-2" />
+                              Mark Active
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setEditingCustomer(customer);
                             setEditForm({
                               studio_name: customer.studio_name,
@@ -821,18 +961,41 @@ export default function CustomersPage() {
                           <Pencil className="w-4 h-4 mr-2" />
                           Edit Customer
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedCustomer(customer);
-                            setIsFlagCustomerOpen(true);
+                            setIsDetailsOpen(true);
                           }}
-                          className="text-red-600"
                         >
-                          <AlertTriangle className="w-4 h-4 mr-2" />
-                          Flag Customer
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
                         </DropdownMenuItem>
+                        {isCustomerFlagged(customer.id) ? (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCustomer(customer);
+                              setIsResolveFlagOpen(true);
+                            }}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Resolve Flag
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCustomer(customer);
+                              setIsFlagCustomerOpen(true);
+                            }}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <AlertTriangle className="w-4 h-4 mr-2" />
+                            Flag Customer
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
@@ -897,7 +1060,7 @@ export default function CustomersPage() {
                     <SheetTitle className="text-2xl font-bold">
                       {selectedCustomer.studio_name}
                     </SheetTitle>
-                    <div className="flex items-center mt-1">
+                    <div className="flex items-center gap-2 mt-1">
                       <Badge
                         variant={
                           selectedCustomer.is_active ? "default" : "secondary"
@@ -1071,15 +1234,17 @@ export default function CustomersPage() {
               <div>
                 <h3 className="text-sm font-medium flex items-center mb-3">
                   <ShoppingBag className="w-4 h-4 mr-2" />
-                  Recent Orders
+                  All Orders
                 </h3>
                 <div className="space-y-4">
-                  {customerOrders?.slice(0, 5).map((order) => (
+                  {customerOrders?.map((order) => (
                     <div
                       key={order.id}
                       className="flex items-start space-x-3 text-sm border rounded-lg p-3 hover:bg-red-50/50 cursor-pointer"
                       onClick={() =>
-                        router.push(`/admin/orders?order=${order.id}`)
+                        router.push(
+                          `/admin/orders?order=${order.id}&customer=${selectedCustomer.id}`
+                        )
                       }
                     >
                       <div className="mt-0.5">
@@ -1110,19 +1275,6 @@ export default function CustomersPage() {
                       No orders found
                     </div>
                   )}
-                  {customerOrders && customerOrders.length > 5 && (
-                    <Button
-                      variant="outline"
-                      className="w-full border-red-100 hover:bg-red-50"
-                      onClick={() =>
-                        router.push(
-                          `/admin/orders?customer=${selectedCustomer.id}`
-                        )
-                      }
-                    >
-                      View All Orders
-                    </Button>
-                  )}
                 </div>
               </div>
 
@@ -1139,17 +1291,31 @@ export default function CustomersPage() {
                     <ShoppingBag className="w-4 h-4 mr-2" />
                     View Orders
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-red-100 hover:bg-red-50"
-                    onClick={() => {
-                      setIsFlagCustomerOpen(true);
-                      setIsDetailsOpen(false);
-                    }}
-                  >
-                    <AlertTriangle className="w-4 h-4 mr-2" />
-                    Flag Customer
-                  </Button>
+                  {isCustomerFlagged(selectedCustomer.id) ? (
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-green-200 hover:bg-green-50 text-green-600"
+                      onClick={() => {
+                        setIsResolveFlagOpen(true);
+                        setIsDetailsOpen(false);
+                      }}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Resolve Flag
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-red-100 hover:bg-red-50"
+                      onClick={() => {
+                        setIsFlagCustomerOpen(true);
+                        setIsDetailsOpen(false);
+                      }}
+                    >
+                      <AlertTriangle className="w-4 h-4 mr-2" />
+                      Flag Customer
+                    </Button>
+                  )}
                 </SheetFooter>
               </div>
             </>
@@ -1528,6 +1694,47 @@ export default function CustomersPage() {
                 Create Customer
               </Button>
             </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resolve Flag Dialog */}
+      <Dialog open={isResolveFlagOpen} onOpenChange={setIsResolveFlagOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve Customer Flag</DialogTitle>
+            <DialogDescription>
+              Add a resolution note to explain why the flag is being removed.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleResolveFlag} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="resolution_note">Resolution Note</Label>
+              <Textarea
+                id="resolution_note"
+                value={resolveNote}
+                onChange={(e) => setResolveNote(e.target.value)}
+                required
+                placeholder="Enter the reason for resolving this flag..."
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full bg-green-600 hover:bg-green-700"
+              disabled={resolveFlagMutation.isPending}
+            >
+              {resolveFlagMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Resolving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Resolve Flag
+                </>
+              )}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>

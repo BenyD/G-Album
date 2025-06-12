@@ -98,6 +98,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useRole } from "@/components/admin/role-context";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const supabase = createClient();
 
@@ -166,7 +167,16 @@ export default function OrdersPage() {
   const [selectedOrderDetails, setSelectedOrderDetails] =
     useState<OrderSummary | null>(null);
   const [isUpdateStatusOpen, setIsUpdateStatusOpen] = useState(false);
+  const [isFlaggedCustomerWarningOpen, setIsFlaggedCustomerWarningOpen] =
+    useState(false);
+  const [flaggedCustomerInfo, setFlaggedCustomerInfo] = useState<{
+    name: string;
+    reason: string;
+  } | null>(null);
+  const [selectedCustomerName, setSelectedCustomerName] = useState("");
   const { role } = useRole();
+  const searchParams = useSearchParams();
+  const customerFilter = searchParams.get("customer");
 
   // Add query for general settings
   const { data: settings } = useQuery({
@@ -183,6 +193,31 @@ export default function OrdersPage() {
       return data;
     },
   });
+
+  // Add query for customer flags
+  const { data: customerFlags } = useQuery({
+    queryKey: ["customer-flags"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customer_flags")
+        .select("*")
+        .is("resolved_at", null);
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Check if customer is flagged
+  const isCustomerFlagged = (customerId: string) => {
+    return customerFlags?.some((flag) => flag.customer_id === customerId);
+  };
+
+  // Get flag reason for customer
+  const getFlagReason = (customerId: string) => {
+    return customerFlags?.find((flag) => flag.customer_id === customerId)
+      ?.reason;
+  };
 
   // Handle search debounce
   const debouncedSearch = useCallback(
@@ -239,6 +274,13 @@ export default function OrdersPage() {
     );
   }, [customers, customerSearchTerm]);
 
+  // After fetching customers, get the name of the filtered customer if customerFilter is present
+  const filteredCustomerName = useMemo(() => {
+    if (!customerFilter || !customers) return null;
+    const customer = customers.find((c) => c.id === customerFilter);
+    return customer ? customer.studio_name : null;
+  }, [customerFilter, customers]);
+
   // Handle amount paid change
   const handleAmountPaidChange = (value: string) => {
     const numValue = value === "" ? undefined : parseFloat(value);
@@ -249,6 +291,34 @@ export default function OrdersPage() {
       payment_method:
         numValue && numValue > 0 ? newOrder.payment_method : undefined,
     });
+  };
+
+  // Handle customer selection
+  const handleCustomerSelect = (customer: Customer) => {
+    if (isCustomerFlagged(customer.id)) {
+      setFlaggedCustomerInfo({
+        name: customer.studio_name,
+        reason: getFlagReason(customer.id) || "No reason provided",
+      });
+      setIsFlaggedCustomerWarningOpen(true);
+    } else {
+      setNewOrder({
+        ...newOrder,
+        customer_id: customer.id,
+      });
+      setSelectedCustomerName(customer.studio_name);
+      setCustomerSearchTerm("");
+    }
+  };
+
+  // Handle clearing customer selection
+  const handleClearCustomer = () => {
+    setNewOrder({
+      ...newOrder,
+      customer_id: "",
+    });
+    setSelectedCustomerName("");
+    setCustomerSearchTerm("");
   };
 
   // Add order mutation
@@ -338,9 +408,11 @@ export default function OrdersPage() {
         );
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["order-logs"] });
+      if (variables?.id) {
+        queryClient.refetchQueries({ queryKey: ["orderLogs", variables.id] });
+      }
       toast.success("Order updated successfully");
     },
     onError: (error) => {
@@ -520,6 +592,13 @@ export default function OrdersPage() {
       filtered = filtered.filter((order) => order.status === statusFilter);
     }
 
+    // Apply customer filter
+    if (customerFilter) {
+      filtered = filtered.filter(
+        (order) => order.customer_id === customerFilter
+      );
+    }
+
     // Apply sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -539,7 +618,7 @@ export default function OrdersPage() {
     });
 
     return filtered;
-  }, [ordersData, debouncedSearchTerm, statusFilter, sortBy]);
+  }, [ordersData, debouncedSearchTerm, statusFilter, sortBy, customerFilter]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -599,6 +678,18 @@ export default function OrdersPage() {
 
     if (error) {
       console.error("Failed to log order action:", error);
+    }
+  };
+
+  // Add a function to clear all filters
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setSortBy("newest");
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("customer");
+      window.history.replaceState({}, document.title, url.pathname);
     }
   };
 
@@ -789,6 +880,40 @@ export default function OrdersPage() {
       </Card>
 
       {/* Orders Table */}
+      {customerFilter && filteredCustomerName && (
+        <div className="mb-6">
+          <div className="flex items-center gap-4 p-4 rounded-lg border border-red-200 bg-red-50 shadow-sm animate-fade-in">
+            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-red-100">
+              <User className="h-5 w-5 text-red-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-red-700 font-semibold truncate">
+                Showing orders for:
+              </div>
+              <div className="text-lg font-bold text-red-900 truncate">
+                {filteredCustomerName}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-2 text-red-400 hover:text-red-700 border border-transparent hover:border-red-200 transition"
+              onClick={clearAllFilters}
+              aria-label="Remove customer filter"
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                <path
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M18 6 6 18M6 6l12 12"
+                />
+              </svg>
+            </Button>
+          </div>
+        </div>
+      )}
       {filteredOrders.length === 0 ? (
         <Card className="border-red-100">
           <CardContent className="py-16 flex flex-col items-center text-center">
@@ -808,10 +933,7 @@ export default function OrdersPage() {
                 <Button
                   variant="outline"
                   className="border-red-100 hover:bg-red-50"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setStatusFilter("all");
-                  }}
+                  onClick={clearAllFilters}
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Clear Filters
@@ -979,50 +1101,103 @@ export default function OrdersPage() {
                       Customer *
                     </Label>
                     <div className="relative">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          id="customer_search"
-                          placeholder="Search customers..."
-                          value={customerSearchTerm}
-                          onChange={(e) =>
-                            setCustomerSearchTerm(e.target.value)
-                          }
-                          className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
-                        />
-                      </div>
-                      {customerSearchTerm && filteredCustomers && (
-                        <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg">
-                          {filteredCustomers.length === 0 ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                              No customers found
-                            </div>
-                          ) : (
-                            filteredCustomers.map((customer) => (
-                              <div
-                                key={customer.id}
-                                className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-red-50"
-                                onClick={() => {
-                                  setNewOrder({
-                                    ...newOrder,
-                                    customer_id: customer.id,
-                                  });
-                                  setCustomerSearchTerm("");
-                                }}
-                              >
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
-                                  <User className="h-4 w-4 text-red-600" />
+                      {newOrder.customer_id && customers ? (
+                        (() => {
+                          const selected = customers.find(
+                            (c) => c.id === newOrder.customer_id
+                          );
+                          if (!selected) return null;
+                          return (
+                            <div className="flex items-center gap-3 p-3 rounded-md border border-red-200 bg-red-50 animate-fade-in">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                                <User className="h-4 w-4 text-red-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-red-900 truncate">
+                                  {selected.studio_name}
                                 </div>
-                                <div>
-                                  <div className="font-medium text-red-900">
-                                    {customer.studio_name}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {customer.email}
-                                  </div>
+                                <div className="text-sm text-muted-foreground truncate">
+                                  {selected.email}
                                 </div>
                               </div>
-                            ))
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="ml-2 text-red-400 hover:text-red-700"
+                                aria-label="Clear selected customer"
+                                onClick={handleClearCustomer}
+                              >
+                                <span className="sr-only">Clear</span>
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M18 6 6 18M6 6l12 12"
+                                  />
+                                </svg>
+                              </Button>
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div className="relative animate-fade-in">
+                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            id="customer_search"
+                            placeholder="Search customers..."
+                            value={customerSearchTerm || selectedCustomerName}
+                            onChange={(e) =>
+                              setCustomerSearchTerm(e.target.value)
+                            }
+                            className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
+                          />
+                          {customerSearchTerm && filteredCustomers && (
+                            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg animate-fade-in">
+                              {filteredCustomers.length === 0 ? (
+                                <div className="p-4 text-center text-sm text-muted-foreground">
+                                  No customers found
+                                </div>
+                              ) : (
+                                filteredCustomers.map((customer) => (
+                                  <div
+                                    key={customer.id}
+                                    className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-red-50"
+                                    onClick={() =>
+                                      handleCustomerSelect(customer)
+                                    }
+                                  >
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                                      <User className="h-4 w-4 text-red-600" />
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-red-900">
+                                        {customer.studio_name}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {customer.email}
+                                      </div>
+                                    </div>
+                                    {isCustomerFlagged(customer.id) && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="ml-auto"
+                                      >
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        Flagged
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ))
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -1697,6 +1872,71 @@ export default function OrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Flagged Customer Warning Dialog */}
+      <AlertDialog
+        open={isFlaggedCustomerWarningOpen}
+        onOpenChange={setIsFlaggedCustomerWarningOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center text-red-600">
+              <AlertTriangle className="w-5 h-5 mr-2" />
+              Flagged Customer Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="mt-4 space-y-4">
+                <div>
+                  You are about to create an order for{" "}
+                  <strong>{flaggedCustomerInfo?.name}</strong>, who has been
+                  flagged.
+                </div>
+                <div className="rounded-md bg-red-50 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <AlertTriangle className="h-5 w-5 text-red-400" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">
+                        Flag Reason
+                      </h3>
+                      <div className="mt-2 text-sm text-red-700">
+                        {flaggedCustomerInfo?.reason}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Please review the flag reason before proceeding with the order
+                  creation.
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (flaggedCustomerInfo) {
+                  const flaggedCustomer = customerFlags?.find(
+                    (flag) => flag.customer_id === newOrder.customer_id
+                  );
+                  setNewOrder({
+                    ...newOrder,
+                    customer_id: flaggedCustomer?.customer_id || "",
+                  });
+                  setSelectedCustomerName(flaggedCustomerInfo.name);
+                  setCustomerSearchTerm("");
+                }
+                setIsFlaggedCustomerWarningOpen(false);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Proceed Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
