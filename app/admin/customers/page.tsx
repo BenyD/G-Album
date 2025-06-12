@@ -28,6 +28,7 @@ import {
   RefreshCw,
   Pencil,
   Loader2,
+  UserX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +72,7 @@ import type {
   UpdateCustomerInput,
   CreateCustomerFlagInput,
 } from "@/lib/types/customer";
+import type { OrderSummary, OrderStatus } from "@/lib/types/order";
 import {
   Sheet,
   SheetContent,
@@ -121,6 +123,16 @@ const defaultFormState: Omit<
   address: "",
   reference_name: null,
   reference_phone: null,
+};
+
+const orderStatusBadgeVariants: Record<
+  OrderStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  pending: "secondary",
+  in_progress: "secondary",
+  completed: "default",
+  delivered: "default",
 };
 
 export default function CustomersPage() {
@@ -195,6 +207,48 @@ export default function CustomersPage() {
     },
   });
 
+  // Add new query for all customer orders
+  const { data: allCustomerOrders } = useQuery({
+    queryKey: ["all-customer-orders"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_summary")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as OrderSummary[];
+    },
+  });
+
+  // Calculate customer statistics
+  const customerStats = useMemo(() => {
+    if (!allCustomerOrders) return new Map();
+
+    const stats = new Map<
+      string,
+      { totalOrders: number; totalSpent: number; activeOrders: number }
+    >();
+
+    allCustomerOrders.forEach((order) => {
+      const customerId = order.customer_id;
+      const currentStats = stats.get(customerId) || {
+        totalOrders: 0,
+        totalSpent: 0,
+        activeOrders: 0,
+      };
+
+      stats.set(customerId, {
+        totalOrders: currentStats.totalOrders + 1,
+        totalSpent: currentStats.totalSpent + order.amount_paid,
+        activeOrders:
+          currentStats.activeOrders + (order.status !== "delivered" ? 1 : 0),
+      });
+    });
+
+    return stats;
+  }, [allCustomerOrders]);
+
   // Add customer mutation
   const addCustomerMutation = useMutation({
     mutationFn: async (newCustomer: CreateCustomerInput) => {
@@ -262,6 +316,7 @@ export default function CustomersPage() {
           address: customer.address,
           reference_name: customer.reference_name,
           reference_phone: customer.reference_phone,
+          is_active: customer.is_active,
         })
         .eq("id", customer.id);
 
@@ -303,7 +358,10 @@ export default function CustomersPage() {
   };
 
   const handleStatusChange = (customer: Customer) => {
-    updateCustomerMutation.mutate(customer);
+    updateCustomerMutation.mutate({
+      ...customer,
+      is_active: !customer.is_active,
+    });
   };
 
   const handleFlagCustomer = (e: React.FormEvent) => {
@@ -394,6 +452,54 @@ export default function CustomersPage() {
       ...editForm,
     });
   };
+
+  // Add new query for customer orders
+  const { data: customerOrders } = useQuery({
+    queryKey: ["customer-orders", selectedCustomer?.id],
+    queryFn: async () => {
+      if (!selectedCustomer?.id) return [];
+
+      const { data, error } = await supabase
+        .from("order_summary")
+        .select("*")
+        .eq("customer_id", selectedCustomer.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as OrderSummary[];
+    },
+    enabled: !!selectedCustomer?.id,
+  });
+
+  // Calculate customer order statistics
+  const customerOrderStats = useMemo(() => {
+    if (!customerOrders)
+      return {
+        activeOrders: 0,
+        totalSpent: 0,
+        pendingAmount: 0,
+      };
+
+    const activeOrders = customerOrders.filter(
+      (order) => order.status !== "delivered"
+    ).length;
+
+    const totalSpent = customerOrders.reduce(
+      (sum, order) => sum + order.amount_paid,
+      0
+    );
+
+    const pendingAmount = customerOrders.reduce(
+      (sum, order) => sum + order.balance_amount,
+      0
+    );
+
+    return {
+      activeOrders,
+      totalSpent,
+      pendingAmount,
+    };
+  }, [customerOrders]);
 
   if (isLoadingCustomers) {
     return <div>Loading...</div>;
@@ -638,18 +744,33 @@ export default function CustomersPage() {
                   <TableCell>
                     <Badge
                       variant={customer.is_active ? "default" : "secondary"}
-                      className="cursor-pointer bg-red-600 hover:bg-red-700"
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleStatusChange(customer);
                       }}
                     >
-                      {customer.is_active ? "Active" : "Inactive"}
+                      {customer.is_active ? (
+                        <>
+                          <UserCheck className="w-3 h-3 mr-1" />
+                          Active
+                        </>
+                      ) : (
+                        <>
+                          <UserX className="w-3 h-3 mr-1" />
+                          Inactive
+                        </>
+                      )}
                     </Badge>
                   </TableCell>
-                  <TableCell>{customer.total_orders}</TableCell>
                   <TableCell>
-                    ₹{customer.total_spent.toLocaleString()}
+                    {customerStats.get(customer.id)?.totalOrders ?? 0}
+                  </TableCell>
+                  <TableCell>
+                    ₹
+                    {customerStats
+                      .get(customer.id)
+                      ?.totalSpent.toLocaleString() ?? 0}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -766,9 +887,23 @@ export default function CustomersPage() {
                         variant={
                           selectedCustomer.is_active ? "default" : "secondary"
                         }
-                        className="mr-2"
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusChange(selectedCustomer);
+                        }}
                       >
-                        {selectedCustomer.is_active ? "Active" : "Inactive"}
+                        {selectedCustomer.is_active ? (
+                          <>
+                            <UserCheck className="w-3 h-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="w-3 h-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
                       </Badge>
                       {isCustomerFlagged(selectedCustomer.id) && (
                         <Badge
@@ -830,11 +965,29 @@ export default function CustomersPage() {
                     </div>
                     <div className="rounded-lg border p-3">
                       <div className="text-sm text-muted-foreground mb-1">
+                        Active Orders
+                      </div>
+                      <div className="text-2xl font-bold flex items-center">
+                        <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
+                        {customerOrderStats.activeOrders}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="text-sm text-muted-foreground mb-1">
                         Total Spent
                       </div>
                       <div className="text-2xl font-bold flex items-center">
                         <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
-                        {selectedCustomer.total_spent.toLocaleString()}
+                        {customerOrderStats.totalSpent.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="text-sm text-muted-foreground mb-1">
+                        Pending Amount
+                      </div>
+                      <div className="text-2xl font-bold flex items-center">
+                        <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
+                        {customerOrderStats.pendingAmount.toLocaleString()}
                       </div>
                     </div>
                   </div>
@@ -900,39 +1053,90 @@ export default function CustomersPage() {
 
               <Separator className="my-4" />
 
-              <SheetFooter className="flex-row gap-2 sm:flex-row">
-                <Button
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                  onClick={() =>
-                    router.push(`/admin/orders?customer=${selectedCustomer.id}`)
-                  }
-                >
+              <div>
+                <h3 className="text-sm font-medium flex items-center mb-3">
                   <ShoppingBag className="w-4 h-4 mr-2" />
-                  View Orders
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 border-red-100 hover:bg-red-50"
-                  onClick={() => {
-                    setIsFlagCustomerOpen(true);
-                    setIsDetailsOpen(false);
-                  }}
-                >
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Flag Customer
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 border-red-100 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                  onClick={() => {
-                    setCustomerToDelete(selectedCustomer);
-                    setIsDetailsOpen(false);
-                  }}
-                >
-                  <Trash className="w-4 h-4 mr-2" />
-                  Delete Customer
-                </Button>
-              </SheetFooter>
+                  Recent Orders
+                </h3>
+                <div className="space-y-4">
+                  {customerOrders?.slice(0, 5).map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex items-start space-x-3 text-sm border rounded-lg p-3 hover:bg-red-50/50 cursor-pointer"
+                      onClick={() =>
+                        router.push(`/admin/orders?order=${order.id}`)
+                      }
+                    >
+                      <div className="mt-0.5">
+                        <ShoppingBag className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">
+                            Order #{order.order_number}
+                          </p>
+                          <Badge
+                            variant={orderStatusBadgeVariants[order.status]}
+                            className="ml-2"
+                          >
+                            {order.status.charAt(0).toUpperCase() +
+                              order.status.slice(1).replace("_", " ")}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <p>₹{order.total_amount.toLocaleString()}</p>
+                          <p>{format(new Date(order.created_at), "PPp")}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {customerOrders?.length === 0 && (
+                    <div className="text-center text-muted-foreground py-4">
+                      No orders found
+                    </div>
+                  )}
+                  {customerOrders && customerOrders.length > 5 && (
+                    <Button
+                      variant="outline"
+                      className="w-full border-red-100 hover:bg-red-50"
+                      onClick={() =>
+                        router.push(
+                          `/admin/orders?customer=${selectedCustomer.id}`
+                        )
+                      }
+                    >
+                      View All Orders
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-8">
+                <SheetFooter className="flex-row gap-2 sm:flex-row">
+                  <Button
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() =>
+                      router.push(
+                        `/admin/orders?customer=${selectedCustomer.id}`
+                      )
+                    }
+                  >
+                    <ShoppingBag className="w-4 h-4 mr-2" />
+                    View Orders
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-red-100 hover:bg-red-50"
+                    onClick={() => {
+                      setIsFlagCustomerOpen(true);
+                      setIsDetailsOpen(false);
+                    }}
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Flag Customer
+                  </Button>
+                </SheetFooter>
+              </div>
             </>
           )}
         </SheetContent>

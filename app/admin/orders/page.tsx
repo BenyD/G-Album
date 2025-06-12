@@ -23,6 +23,7 @@ import {
   IndianRupee,
   Mail,
   Phone,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,6 +96,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const supabase = createClient();
 
@@ -163,6 +165,22 @@ export default function OrdersPage() {
   const [selectedOrderDetails, setSelectedOrderDetails] =
     useState<OrderSummary | null>(null);
   const [isUpdateStatusOpen, setIsUpdateStatusOpen] = useState(false);
+
+  // Add query for general settings
+  const { data: settings } = useQuery({
+    queryKey: ["general-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("general_settings")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Handle search debounce
   const debouncedSearch = useCallback(
@@ -331,14 +349,34 @@ export default function OrdersPage() {
   // Delete order mutation
   const deleteOrderMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Delete the order (cascade will handle related records)
-      const { error } = await supabase.from("orders").delete().eq("id", id);
+      // Delete order payments
+      const { error: paymentsError } = await supabase
+        .from("order_payments")
+        .delete()
+        .eq("order_id", id);
 
-      if (error) throw error;
+      if (paymentsError) throw paymentsError;
+
+      // Delete order logs
+      const { error: logsError } = await supabase
+        .from("order_logs")
+        .delete()
+        .eq("order_id", id);
+
+      if (logsError) throw logsError;
+
+      // Delete the order
+      const { error: orderError } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", id);
+
+      if (orderError) throw orderError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       setOrderToDelete(null);
+      setIsDetailsOpen(false);
       toast.success("Order deleted successfully");
     },
     onError: (error) => {
@@ -925,183 +963,220 @@ export default function OrdersPage() {
               addOrderMutation.mutate(newOrder);
             }}
           >
-            <div className="grid gap-6 py-4 md:grid-cols-2">
-              <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="customer_id" className="text-red-900">
-                    Customer *
-                  </Label>
-                  <Select
-                    value={newOrder.customer_id}
-                    onValueChange={(value) =>
-                      setNewOrder({ ...newOrder, customer_id: value })
-                    }
-                  >
-                    <SelectTrigger className="border-red-100 focus:border-red-200 focus:ring-red-100">
-                      <SelectValue placeholder="Select a customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="p-2 pb-0">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-red-400" />
-                          <Input
-                            type="search"
-                            placeholder="Search customers..."
-                            value={customerSearchTerm}
-                            onChange={(e) =>
-                              setCustomerSearchTerm(e.target.value)
-                            }
-                            className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
-                          />
+            <div className="grid gap-6 py-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="customer_id" className="text-red-900">
+                      Customer *
+                    </Label>
+                    <div className="relative">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="customer_search"
+                          placeholder="Search customers..."
+                          value={customerSearchTerm}
+                          onChange={(e) =>
+                            setCustomerSearchTerm(e.target.value)
+                          }
+                          className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
+                        />
+                      </div>
+                      {customerSearchTerm && filteredCustomers && (
+                        <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg">
+                          {filteredCustomers.length === 0 ? (
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                              No customers found
+                            </div>
+                          ) : (
+                            filteredCustomers.map((customer) => (
+                              <div
+                                key={customer.id}
+                                className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-red-50"
+                                onClick={() => {
+                                  setNewOrder({
+                                    ...newOrder,
+                                    customer_id: customer.id,
+                                  });
+                                  setCustomerSearchTerm("");
+                                }}
+                              >
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                                  <User className="h-4 w-4 text-red-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-red-900">
+                                    {customer.studio_name}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {customer.email}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="order_number" className="text-red-900">
+                      Order Number (Optional)
+                    </Label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        #
                       </div>
-                      <div className="relative max-h-[300px] overflow-y-auto">
-                        {filteredCustomers?.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.studio_name} - {customer.email}
-                          </SelectItem>
-                        ))}
-                        {filteredCustomers?.length === 0 && (
-                          <div className="p-2 text-sm text-muted-foreground text-center">
-                            No customers found
-                          </div>
-                        )}
+                      <Input
+                        id="order_number"
+                        placeholder={`Leave empty for auto-generation (${
+                          settings?.order_number_prefix || "GA-"
+                        }${(settings?.last_order_number || 0) + 1})`}
+                        value={newOrder.order_number || ""}
+                        onChange={(e) =>
+                          setNewOrder({
+                            ...newOrder,
+                            order_number: e.target.value,
+                          })
+                        }
+                        className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="total_amount" className="text-red-900">
+                      Total Amount (₹) *
+                    </Label>
+                    <div className="relative">
+                      <IndianRupee className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="total_amount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="25000"
+                        value={newOrder.total_amount || ""}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          setNewOrder({
+                            ...newOrder,
+                            total_amount: value,
+                            amount_paid:
+                              newOrder.amount_paid &&
+                              newOrder.amount_paid > value
+                                ? undefined
+                                : newOrder.amount_paid,
+                          });
+                        }}
+                        className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label
+                      htmlFor="estimated_delivery_date"
+                      className="text-red-900"
+                    >
+                      Estimated Delivery Date *
+                    </Label>
+                    <DatePicker
+                      date={
+                        newOrder.estimated_delivery_date
+                          ? new Date(newOrder.estimated_delivery_date)
+                          : undefined
+                      }
+                      onSelect={(date) => {
+                        if (date && date <= new Date()) {
+                          toast.error("Delivery date must be in the future");
+                          return;
+                        }
+                        setNewOrder({
+                          ...newOrder,
+                          estimated_delivery_date: date?.toISOString(),
+                        });
+                      }}
+                      className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                      placeholder="Select delivery date"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="amount_paid" className="text-red-900">
+                      Initial Payment Amount (₹)
+                    </Label>
+                    <div className="relative">
+                      <IndianRupee className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="amount_paid"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="5000"
+                        value={
+                          newOrder.amount_paid === undefined
+                            ? ""
+                            : newOrder.amount_paid
+                        }
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          if (value > (newOrder.total_amount || 0)) {
+                            toast.error(
+                              "Initial payment cannot exceed total amount"
+                            );
+                            return;
+                          }
+                          handleAmountPaidChange(e.target.value);
+                        }}
+                        className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
+                      />
+                    </div>
+                  </div>
+
+                  {newOrder.amount_paid && newOrder.amount_paid > 0 ? (
+                    <div className="grid gap-2">
+                      <Label htmlFor="payment_method" className="text-red-900">
+                        Payment Method *
+                      </Label>
+                      <div className="relative">
+                        <CreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Select
+                          value={newOrder.payment_method}
+                          onValueChange={(value: PaymentMethod) =>
+                            setNewOrder({ ...newOrder, payment_method: value })
+                          }
+                        >
+                          <SelectTrigger className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100">
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {paymentMethods.map((method) => (
+                              <SelectItem
+                                key={method}
+                                value={method as PaymentMethod}
+                              >
+                                {method}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="order_number" className="text-red-900">
-                    Order Number (Optional)
-                  </Label>
-                  <Input
-                    id="order_number"
-                    placeholder="Leave empty for auto-generation"
-                    value={newOrder.order_number || ""}
-                    onChange={(e) =>
-                      setNewOrder({ ...newOrder, order_number: e.target.value })
-                    }
-                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="total_amount" className="text-red-900">
-                    Total Amount (₹) *
-                  </Label>
-                  <Input
-                    id="total_amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="25000"
-                    value={newOrder.total_amount || ""}
-                    onChange={(e) =>
-                      setNewOrder({
-                        ...newOrder,
-                        total_amount: parseFloat(e.target.value),
-                        // Reset amount_paid if it's greater than new total
-                        amount_paid:
-                          newOrder.amount_paid &&
-                          newOrder.amount_paid > parseFloat(e.target.value)
-                            ? undefined
-                            : newOrder.amount_paid,
-                      })
-                    }
-                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="estimated_delivery_date"
-                    className="text-red-900"
-                  >
-                    Estimated Delivery Date *
-                  </Label>
-                  <Input
-                    id="estimated_delivery_date"
-                    type="date"
-                    min={new Date().toISOString().split("T")[0]}
-                    value={newOrder.estimated_delivery_date || ""}
-                    onChange={(e) =>
-                      setNewOrder({
-                        ...newOrder,
-                        estimated_delivery_date: e.target.value,
-                      })
-                    }
-                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                  />
-                  {newOrder.estimated_delivery_date &&
-                    new Date(newOrder.estimated_delivery_date) <=
-                      new Date() && (
-                      <p className="text-sm text-red-600">
-                        Delivery date must be in the future
-                      </p>
-                    )}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="amount_paid" className="text-red-900">
-                    Initial Payment Amount (₹)
-                  </Label>
-                  <Input
-                    id="amount_paid"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="5000"
-                    value={
-                      newOrder.amount_paid === undefined
-                        ? ""
-                        : newOrder.amount_paid
-                    }
-                    onChange={(e) => handleAmountPaidChange(e.target.value)}
-                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                  />
-                  {newOrder.amount_paid !== undefined &&
-                    newOrder.amount_paid > (newOrder.total_amount || 0) && (
-                      <p className="text-sm text-red-600">
-                        Initial payment cannot exceed total amount
-                      </p>
-                    )}
-                </div>
-
-                {newOrder.amount_paid && newOrder.amount_paid > 0 ? (
-                  <div className="grid gap-2">
-                    <Label htmlFor="payment_method" className="text-red-900">
-                      Payment Method *
-                    </Label>
-                    <Select
-                      value={newOrder.payment_method}
-                      onValueChange={(value: PaymentMethod) =>
-                        setNewOrder({ ...newOrder, payment_method: value })
-                      }
-                    >
-                      <SelectTrigger className="border-red-100 focus:border-red-200 focus:ring-red-100">
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {paymentMethods.map((method) => (
-                          <SelectItem
-                            key={method}
-                            value={method as PaymentMethod}
-                          >
-                            {method}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null}
-
-                <div className="grid gap-2">
-                  <Label htmlFor="notes" className="text-red-900">
-                    Notes (Optional)
-                  </Label>
+              <div className="grid gap-2">
+                <Label htmlFor="notes" className="text-red-900">
+                  Notes (Optional)
+                </Label>
+                <div className="relative">
+                  <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Textarea
                     id="notes"
                     placeholder="Add any additional notes about the order..."
@@ -1109,7 +1184,7 @@ export default function OrdersPage() {
                     onChange={(e) =>
                       setNewOrder({ ...newOrder, notes: e.target.value })
                     }
-                    className="min-h-[120px] border-red-100 focus:border-red-200 focus:ring-red-100"
+                    className="pl-9 min-h-[120px] border-red-100 focus:border-red-200 focus:ring-red-100"
                   />
                 </div>
               </div>
@@ -1259,7 +1334,7 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Order Confirmation */}
+      {/* Delete Order Dialog */}
       <AlertDialog
         open={!!orderToDelete}
         onOpenChange={(open) => {
@@ -1272,7 +1347,8 @@ export default function OrdersPage() {
             <AlertDialogDescription>
               Are you sure you want to delete order{" "}
               {orderToDelete?.order_number}? This action cannot be undone. All
-              associated data will be permanently removed.
+              associated data including payments and logs will be permanently
+              removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1310,7 +1386,8 @@ export default function OrdersPage() {
                     <div className="flex items-center mt-1">
                       <Badge
                         variant={orderStatusBadgeVariants[selectedOrder.status]}
-                        className="mr-2"
+                        className="mr-2 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setIsUpdateStatusOpen(true)}
                       >
                         {selectedOrder.status.charAt(0).toUpperCase() +
                           selectedOrder.status.slice(1).replace("_", " ")}
@@ -1318,6 +1395,7 @@ export default function OrdersPage() {
                     </div>
                   </div>
                 </div>
+
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <User className="w-4 h-4 mr-2" />
@@ -1498,6 +1576,119 @@ export default function OrdersPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Update Status Dialog */}
+      <Dialog open={isUpdateStatusOpen} onOpenChange={setIsUpdateStatusOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Order Status</DialogTitle>
+            <DialogDescription>
+              Select the new status for order #{selectedOrder?.order_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className={`h-24 flex flex-col items-center justify-center gap-2 ${
+                  selectedOrder?.status === "pending"
+                    ? "border-red-600 bg-red-50"
+                    : "border-red-100 hover:bg-red-50"
+                }`}
+                onClick={() => {
+                  if (selectedOrder) {
+                    updateOrderMutation.mutate({
+                      id: selectedOrder.id,
+                      data: { status: "pending" },
+                    });
+                    setIsUpdateStatusOpen(false);
+                  }
+                }}
+                disabled={selectedOrder?.status === "pending"}
+              >
+                <Clock className="w-6 h-6" />
+                <span>Pending</span>
+              </Button>
+              <Button
+                variant="outline"
+                className={`h-24 flex flex-col items-center justify-center gap-2 ${
+                  selectedOrder?.status === "in_progress"
+                    ? "border-red-600 bg-red-50"
+                    : "border-red-100 hover:bg-red-50"
+                }`}
+                onClick={() => {
+                  if (selectedOrder) {
+                    updateOrderMutation.mutate({
+                      id: selectedOrder.id,
+                      data: { status: "in_progress" },
+                    });
+                    setIsUpdateStatusOpen(false);
+                  }
+                }}
+                disabled={selectedOrder?.status === "in_progress"}
+              >
+                <RefreshCw className="w-6 h-6" />
+                <span>In Progress</span>
+              </Button>
+              <Button
+                variant="outline"
+                className={`h-24 flex flex-col items-center justify-center gap-2 ${
+                  selectedOrder?.status === "completed"
+                    ? "border-red-600 bg-red-50"
+                    : "border-red-100 hover:bg-red-50"
+                }`}
+                onClick={() => {
+                  if (selectedOrder) {
+                    updateOrderMutation.mutate({
+                      id: selectedOrder.id,
+                      data: { status: "completed" },
+                    });
+                    setIsUpdateStatusOpen(false);
+                  }
+                }}
+                disabled={selectedOrder?.status === "completed"}
+              >
+                <CheckCircle2 className="w-6 h-6" />
+                <span>Completed</span>
+              </Button>
+              <Button
+                variant="outline"
+                className={`h-24 flex flex-col items-center justify-center gap-2 ${
+                  selectedOrder?.status === "delivered"
+                    ? "border-red-600 bg-red-50"
+                    : "border-red-100 hover:bg-red-50"
+                }`}
+                onClick={() => {
+                  if (selectedOrder) {
+                    updateOrderMutation.mutate({
+                      id: selectedOrder.id,
+                      data: { status: "delivered" },
+                    });
+                    setIsUpdateStatusOpen(false);
+                  }
+                }}
+                disabled={
+                  selectedOrder?.status === "delivered" ||
+                  (selectedOrder?.status === "completed" &&
+                    selectedOrder?.total_amount > selectedOrder?.amount_paid)
+                }
+              >
+                <ShoppingBag className="w-6 h-6" />
+                <span>Delivered</span>
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsUpdateStatusOpen(false)}
+              className="border-red-100 hover:bg-red-50"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
