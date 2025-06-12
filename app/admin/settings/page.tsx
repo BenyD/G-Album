@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -227,35 +227,51 @@ export default function SettingsPage() {
     }));
   };
 
+  // Fetch admin profiles for user name mapping
   useEffect(() => {
     if (role === "super_admin") {
       supabase
         .from("admin_profiles")
         .select("id, full_name")
-        .order("full_name", { ascending: true })
         .then(({ data }) => {
           if (data) setUserOptions(data);
         });
     }
   }, [role]);
 
+  // --- REWRITE GLOBAL LOG FETCHING ---
+  const fetchLogs = useCallback(
+    async (page: number, userFilter: string, actionFilter: string) => {
+      let query = supabase
+        .from("activity_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(LOGS_PER_PAGE)
+        .range((page - 1) * LOGS_PER_PAGE, page * LOGS_PER_PAGE - 1);
+      if (userFilter) query = query.eq("user_id", userFilter);
+      if (actionFilter) query = query.ilike("action", `%${actionFilter}%`);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    [supabase]
+  );
+
+  // Use new fetchLogs in effect
   useEffect(() => {
     if (role === "super_admin") {
       setIsLoadingLogs(true);
-      let query = supabase
-        .from("activity_logs")
-        .select("*, admin_profiles: user_id (full_name)")
-        .order("created_at", { ascending: false })
-        .range(0, logPage * LOGS_PER_PAGE - 1);
-      if (logUserFilter) query = query.eq("user_id", logUserFilter);
-      if (logActionFilter)
-        query = query.ilike("action", `%${logActionFilter}%`);
-      query.then(({ data, error }) => {
-        if (!error && data) setGlobalLogs(data);
-        setIsLoadingLogs(false);
-      });
+      fetchLogs(logPage, logUserFilter, logActionFilter)
+        .then((logs) => {
+          setGlobalLogs(logs);
+          setIsLoadingLogs(false);
+        })
+        .catch((err) => {
+          setIsLoadingLogs(false);
+          toast.error("Failed to fetch activity logs: " + err.message);
+        });
     }
-  }, [role, logUserFilter, logActionFilter, logPage]);
+  }, [role, logUserFilter, logActionFilter, logPage, fetchLogs]);
 
   if (isLoading) {
     return (
@@ -411,49 +427,61 @@ export default function SettingsPage() {
                 No activity logs found
               </div>
             ) : (
-              <div className="max-h-[600px] overflow-y-auto space-y-3">
-                {globalLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="flex items-start gap-3 p-3 bg-red-50/50 rounded-lg"
-                  >
-                    <Clock className="w-4 h-4 text-red-600 mt-1" />
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium text-red-900">
-                        {log.action
-                          .split("_")
-                          .map(
-                            (word: string) =>
-                              word.charAt(0).toUpperCase() + word.slice(1)
-                          )
-                          .join(" ")}
-                      </p>
-                      <p className="text-xs text-red-600">
-                        {new Date(log.created_at).toLocaleString()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        User: {log.admin_profiles?.full_name || log.user_id}
-                      </p>
-                      {log.details && (
-                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-all">
-                          {typeof log.details === "string"
-                            ? log.details
-                            : JSON.stringify(log.details, null, 2)}
-                        </pre>
-                      )}
-                    </div>
+              <>
+                {globalLogs.some(
+                  (log) => new Date(log.created_at) > new Date()
+                ) && (
+                  <div className="mb-4 p-2 bg-yellow-100 text-yellow-800 rounded">
+                    Warning: Some logs have a future timestamp. Please check
+                    your server time settings.
                   </div>
-                ))}
-                <div className="flex justify-center mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setLogPage((p) => p + 1)}
-                    disabled={isLoadingLogs}
-                  >
-                    Load More
-                  </Button>
+                )}
+                <div className="max-h-[600px] overflow-y-auto space-y-3">
+                  {globalLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="flex items-start gap-3 p-3 bg-red-50/50 rounded-lg"
+                    >
+                      <Clock className="w-4 h-4 text-red-600 mt-1" />
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-medium text-red-900">
+                          {log.action
+                            .split("_")
+                            .map(
+                              (word: string) =>
+                                word.charAt(0).toUpperCase() + word.slice(1)
+                            )
+                            .join(" ")}
+                        </p>
+                        <p className="text-xs text-red-600">
+                          {new Date(log.created_at).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          User:{" "}
+                          {userOptions.find((u) => u.id === log.user_id)
+                            ?.full_name || log.user_id}
+                        </p>
+                        {log.details && (
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-all">
+                            {typeof log.details === "string"
+                              ? log.details
+                              : JSON.stringify(log.details, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setLogPage((p) => p + 1)}
+                      disabled={isLoadingLogs}
+                    >
+                      Load More
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </CardContent>
         </Card>

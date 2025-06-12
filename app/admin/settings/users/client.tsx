@@ -55,7 +55,7 @@ import {
   getRoles,
 } from "./actions";
 import { toast } from "sonner";
-import { createClient } from "@/utils/supabase/client";
+import { createClient, logActivity } from "@/utils/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -170,6 +170,23 @@ export function UserManagementClient() {
 
       if (error) throw error;
 
+      // Get current admin user
+      const {
+        data: { user: admin },
+        error: adminError,
+      } = await supabase.auth.getUser();
+      if (adminError || !admin) throw new Error("Could not get current user");
+
+      // Log the activity
+      await logActivity("user_profile_updated", {
+        user_id: user.id,
+        email: user.email,
+        updated_by: admin.id,
+        full_name: user.profile?.full_name,
+        role_id: user.profile?.role_id,
+        status: user.profile?.status,
+      });
+
       setUsers((prev) =>
         prev.map((u) => (u.id === user.id ? { ...u, ...user } : u))
       );
@@ -190,6 +207,20 @@ export function UserManagementClient() {
         .eq("id", userId);
 
       if (error) throw error;
+
+      // Get current admin user
+      const {
+        data: { user: admin },
+        error: adminError,
+      } = await supabase.auth.getUser();
+      if (adminError || !admin) throw new Error("Could not get current user");
+
+      // Log the activity
+      await logActivity("user_role_assigned", {
+        user_id: userId,
+        role_id: roleId,
+        assigned_by: admin.id,
+      });
 
       setUsers((prev) =>
         prev.map((user) =>
@@ -221,6 +252,20 @@ export function UserManagementClient() {
         .eq("id", userId);
 
       if (error) throw error;
+
+      // Get current admin user
+      const {
+        data: { user: admin },
+        error: adminError,
+      } = await supabase.auth.getUser();
+      if (adminError || !admin) throw new Error("Could not get current user");
+
+      // Log the activity
+      await logActivity("user_status_updated", {
+        user_id: userId,
+        status,
+        updated_by: admin.id,
+      });
 
       setUsers((prev) =>
         prev.map((user) =>
