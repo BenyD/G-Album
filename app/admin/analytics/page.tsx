@@ -41,6 +41,18 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { useState } from "react";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  addDays,
+  subDays,
+  startOfDay,
+  endOfDay,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+} from "date-fns";
 
 export default function AnalyticsPage() {
   const { hasPermission } = useRole();
@@ -51,15 +63,42 @@ export default function AnalyticsPage() {
 
   const canViewAnalytics = hasPermission("view_analytics");
 
-  // Fetch monthly analytics
+  const [dateFilter, setDateFilter] = useState("last_30_days");
+  const [customRange, setCustomRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({ start: null, end: null });
+
+  // Helper to get start/end dates based on filter
+  const getDateRange = () => {
+    const today = new Date();
+    switch (dateFilter) {
+      case "today":
+        return { start: startOfDay(today), end: endOfDay(today) };
+      case "last_week":
+        return { start: startOfDay(subDays(today, 6)), end: endOfDay(today) };
+      case "last_30_days":
+        return { start: startOfDay(subDays(today, 29)), end: endOfDay(today) };
+      case "last_year":
+        return { start: startOfYear(today), end: endOfDay(today) };
+      case "custom":
+        return { start: customRange.start, end: customRange.end };
+      default:
+        return { start: startOfDay(subDays(today, 29)), end: endOfDay(today) };
+    }
+  };
+  const { start, end } = getDateRange();
+
+  // Fetch monthly analytics (filtered)
   const { data: monthlyData, isLoading: isLoadingMonthly } = useQuery({
-    queryKey: ["monthly-analytics"],
+    queryKey: ["monthly-analytics", start, end],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("monthly_analytics")
         .select("*")
+        .gte("month", start.toISOString())
+        .lte("month", end.toISOString())
         .order("month", { ascending: true });
-
       if (error) throw error;
       return data;
     },
@@ -80,17 +119,14 @@ export default function AnalyticsPage() {
     enabled: canViewAnalytics,
   });
 
-  // Fetch revenue breakdown
+  // Fetch revenue breakdown (filtered)
   const { data: revenueBreakdown, isLoading: isLoadingBreakdown } = useQuery({
-    queryKey: ["revenue-breakdown"],
+    queryKey: ["revenue-breakdown", start, end],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_revenue_breakdown", {
-        start_date: new Date(
-          new Date().setMonth(new Date().getMonth() - 6)
-        ).toISOString(),
-        end_date: new Date().toISOString(),
+        start_date: start.toISOString(),
+        end_date: end.toISOString(),
       });
-
       if (error) throw error;
       return data;
     },
@@ -137,6 +173,41 @@ export default function AnalyticsPage() {
           View business performance metrics and trends
         </p>
         <div className="absolute -bottom-1 left-0 w-12 h-1 bg-red-600 rounded-full" />
+      </div>
+
+      {/* Date Filter */}
+      <div className="flex flex-wrap gap-2 items-center mb-4">
+        <Select value={dateFilter} onValueChange={setDateFilter}>
+          <SelectTrigger className="w-[180px] border-red-100">
+            <SelectValue placeholder="Filter by date" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="last_week">Last 7 Days</SelectItem>
+            <SelectItem value="last_30_days">Last 30 Days</SelectItem>
+            <SelectItem value="last_year">This Year</SelectItem>
+            <SelectItem value="custom">Custom Range</SelectItem>
+          </SelectContent>
+        </Select>
+        {dateFilter === "custom" && (
+          <div className="flex gap-2 items-center">
+            <DatePicker
+              date={customRange.start}
+              onSelect={(date) =>
+                setCustomRange((prev) => ({ ...prev, start: date }))
+              }
+              placeholder="Start date"
+            />
+            <span>-</span>
+            <DatePicker
+              date={customRange.end}
+              onSelect={(date) =>
+                setCustomRange((prev) => ({ ...prev, end: date }))
+              }
+              placeholder="End date"
+            />
+          </div>
+        )}
       </div>
 
       {/* Key Metrics */}
@@ -269,6 +340,64 @@ export default function AnalyticsPage() {
                     data={monthlyData || []}
                     xAxisKey="month"
                     yAxisKey="total_revenue"
+                    valueFormatter={formatCurrency}
+                    height={300}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Additional Revenue Visualizations */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-red-900">
+                  Cumulative Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingMonthly ? (
+                  <div className="flex items-center justify-center h-[300px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+                  </div>
+                ) : (
+                  <LineChart
+                    data={
+                      monthlyData?.reduce((acc, cur, i) => {
+                        const prev = acc[i - 1]?.cumulative || 0;
+                        acc.push({
+                          ...cur,
+                          cumulative: prev + cur.total_revenue,
+                        });
+                        return acc;
+                      }, []) || []
+                    }
+                    xAxisKey="month"
+                    yAxisKey="cumulative"
+                    valueFormatter={formatCurrency}
+                    height={300}
+                  />
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-red-900">
+                  Revenue vs Orders
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingMonthly ? (
+                  <div className="flex items-center justify-center h-[300px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+                  </div>
+                ) : (
+                  <BarChart
+                    data={monthlyData || []}
+                    xAxisKey="month"
+                    yAxisKey="total_revenue"
+                    secondaryYAxisKey="total_orders"
                     valueFormatter={formatCurrency}
                     height={300}
                   />

@@ -97,6 +97,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useRole } from "@/components/admin/role-context";
 
 const supabase = createClient();
 
@@ -165,6 +166,7 @@ export default function OrdersPage() {
   const [selectedOrderDetails, setSelectedOrderDetails] =
     useState<OrderSummary | null>(null);
   const [isUpdateStatusOpen, setIsUpdateStatusOpen] = useState(false);
+  const { role } = useRole();
 
   // Add query for general settings
   const { data: settings } = useQuery({
@@ -600,7 +602,7 @@ export default function OrdersPage() {
     }
   };
 
-    return (
+  return (
     <div className="container mx-auto space-y-8 py-6">
       {/* Header */}
       <div className="flex flex-col gap-2 relative">
@@ -698,14 +700,14 @@ export default function OrdersPage() {
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 w-4 h-4" />
-                <Input
+              <Input
                 type="search"
                 placeholder="Search orders..."
                 className="pl-10 border-red-100 focus:border-red-200 focus:ring-red-100"
-                  value={searchTerm}
+                value={searchTerm}
                 onChange={handleSearchChange}
-                />
-              </div>
+              />
+            </div>
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -787,7 +789,7 @@ export default function OrdersPage() {
       </Card>
 
       {/* Orders Table */}
-          {filteredOrders.length === 0 ? (
+      {filteredOrders.length === 0 ? (
         <Card className="border-red-100">
           <CardContent className="py-16 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
@@ -813,12 +815,12 @@ export default function OrdersPage() {
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Clear Filters
-                  </Button>
+                </Button>
               </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
+            )}
+          </CardContent>
+        </Card>
+      ) : (
         <Card className="border-red-100">
           <Table>
             <TableHeader>
@@ -858,7 +860,7 @@ export default function OrdersPage() {
                     >
                       {order.status.charAt(0).toUpperCase() +
                         order.status.slice(1).replace("_", " ")}
-                          </Badge>
+                    </Badge>
                   </TableCell>
                   <TableCell>₹{order.total_amount.toLocaleString()}</TableCell>
                   <TableCell>₹{order.amount_paid.toLocaleString()}</TableCell>
@@ -910,9 +912,10 @@ export default function OrdersPage() {
                             });
                           }}
                           disabled={
-                            order.status === "delivered" ||
-                            (order.status === "completed" &&
-                              order.total_amount > order.amount_paid)
+                            !(
+                              role === "super_admin" ||
+                              order.status === "pending"
+                            )
                           }
                         >
                           <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -931,7 +934,12 @@ export default function OrdersPage() {
                             setOrderToDelete(order);
                           }}
                           className="text-red-600"
-                          disabled={order.status !== "pending"}
+                          disabled={
+                            !(
+                              role === "super_admin" ||
+                              order.status === "pending"
+                            )
+                          }
                         >
                           <Trash className="w-4 h-4 mr-2" />
                           Delete Order
@@ -982,13 +990,13 @@ export default function OrdersPage() {
                           }
                           className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
                         />
-                        </div>
+                      </div>
                       {customerSearchTerm && filteredCustomers && (
                         <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-white shadow-lg">
                           {filteredCustomers.length === 0 ? (
                             <div className="p-4 text-center text-sm text-muted-foreground">
                               No customers found
-                          </div>
+                            </div>
                           ) : (
                             filteredCustomers.map((customer) => (
                               <div
@@ -1004,22 +1012,22 @@ export default function OrdersPage() {
                               >
                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
                                   <User className="h-4 w-4 text-red-600" />
-                          </div>
-                          <div>
+                                </div>
+                                <div>
                                   <div className="font-medium text-red-900">
                                     {customer.studio_name}
-                          </div>
+                                  </div>
                                   <div className="text-sm text-muted-foreground">
                                     {customer.email}
-                          </div>
-                        </div>
-                      </div>
+                                  </div>
+                                </div>
+                              </div>
                             ))
                           )}
-                                      </div>
+                        </div>
                       )}
-                                      </div>
-                                      </div>
+                    </div>
+                  </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="order_number" className="text-red-900">
@@ -1028,7 +1036,7 @@ export default function OrdersPage() {
                     <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         #
-                                      </div>
+                      </div>
                       <Input
                         id="order_number"
                         placeholder={`Leave empty for auto-generation (${
@@ -1043,8 +1051,8 @@ export default function OrdersPage() {
                         }
                         className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
                       />
-                                    </div>
-                                  </div>
+                    </div>
+                  </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="total_amount" className="text-red-900">
@@ -1104,7 +1112,7 @@ export default function OrdersPage() {
                       className="border-red-100 focus:border-red-200 focus:ring-red-100"
                       placeholder="Select delivery date"
                     />
-                                      </div>
+                  </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="amount_paid" className="text-red-900">
@@ -1135,7 +1143,7 @@ export default function OrdersPage() {
                         }}
                         className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
                       />
-                                      </div>
+                    </div>
                   </div>
 
                   {newOrder.amount_paid && newOrder.amount_paid > 0 ? (
@@ -1153,8 +1161,8 @@ export default function OrdersPage() {
                         >
                           <SelectTrigger className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100">
                             <SelectValue placeholder="Select payment method" />
-                                            </SelectTrigger>
-                                            <SelectContent>
+                          </SelectTrigger>
+                          <SelectContent>
                             {paymentMethods.map((method) => (
                               <SelectItem
                                 key={method}
@@ -1163,13 +1171,13 @@ export default function OrdersPage() {
                                 {method}
                               </SelectItem>
                             ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </div>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   ) : null}
-                                      </div>
-                                    </div>
+                </div>
+              </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="notes" className="text-red-900">
@@ -1186,13 +1194,13 @@ export default function OrdersPage() {
                     }
                     className="pl-9 min-h-[120px] border-red-100 focus:border-red-200 focus:ring-red-100"
                   />
-                                    </div>
-                                  </div>
+                </div>
+              </div>
             </div>
             <DialogFooter className="mt-6">
-                                      <Button
+              <Button
                 type="button"
-                                        variant="outline"
+                variant="outline"
                 onClick={() => {
                   setIsAddOrderOpen(false);
                   setNewOrder(defaultOrderInput);
@@ -1200,8 +1208,8 @@ export default function OrdersPage() {
                 className="border-red-100 hover:bg-red-50"
               >
                 Cancel
-                                      </Button>
-                                      <Button
+              </Button>
+              <Button
                 type="submit"
                 disabled={
                   !newOrder.customer_id ||
@@ -1217,7 +1225,7 @@ export default function OrdersPage() {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Create Order
-                                      </Button>
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1250,22 +1258,22 @@ export default function OrdersPage() {
                 <Label htmlFor="amount" className="text-red-900">
                   Amount (₹) *
                 </Label>
-                                            <Input
+                <Input
                   id="amount"
-                                              type="number"
+                  type="number"
                   min="0"
                   step="0.01"
-                                              placeholder="5000"
+                  placeholder="5000"
                   value={newPayment.amount || ""}
-                                              onChange={(e) =>
+                  onChange={(e) =>
                     setNewPayment({
                       ...newPayment,
                       amount: parseFloat(e.target.value),
                     })
-                                              }
+                  }
                   className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                                            />
-                                          </div>
+                />
+              </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="payment_method" className="text-red-900">
@@ -1298,15 +1306,15 @@ export default function OrdersPage() {
                   id="payment_notes"
                   placeholder="Add any notes about the payment..."
                   value={newPayment.notes || ""}
-                                              onChange={(e) =>
+                  onChange={(e) =>
                     setNewPayment({ ...newPayment, notes: e.target.value })
-                                              }
+                  }
                   className="border-red-100 focus:border-red-200 focus:ring-red-100"
-                                            />
-                                          </div>
-                                        </div>
+                />
+              </div>
+            </div>
             <DialogFooter>
-                                        <Button
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
@@ -1321,7 +1329,7 @@ export default function OrdersPage() {
                 className="border-red-100 hover:bg-red-50"
               >
                 Cancel
-                                        </Button>
+              </Button>
               <Button
                 type="submit"
                 disabled={!newPayment.amount || !newPayment.payment_method}
@@ -1379,7 +1387,7 @@ export default function OrdersPage() {
             <>
               <SheetHeader className="space-y-4 pb-4">
                 <div className="flex justify-between items-start">
-                                  <div>
+                  <div>
                     <SheetTitle className="text-2xl font-bold">
                       Order #{selectedOrder.order_number}
                     </SheetTitle>
@@ -1391,16 +1399,16 @@ export default function OrdersPage() {
                       >
                         {selectedOrder.status.charAt(0).toUpperCase() +
                           selectedOrder.status.slice(1).replace("_", " ")}
-                                                </Badge>
-                                              </div>
-                                            </div>
-                                          </div>
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <User className="w-4 h-4 mr-2" />
                     <span>{selectedOrder.customer_name}</span>
-                                      </div>
+                  </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Mail className="w-4 h-4 mr-2" />
                     <a
@@ -1409,7 +1417,7 @@ export default function OrdersPage() {
                     >
                       {selectedOrder.customer_email}
                     </a>
-                                  </div>
+                  </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Phone className="w-4 h-4 mr-2" />
                     <a
@@ -1418,7 +1426,7 @@ export default function OrdersPage() {
                     >
                       {selectedOrder.customer_phone}
                     </a>
-                                </div>
+                  </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4 mr-2" />
                     <span>
@@ -1436,15 +1444,15 @@ export default function OrdersPage() {
                           "PPpp"
                         )}
                       </span>
-            </div>
-          )}
-                        </div>
+                    </div>
+                  )}
+                </div>
               </SheetHeader>
 
               <Separator className="my-4" />
 
               <div className="space-y-6">
-                          <div>
+                <div>
                   <h3 className="text-sm font-medium flex items-center mb-3">
                     <IndianRupee className="w-4 h-4 mr-2" />
                     Payment Information
@@ -1453,37 +1461,37 @@ export default function OrdersPage() {
                     <div className="rounded-lg border p-3">
                       <div className="text-sm text-muted-foreground mb-1">
                         Total Amount
-                          </div>
+                      </div>
                       <div className="text-2xl font-bold flex items-center">
                         <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
                         {selectedOrder.total_amount.toLocaleString()}
-                          </div>
-                          </div>
+                      </div>
+                    </div>
                     <div className="rounded-lg border p-3">
                       <div className="text-sm text-muted-foreground mb-1">
                         Amount Paid
-                          </div>
+                      </div>
                       <div className="text-2xl font-bold flex items-center">
                         <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
                         {selectedOrder.amount_paid.toLocaleString()}
-                          </div>
-                        </div>
                       </div>
+                    </div>
+                  </div>
                   <div className="mt-4 rounded-lg border p-3">
                     <div className="text-sm text-muted-foreground mb-1">
                       Balance Amount
-                                      </div>
+                    </div>
                     <div className="text-2xl font-bold flex items-center">
                       <IndianRupee className="w-4 h-4 mr-2 text-muted-foreground" />
                       {selectedOrder.balance_amount.toLocaleString()}
-                                      </div>
-                                    </div>
-                                  </div>
+                    </div>
+                  </div>
+                </div>
 
                 {selectedOrder.notes && (
                   <>
-                                  <Separator />
-                                  <div>
+                    <Separator />
+                    <div>
                       <h3 className="text-sm font-medium flex items-center mb-3">
                         <FileText className="w-4 h-4 mr-2" />
                         Order Notes
@@ -1491,15 +1499,15 @@ export default function OrdersPage() {
                       <div className="rounded-lg border p-3">
                         <p className="text-sm whitespace-pre-wrap">
                           {selectedOrder.notes}
-                                        </p>
-                                      </div>
-                                      </div>
+                        </p>
+                      </div>
+                    </div>
                   </>
                 )}
 
-                                  <Separator />
+                <Separator />
 
-                                  <div>
+                <div>
                   <h3 className="text-sm font-medium flex items-center mb-3">
                     <Clock className="w-4 h-4 mr-2" />
                     Activity Log
@@ -1517,8 +1525,8 @@ export default function OrdersPage() {
                             <IndianRupee className="w-4 h-4 text-muted-foreground" />
                           ) : (
                             <Clock className="w-4 h-4 text-muted-foreground" />
-                                          )}
-                                        </div>
+                          )}
+                        </div>
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium leading-none">
                             {log.action === "status_update"
@@ -1533,12 +1541,12 @@ export default function OrdersPage() {
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(log.created_at), "PPpp")}
                           </p>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                  </div>
-                                </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
               <Separator className="my-4" />
 
@@ -1573,9 +1581,9 @@ export default function OrdersPage() {
                 )}
               </SheetFooter>
             </>
-                            )}
-                          </SheetContent>
-                        </Sheet>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Update Status Dialog */}
       <Dialog open={isUpdateStatusOpen} onOpenChange={setIsUpdateStatusOpen}>
@@ -1677,7 +1685,7 @@ export default function OrdersPage() {
                 <span>Delivered</span>
               </Button>
             </div>
-            </div>
+          </div>
           <DialogFooter>
             <Button
               variant="outline"

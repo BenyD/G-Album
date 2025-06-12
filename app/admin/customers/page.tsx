@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -336,8 +336,15 @@ export default function CustomersPage() {
   // Flag customer mutation
   const flagCustomerMutation = useMutation({
     mutationFn: async (input: CreateCustomerFlagInput) => {
-      const { error } = await supabase.from("customer_flags").insert([input]);
-
+      // Get current user id
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Could not get current user");
+      const { error } = await supabase
+        .from("customer_flags")
+        .insert([{ ...input, created_by: user.id }]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -800,6 +807,14 @@ export default function CustomersPage() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingCustomer(customer);
+                            setEditForm({
+                              studio_name: customer.studio_name,
+                              email: customer.email,
+                              phone: customer.phone,
+                              address: customer.address,
+                              reference_name: customer.reference_name,
+                              reference_phone: customer.reference_phone,
+                            });
                             setIsEditCustomerOpen(true);
                           }}
                         >

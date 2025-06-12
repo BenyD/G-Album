@@ -193,6 +193,26 @@ CREATE POLICY "Allow admin update order settings"
         )
     );
 
+-- Drop the old delete policy if it exists
+DROP POLICY IF EXISTS "Allow admin delete orders" ON public.orders;
+
+-- Add new delete policy: allow any admin to delete their own orders, but super_admins can delete any order
+CREATE POLICY "Allow admin delete orders"
+    ON public.orders
+    FOR DELETE
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.admin_profiles ap
+            JOIN public.roles r ON ap.role_id = r.id
+            WHERE ap.id = auth.uid()
+            AND (
+                r.name = 'super_admin' -- super_admin can delete any order
+                OR ap.id = orders.created_by -- regular admin can delete their own orders
+            )
+        )
+    );
+
 -- Create view for order summary
 CREATE OR REPLACE VIEW public.order_summary AS
 SELECT 
