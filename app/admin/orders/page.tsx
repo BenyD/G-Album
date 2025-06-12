@@ -99,6 +99,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useRole } from "@/components/admin/role-context";
 import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const supabase = createClient();
 
@@ -120,6 +121,14 @@ const orderStatusBadgeVariants: Record<
   in_progress: "secondary",
   completed: "default",
   delivered: "default",
+};
+
+// Define custom badge color classes for each status
+const statusBadgeClasses = {
+  pending: "bg-gray-100 text-gray-700 border-gray-200",
+  in_progress: "bg-blue-100 text-blue-700 border-blue-200",
+  completed: "bg-green-100 text-green-700 border-green-200",
+  delivered: "bg-yellow-100 text-yellow-800 border-yellow-200",
 };
 
 // Add type for OrderPayment
@@ -177,6 +186,7 @@ export default function OrdersPage() {
   const { role } = useRole();
   const searchParams = useSearchParams();
   const customerFilter = searchParams.get("customer");
+  const [ordersTab, setOrdersTab] = useState("active");
 
   // Add query for general settings
   const { data: settings } = useQuery({
@@ -693,6 +703,16 @@ export default function OrdersPage() {
     }
   };
 
+  // Split filteredOrders into active and history
+  const activeOrders = filteredOrders.filter(
+    (order) =>
+      !(order.status === "delivered" && order.amount_paid >= order.total_amount)
+  );
+  const orderHistory = filteredOrders.filter(
+    (order) =>
+      order.status === "delivered" && order.amount_paid >= order.total_amount
+  );
+
   return (
     <div className="container mx-auto space-y-8 py-6">
       {/* Header */}
@@ -914,167 +934,332 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
-      {filteredOrders.length === 0 ? (
-        <Card className="border-red-100">
-          <CardContent className="py-16 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
-              <ShoppingBag className="w-8 h-8 text-red-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-red-900 mb-2">
-              No Orders Found
-            </h3>
-            <p className="text-muted-foreground max-w-sm mb-6">
-              {searchTerm || statusFilter !== "all"
-                ? "No orders match your current filters. Try adjusting your search criteria or clearing filters."
-                : "There are no orders yet. Create your first order to get started."}
-            </p>
-            {(searchTerm || statusFilter !== "all") && (
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="border-red-100 hover:bg-red-50"
-                  onClick={clearAllFilters}
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Clear Filters
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-red-100">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-red-50/50">
-                <TableHead>Order Number</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Total Amount</TableHead>
-                <TableHead>Amount Paid</TableHead>
-                <TableHead>Balance</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow
-                  key={order.id}
-                  className="cursor-pointer hover:bg-red-50/50"
-                  onClick={() => handleRowClick(order)}
-                >
-                  <TableCell className="font-medium">
-                    {order.order_number}
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{order.customer_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {order.customer_email}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={orderStatusBadgeVariants[order.status]}
-                      className="mr-2"
+      <Tabs value={ordersTab} onValueChange={setOrdersTab} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="active">Active Orders</TabsTrigger>
+          <TabsTrigger value="history">Order History</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active">
+          {activeOrders.length === 0 ? (
+            <Card className="border-red-100">
+              <CardContent className="py-16 flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                  <ShoppingBag className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-red-900 mb-2">
+                  No Active Orders
+                </h3>
+                <p className="text-muted-foreground max-w-sm mb-6">
+                  Orders that are not delivered or fully paid will appear here.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-red-100">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-red-50/50">
+                    <TableHead>Order Number</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Total Amount</TableHead>
+                    <TableHead>Amount Paid</TableHead>
+                    <TableHead>Balance</TableHead>
+                    <TableHead>Created At</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeOrders.map((order) => (
+                    <TableRow
+                      key={order.id}
+                      className="cursor-pointer hover:bg-red-50/50"
+                      onClick={() => handleRowClick(order)}
                     >
-                      {order.status.charAt(0).toUpperCase() +
-                        order.status.slice(1).replace("_", " ")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>₹{order.total_amount.toLocaleString()}</TableCell>
-                  <TableCell>₹{order.amount_paid.toLocaleString()}</TableCell>
-                  <TableCell>
-                    ₹{(order.total_amount - order.amount_paid).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(order.created_at), "PPp")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-red-50"
-                          onClick={(e) => e.stopPropagation()}
+                      <TableCell className="font-medium">
+                        {order.order_number}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{order.customer_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {order.customer_email}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={orderStatusBadgeVariants[order.status]}
+                          className={cn(
+                            "mr-2",
+                            statusBadgeClasses[order.status]
+                          )}
                         >
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedOrder(order);
-                            setIsAddPaymentOpen(true);
-                          }}
-                        >
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          Add Payment
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateOrderMutation.mutate({
-                              id: order.id,
-                              data: {
-                                status:
+                          {order.status.charAt(0).toUpperCase() +
+                            order.status.slice(1).replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        ₹{order.total_amount.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        ₹{order.amount_paid.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        ₹
+                        {(
+                          order.total_amount - order.amount_paid
+                        ).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(order.created_at), "PPp")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-red-50"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedOrder(order);
+                                setIsAddPaymentOpen(true);
+                              }}
+                            >
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Add Payment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateOrderMutation.mutate({
+                                  id: order.id,
+                                  data: {
+                                    status:
+                                      order.status === "pending"
+                                        ? "in_progress"
+                                        : order.status === "in_progress"
+                                        ? "completed"
+                                        : order.status === "completed" &&
+                                          order.total_amount <=
+                                            order.amount_paid
+                                        ? "delivered"
+                                        : order.status,
+                                  },
+                                });
+                              }}
+                              disabled={
+                                !(
+                                  role === "super_admin" ||
                                   order.status === "pending"
-                                    ? "in_progress"
-                                    : order.status === "in_progress"
-                                    ? "completed"
-                                    : order.status === "completed" &&
-                                      order.total_amount <= order.amount_paid
-                                    ? "delivered"
-                                    : order.status,
-                              },
-                            });
-                          }}
-                          disabled={
-                            !(
-                              role === "super_admin" ||
-                              order.status === "pending"
-                            )
-                          }
+                                )
+                              }
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              {order.status === "pending"
+                                ? "Mark In Progress"
+                                : order.status === "in_progress"
+                                ? "Mark Completed"
+                                : order.status === "completed"
+                                ? "Mark Delivered"
+                                : "Status"}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOrderToDelete(order);
+                              }}
+                              className="text-red-600"
+                              disabled={
+                                !(
+                                  role === "super_admin" ||
+                                  order.status === "pending"
+                                )
+                              }
+                            >
+                              <Trash className="w-4 h-4 mr-2" />
+                              Delete Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </TabsContent>
+        <TabsContent value="history">
+          {orderHistory.length === 0 ? (
+            <Card className="border-red-100">
+              <CardContent className="py-16 flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                  <ShoppingBag className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-red-900 mb-2">
+                  No Completed Orders
+                </h3>
+                <p className="text-muted-foreground max-w-sm mb-6">
+                  Orders that are delivered and fully paid will appear here.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-red-100">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-red-50/50">
+                    <TableHead>Order Number</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Total Amount</TableHead>
+                    <TableHead>Amount Paid</TableHead>
+                    <TableHead>Balance</TableHead>
+                    <TableHead>Created At</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orderHistory.map((order) => (
+                    <TableRow
+                      key={order.id}
+                      className="cursor-pointer hover:bg-red-50/50"
+                      onClick={() => handleRowClick(order)}
+                    >
+                      <TableCell className="font-medium">
+                        {order.order_number}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{order.customer_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {order.customer_email}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={orderStatusBadgeVariants[order.status]}
+                          className={cn(
+                            "mr-2",
+                            statusBadgeClasses[order.status]
+                          )}
                         >
-                          <CheckCircle2 className="w-4 h-4 mr-2" />
-                          {order.status === "pending"
-                            ? "Mark In Progress"
-                            : order.status === "in_progress"
-                            ? "Mark Completed"
-                            : order.status === "completed"
-                            ? "Mark Delivered"
-                            : "Status"}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOrderToDelete(order);
-                          }}
-                          className="text-red-600"
-                          disabled={
-                            !(
-                              role === "super_admin" ||
-                              order.status === "pending"
-                            )
-                          }
-                        >
-                          <Trash className="w-4 h-4 mr-2" />
-                          Delete Order
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+                          {order.status.charAt(0).toUpperCase() +
+                            order.status.slice(1).replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        ₹{order.total_amount.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        ₹{order.amount_paid.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        ₹
+                        {(
+                          order.total_amount - order.amount_paid
+                        ).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(order.created_at), "PPp")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-red-50"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedOrder(order);
+                                setIsAddPaymentOpen(true);
+                              }}
+                            >
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Add Payment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateOrderMutation.mutate({
+                                  id: order.id,
+                                  data: {
+                                    status:
+                                      order.status === "pending"
+                                        ? "in_progress"
+                                        : order.status === "in_progress"
+                                        ? "completed"
+                                        : order.status === "completed" &&
+                                          order.total_amount <=
+                                            order.amount_paid
+                                        ? "delivered"
+                                        : order.status,
+                                  },
+                                });
+                              }}
+                              disabled={
+                                !(
+                                  role === "super_admin" ||
+                                  order.status === "pending"
+                                )
+                              }
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              {order.status === "pending"
+                                ? "Mark In Progress"
+                                : order.status === "in_progress"
+                                ? "Mark Completed"
+                                : order.status === "completed"
+                                ? "Mark Delivered"
+                                : "Status"}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOrderToDelete(order);
+                              }}
+                              className="text-red-600"
+                              disabled={
+                                !(
+                                  role === "super_admin" ||
+                                  order.status === "pending"
+                                )
+                              }
+                            >
+                              <Trash className="w-4 h-4 mr-2" />
+                              Delete Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Add Order Dialog */}
       <Dialog open={isAddOrderOpen} onOpenChange={setIsAddOrderOpen}>
@@ -1569,7 +1754,10 @@ export default function OrdersPage() {
                     <div className="flex items-center mt-1">
                       <Badge
                         variant={orderStatusBadgeVariants[selectedOrder.status]}
-                        className="mr-2 cursor-pointer hover:opacity-80 transition-opacity"
+                        className={cn(
+                          "mr-2 cursor-pointer hover:opacity-80 transition-opacity",
+                          statusBadgeClasses[selectedOrder.status]
+                        )}
                         onClick={() => setIsUpdateStatusOpen(true)}
                       >
                         {selectedOrder.status.charAt(0).toUpperCase() +
