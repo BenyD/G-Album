@@ -1,48 +1,33 @@
+"use client";
+
 import { Suspense } from "react";
-import { getUsers, getRoles } from "./actions";
 import { UserManagementClient } from "./client";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { Loader2 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+const supabase = createClient();
 
-export default async function UserManagementPage() {
-  try {
-    // Fetch initial data on the server
-    const [initialUsers, initialRoles] = await Promise.all([
-      getUsers(),
-      getRoles(),
-    ]);
-
-    return (
-      <div className="space-y-4">
-        <Alert className="bg-blue-50 border-blue-200">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertTitle className="text-blue-800">User Management</AlertTitle>
-          <AlertDescription className="text-blue-700">
-            You can manage user roles and permissions here. New users from
-            Supabase need to be assigned a role.
-          </AlertDescription>
-        </Alert>
-
-        <Suspense fallback={<div>Loading...</div>}>
-          <UserManagementClient
-            initialUsers={initialUsers}
-            initialRoles={initialRoles}
-          />
-        </Suspense>
+export default function UserManagementPage() {
+  return (
+    <div className="container mx-auto space-y-8 py-6">
+      {/* Header */}
+      <div className="flex flex-col gap-2 relative">
+        <h1 className="text-2xl font-bold text-red-900">User Management</h1>
+        <p className="text-muted-foreground">
+          Manage user roles, permissions, and access levels
+        </p>
+        <div className="absolute -bottom-1 left-0 w-12 h-1 bg-red-600 rounded-full" />
       </div>
-    );
-  } catch (error) {
-    console.error("Error loading user management page:", error);
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>
-          Failed to load user management data. Please try again later.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+          </div>
+        }
+      >
+        <UserManagementClient />
+      </Suspense>
+    </div>
+  );
 }

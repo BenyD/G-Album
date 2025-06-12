@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRole } from "@/components/admin/role-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,12 @@ import {
   Check,
   Ban,
   Pencil,
+  Users,
+  UserCheck,
+  UserX,
+  ArrowUpDown,
+  Filter,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,6 +51,8 @@ import {
   updateUserStatus,
   updateUserProfile,
   type UserWithProfile,
+  getUsers,
+  getRoles,
 } from "./actions";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
@@ -55,113 +63,195 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { motion } from "framer-motion";
+import { format } from "date-fns";
+import { Label } from "@/components/ui/label";
 
-interface UserManagementClientProps {
-  initialUsers: UserWithProfile[];
-  initialRoles: any[];
-}
-
-export function UserManagementClient({
-  initialUsers,
-  initialRoles,
-}: UserManagementClientProps) {
+export function UserManagementClient() {
   const { role, hasPermission } = useRole();
-  const [users, setUsers] = useState<UserWithProfile[]>(initialUsers);
-  const [roles] = useState<any[]>(initialRoles);
+  const [users, setUsers] = useState<UserWithProfile[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
   const [refreshing, setRefreshing] = useState(false);
   const supabase = createClient();
   const [editingUser, setEditingUser] = useState<UserWithProfile | null>(null);
 
-  // Filter and sort users
-  const filteredUsers = users
-    .filter((user) => {
-      const matchesSearch =
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.profile?.full_name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase());
-      const matchesRole =
-        roleFilter === "all" || user.profile?.role?.name === roleFilter;
-      return matchesSearch && matchesRole;
-    })
-    .sort((a, b) => {
-      // Sort by status: pending first, then by creation date
-      const statusOrder = { pending: 0, approved: 1, suspended: 2 };
-      const aStatus = a.profile?.status || "pending";
-      const bStatus = b.profile?.status || "pending";
-      if (aStatus !== bStatus) {
-        return statusOrder[aStatus] - statusOrder[bStatus];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [usersData, rolesData] = await Promise.all([
+          getUsers(),
+          getRoles(),
+        ]);
+        setUsers(usersData || []);
+        setRoles(rolesData || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load users and roles. Please try again.");
       }
-      return (
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-    });
+    };
+    fetchData();
+  }, []);
+
+  // Filter users based on search term, role, and status
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = searchTerm
+      ? (user.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+        (user.profile?.full_name?.toLowerCase() || "").includes(
+          searchTerm.toLowerCase()
+        )
+      : true;
+
+    const matchesRole =
+      roleFilter === "all" ||
+      user.profile?.role?.name?.toLowerCase() === roleFilter;
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      user.profile?.status?.toLowerCase() === statusFilter;
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Sort users
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    switch (sortBy) {
+      case "newest":
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      case "oldest":
+        return (
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      case "name":
+        return (a.profile?.full_name || "").localeCompare(
+          b.profile?.full_name || ""
+        );
+      default:
+        return 0;
+    }
+  });
 
   // Get pending users
-  const pendingUsers = filteredUsers.filter((user) => !user.profile?.role_id);
+  const pendingUsers = sortedUsers.filter((user) => !user.profile?.role_id);
 
   // Get active users
-  const activeUsers = filteredUsers.filter((user) => user.profile?.role_id);
+  const activeUsers = sortedUsers.filter((user) => user.profile?.role_id);
+
+  // Get suspended users
+  const suspendedUsers = sortedUsers.filter(
+    (user) => user.profile?.status === "suspended"
+  );
 
   // Handle user update
-  const handleUserUpdate = async (
-    userId: string,
-    data: {
-      full_name?: string;
-      role_id?: string;
-      status?: "approved" | "suspended";
-    }
-  ) => {
+  const handleUserUpdate = async (user: UserWithProfile) => {
     try {
-      const updates = [];
+      const { error } = await supabase
+        .from("admin_profiles")
+        .update({
+          full_name: user.profile?.full_name,
+          role_id: user.profile?.role_id,
+          status: user.profile?.status,
+        })
+        .eq("id", user.id);
 
-      if (data.role_id) {
-        updates.push(assignRole(userId, data.role_id));
-      }
-      if (data.status) {
-        updates.push(updateUserStatus(userId, data.status));
-      }
-      if (data.full_name) {
-        updates.push(updateUserProfile(userId, { full_name: data.full_name }));
-      }
+      if (error) throw error;
 
-      await Promise.all(updates);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, ...user } : u))
+      );
       setEditingUser(null);
       toast.success("User updated successfully");
     } catch (error) {
       console.error("Error updating user:", error);
-      toast.error("Failed to update user");
+      toast.error("Failed to update user. Please try again.");
     }
   };
 
   // Handle role assignment
   const handleRoleAssign = async (userId: string, roleId: string) => {
     try {
-      await assignRole(userId, roleId);
+      const { error } = await supabase
+        .from("admin_profiles")
+        .update({ role_id: roleId })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId
+            ? {
+                ...user,
+                profile: {
+                  ...user.profile,
+                  role_id: roleId,
+                  role: roles.find((r) => r.id === roleId) || null,
+                },
+              }
+            : user
+        )
+      );
       toast.success("Role assigned successfully");
     } catch (error) {
       console.error("Error assigning role:", error);
-      toast.error("Failed to assign role");
+      toast.error("Failed to assign role. Please try again.");
     }
   };
 
   // Handle status update
-  const handleStatusUpdate = async (
-    userId: string,
-    status: "approved" | "suspended"
-  ) => {
+  const handleStatusUpdate = async (userId: string, status: string) => {
     try {
-      await updateUserStatus(userId, status);
-      toast.success(
-        `User ${status === "approved" ? "approved" : "suspended"} successfully`
+      const { error } = await supabase
+        .from("admin_profiles")
+        .update({ status })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId
+            ? { ...user, profile: { ...user.profile, status } }
+            : user
+        )
       );
+      toast.success("Status updated successfully");
     } catch (error) {
       console.error("Error updating status:", error);
-      toast.error("Failed to update user status");
+      toast.error("Failed to update status. Please try again.");
+    }
+  };
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const [usersData, rolesData] = await Promise.all([
+        getUsers(),
+        getRoles(),
+      ]);
+      setUsers(usersData || []);
+      setRoles(rolesData || []);
+      toast.success("Data refreshed successfully");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data. Please try again.");
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -258,18 +348,13 @@ export function UserManagementClient({
 
   // Get role badge color
   const getRoleBadgeColor = (roleName: string) => {
-    switch (roleName) {
-      case "super_admin":
-        return "bg-red-100 text-red-800";
-      case "admin":
-        return "bg-blue-100 text-blue-800";
-      case "editor":
-        return "bg-green-100 text-green-800";
-      case "viewer":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
+    const colors: Record<string, string> = {
+      super_admin: "bg-red-100 text-red-800 border-red-200",
+      admin: "bg-red-100 text-red-800 border-red-200",
+      editor: "bg-red-100 text-red-800 border-red-200",
+      viewer: "bg-red-100 text-red-800 border-red-200",
+    };
+    return colors[roleName] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   // Format role name for display
@@ -308,318 +393,400 @@ export function UserManagementClient({
   }
 
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
-          <p className="text-muted-foreground mt-1">
-            Users are added via Supabase Authentication. Assign roles to
-            activate accounts.
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{users.length}</div>
+            <p className="text-xs text-muted-foreground">
+              All registered users
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <UserCheck className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {
+                users.filter((user) => user.profile?.status === "approved")
+                  .length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Users with approved access
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Users</CardTitle>
+            <UserX className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {
+                users.filter((user) => user.profile?.status === "pending")
+                  .length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Users awaiting approval
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Suspended Users
+            </CardTitle>
+            <Ban className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {
+                users.filter((user) => user.profile?.status === "suspended")
+                  .length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Users with suspended access
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="flex items-center gap-4 mb-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search users..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            {roles.map((role) => (
-              <SelectItem key={role.id} value={role.name}>
-                {formatRoleName(role.name)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Pending Users Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-orange-500" />
-            Pending Users
-          </CardTitle>
-          <CardDescription>
-            Users from Supabase awaiting role assignment
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {pendingUsers.length > 0 ? (
-              pendingUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 border-orange-200"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-                      <User className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{user.email}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Added {new Date(user.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      onValueChange={(roleId) =>
-                        handleQuickApproval(user.id, roleId)
-                      }
-                    >
-                      <SelectTrigger className="w-[130px] h-8">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {formatRoleName(role.name)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <UserPlus className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">No pending users</p>
-                <p className="text-sm text-slate-400">
-                  New users added in Supabase will appear here
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Active Users Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-green-500" />
-            Active User Accounts
-          </CardTitle>
-          <CardDescription>
-            Users with assigned roles and active accounts
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="relative w-full overflow-auto">
-            <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Name
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Role
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="[&_tr:last-child]:border-0">
-                {activeUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                  >
-                    <td className="p-4 align-middle">{user.email}</td>
-                    <td className="p-4 align-middle">
-                      {user.profile?.full_name || "-"}
-                    </td>
-                    <td className="p-4 align-middle">
-                      {user.profile?.role?.name
-                        ? formatRoleName(user.profile.role.name)
-                        : "-"}
-                    </td>
-                    <td className="p-4 align-middle">
-                      <Badge
-                        className={
-                          user.profile?.status === "approved"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }
-                      >
-                        {formatStatus(user.profile?.status || "pending")}
-                      </Badge>
-                    </td>
-                    <td className="p-4 align-middle">
-                      <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => setEditingUser(user)}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleStatusUpdate(
-                                  user.id,
-                                  user.profile?.status === "approved"
-                                    ? "suspended"
-                                    : "approved"
-                                )
-                              }
-                              className={
-                                user.profile?.status === "approved"
-                                  ? "text-red-600"
-                                  : "text-green-600"
-                              }
-                            >
-                              {user.profile?.status === "approved" ? (
-                                <>
-                                  <Ban className="mr-2 h-4 w-4" />
-                                  Suspend User
-                                </>
-                              ) : (
-                                <>
-                                  <Check className="mr-2 h-4 w-4" />
-                                  Approve User
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Edit User Dialog */}
-      <Dialog
-        open={!!editingUser}
-        onOpenChange={(open) => !open && setEditingUser(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Make changes to the user's profile
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Full Name</label>
+      {/* Search and Filters */}
+      <Card className="border-red-100">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 w-4 h-4" />
               <Input
-                value={editingUser?.profile?.full_name || ""}
-                onChange={(e) =>
-                  setEditingUser((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          profile: {
-                            ...prev.profile!,
-                            full_name: e.target.value,
-                          },
-                        }
-                      : null
-                  )
-                }
+                type="search"
+                placeholder="Search users..."
+                className="pl-10 border-red-100 focus:border-red-200 focus:ring-red-100"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Role</label>
-              <Select
-                value={editingUser?.profile?.role_id}
-                onValueChange={(roleId) =>
-                  setEditingUser((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          profile: {
-                            ...prev.profile!,
-                            role_id: roleId,
-                          },
-                        }
-                      : null
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
+            <div className="flex items-center gap-2">
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-[180px] border-red-100">
+                  <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
                   {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
+                    <SelectItem key={role.id} value={role.name}>
                       {formatRoleName(role.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select
-                value={editingUser?.profile?.status}
-                onValueChange={(status: "approved" | "suspended") =>
-                  setEditingUser((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          profile: {
-                            ...prev.profile!,
-                            status,
-                          },
-                        }
-                      : null
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px] border-red-100">
+                  <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select
+                value={sortBy}
+                onValueChange={(value) => setSortBy(value as typeof sortBy)}
+              >
+                <SelectTrigger className="w-[180px] border-red-100">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="border-red-100 hover:bg-red-50 hover:text-red-600"
+              >
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Users Table */}
+      {sortedUsers.length === 0 ? (
+        <Card className="border-red-100">
+          <CardContent className="py-16 flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+              <User className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-red-900 mb-2">
+              No Users Found
+            </h3>
+            <p className="text-muted-foreground max-w-sm mb-6">
+              {searchTerm || roleFilter !== "all" || statusFilter !== "all"
+                ? "No users match your current filters. Try adjusting your search criteria or clearing filters."
+                : "There are no users yet."}
+            </p>
+            {(searchTerm || roleFilter !== "all" || statusFilter !== "all") && (
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="border-red-100 hover:bg-red-50"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setRoleFilter("all");
+                    setStatusFilter("all");
+                  }}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-red-100">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-red-50/50">
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedUsers.map((user) => (
+                <TableRow
+                  key={user.id}
+                  className="cursor-pointer hover:bg-red-50/50"
+                >
+                  <TableCell>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+                        <User className="h-4 w-4 text-red-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{user.email}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {user.profile?.full_name || "No name set"}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="secondary"
+                      className={getRoleBadgeColor(
+                        user.profile?.role?.name || ""
+                      )}
+                    >
+                      {formatRoleName(user.profile?.role?.name || "Unknown")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="secondary"
+                      className={
+                        user.profile?.status === "suspended"
+                          ? "bg-red-100 text-red-800 border-red-200"
+                          : user.profile?.status === "approved"
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                      }
+                    >
+                      {formatStatus(user.profile?.status || "pending")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(user.created_at), "MMM d, yyyy")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-red-50 hover:text-red-600"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setEditingUser(user)}
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit User
+                        </DropdownMenuItem>
+                        {user.profile?.status === "suspended" ? (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleStatusUpdate(user.id, "approved")
+                            }
+                            className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                          >
+                            <Check className="mr-2 h-4 w-4" />
+                            Approve User
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleStatusUpdate(user.id, "suspended")
+                            }
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                          >
+                            <Ban className="mr-2 h-4 w-4" />
+                            Suspend User
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user details, role, and status
+            </DialogDescription>
+          </DialogHeader>
+          {editingUser && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-red-900">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  value={editingUser.email}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="full_name" className="text-red-900">
+                  Full Name
+                </Label>
+                <Input
+                  id="full_name"
+                  value={editingUser.profile?.full_name || ""}
+                  onChange={(e) =>
+                    setEditingUser({
+                      ...editingUser,
+                      profile: {
+                        ...editingUser.profile,
+                        full_name: e.target.value,
+                      },
+                    })
+                  }
+                  className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role" className="text-red-900">
+                  Role
+                </Label>
+                <Select
+                  value={editingUser.profile?.role_id || ""}
+                  onValueChange={(value) =>
+                    setEditingUser({
+                      ...editingUser,
+                      profile: {
+                        ...editingUser.profile,
+                        role_id: value,
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger className="border-red-100">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {formatRoleName(role.name)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status" className="text-red-900">
+                  Status
+                </Label>
+                <Select
+                  value={editingUser.profile?.status || "pending"}
+                  onValueChange={(value) =>
+                    setEditingUser({
+                      ...editingUser,
+                      profile: {
+                        ...editingUser.profile,
+                        status: value as "approved" | "suspended",
+                      },
+                    })
+                  }
+                >
+                  <SelectTrigger className="border-red-100">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingUser(null)}>
               Cancel
             </Button>
-            <Button onClick={handleEditSave}>Save Changes</Button>
+            <Button
+              onClick={handleEditSave}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
