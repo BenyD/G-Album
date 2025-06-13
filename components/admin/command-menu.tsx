@@ -125,19 +125,21 @@ const commandMenuItems = [
   },
   {
     title: "Add New Customer",
-    href: "/admin/customers/new",
+    href: "/admin/customers",
     icon: UserPlus,
     shortcut: "C",
     permission: "manage_users",
     group: "Quick Actions",
+    action: "add_customer",
   },
   {
     title: "Add New Order",
-    href: "/admin/orders/new",
+    href: "/admin/orders",
     icon: FilePlus,
     shortcut: "O",
     permission: "manage_orders",
     group: "Quick Actions",
+    action: "add_order",
   },
 ];
 
@@ -177,6 +179,17 @@ export default function AdminCommandMenu() {
     [hasPermission]
   );
 
+  const handleItemSelect = (item: (typeof commandMenuItems)[0]) => {
+    if (item.action === "add_customer") {
+      router.push("/admin/customers?action=add");
+    } else if (item.action === "add_order") {
+      router.push("/admin/orders?action=add");
+    } else {
+      router.push(item.href);
+    }
+    setIsOpen(false);
+  };
+
   return (
     <CommandDialog open={isOpen} onOpenChange={setIsOpen}>
       <CommandInput placeholder="Type a command or search..." />
@@ -188,10 +201,7 @@ export default function AdminCommandMenu() {
             .map((item) => (
               <CommandItem
                 key={item.href}
-                onSelect={() => {
-                  router.push(item.href);
-                  setIsOpen(false);
-                }}
+                onSelect={() => handleItemSelect(item)}
                 className="group"
               >
                 <item.icon className="mr-2 h-4 w-4 text-slate-400 group-data-[selected=true]:text-white transition-colors duration-100" />

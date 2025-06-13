@@ -29,6 +29,7 @@ import {
   Search,
   UserCheck,
   ShoppingCart,
+  ExternalLink,
 } from "lucide-react";
 import { useRole } from "@/components/admin/role-context";
 import { Button } from "@/components/ui/button";
@@ -438,6 +439,17 @@ export default function AdminSidebar() {
 
       <SidebarFooter className="border-t border-slate-200 pt-2">
         <div className="px-3 py-2">
+          <Button
+            asChild
+            variant="secondary"
+            size="sm"
+            className="w-full mb-2 flex items-center gap-2 justify-center"
+          >
+            <a href="/" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4" />
+              Visit Website
+            </a>
+          </Button>
           <div className="text-xs text-slate-500 mb-2">Logged in as:</div>
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">

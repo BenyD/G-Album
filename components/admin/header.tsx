@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, Settings, User, ExternalLink } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -86,6 +86,15 @@ export default function AdminHeader() {
       .toUpperCase();
   };
 
+  // Utility to format role names
+  const formatRoleName = (roleName: string) => {
+    if (!roleName) return "";
+    return roleName
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
   return (
     <header
       className={`sticky top-0 z-30 w-full border-b transition-all duration-200 ${
@@ -148,19 +157,6 @@ export default function AdminHeader() {
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
-          {/* Visit Website Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="hidden md:flex items-center gap-1.5 text-slate-600 hover:text-red-600"
-          >
-            <Link href="/" target="_blank">
-              <ExternalLink className="h-4 w-4" />
-              <span>Visit Website</span>
-            </Link>
-          </Button>
-
           {/* Command Bar Shortcut Hint */}
           <div className="hidden md:flex items-center mr-2 text-xs text-slate-500 bg-slate-100 rounded px-2 py-1 select-none">
             <span className="font-mono">
@@ -193,7 +189,7 @@ export default function AdminHeader() {
                     {profile?.full_name}
                   </p>
                   <p className="text-xs leading-none text-slate-500">
-                    {profile?.role?.name || ""}
+                    {formatRoleName(profile?.role?.name || "")}
                   </p>
                 </div>
               </DropdownMenuLabel>
