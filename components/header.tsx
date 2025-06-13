@@ -13,7 +13,6 @@ const navigation = [
   { name: "About", href: "/about" },
   { name: "Albums", href: "/albums" },
   { name: "Gallery", href: "/gallery" },
-  { name: "Contact", href: "/contact" },
 ];
 
 export default function Header() {
@@ -161,8 +160,8 @@ export default function Header() {
               mobileMenuOpen
                 ? "text-red-600"
                 : shouldShowRed
-                ? "text-red-900"
-                : "text-white"
+                  ? "text-red-900"
+                  : "text-white"
             }`}
           >
             <div className="relative w-6 h-5">
