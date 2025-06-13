@@ -1,12 +1,18 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRole } from "@/components/admin/role-context"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useState, useEffect } from "react";
+import { useRole } from "@/components/admin/role-context";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -14,728 +20,820 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { Download, Mail, Plus, Search, Send, Trash, Users, Edit, Info, Lock, BarChart3 } from "lucide-react"
-import { RoleBasedContent } from "@/components/admin/role-based-content"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import {
+  Download,
+  Mail,
+  Plus,
+  Search,
+  Send,
+  Trash,
+  Users,
+  Edit,
+  Info,
+  Lock,
+  BarChart3,
+  MoreVertical,
+  UserX,
+  Trash2,
+} from "lucide-react";
+import { RoleBasedContent } from "@/components/admin/role-based-content";
+import { toast } from "sonner";
+import { createClient } from "@/utils/supabase/client";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Newsletter {
-  id: number
-  subject: string
-  content: string
-  sentDate: string
-  recipients: number
-  openRate: string
-  clickRate: string
-  status: "sent" | "draft"
+  id: string;
+  subject: string;
+  content: string;
+  sent_at: string;
+  status: "sent" | "draft" | "failed";
+  metadata: {
+    recipient_count: number;
+    open_rate?: number;
+    click_rate?: number;
+  };
 }
 
 interface Subscriber {
-  id: number
-  email: string
-  name: string
-  joinedDate: string
-  status: "Active" | "Inactive"
-  tags: string[]
+  id: string;
+  email: string;
+  name: string | null;
+  status: "active" | "inactive" | "unsubscribed" | "deleted";
+  created_at: string;
+  updated_at: string;
 }
 
 export default function NewsletterPage() {
-  const { role, hasPermission } = useRole()
+  const { role, hasPermission } = useRole();
+  const supabase = createClient();
 
   // State management
-  const [createNewsletterOpen, setCreateNewsletterOpen] = useState(false)
-  const [addSubscriberOpen, setAddSubscriberOpen] = useState(false)
-  const [editSubscriberOpen, setEditSubscriberOpen] = useState(false)
-  const [newsletterDetailOpen, setNewsletterDetailOpen] = useState(false)
-  const [selectedNewsletter, setSelectedNewsletter] = useState<Newsletter | null>(null)
-  const [selectedSubscriber, setSelectedSubscriber] = useState<Subscriber | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [deleteType, setDeleteType] = useState<"newsletter" | "subscriber" | null>(null)
-  const [deleteItem, setDeleteItem] = useState<any>(null)
+  const [createNewsletterOpen, setCreateNewsletterOpen] = useState(false);
+  const [addSubscriberOpen, setAddSubscriberOpen] = useState(false);
+  const [editSubscriberOpen, setEditSubscriberOpen] = useState(false);
+  const [newsletterDetailOpen, setNewsletterDetailOpen] = useState(false);
+  const [selectedNewsletter, setSelectedNewsletter] =
+    useState<Newsletter | null>(null);
+  const [selectedSubscriber, setSelectedSubscriber] =
+    useState<Subscriber | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<
+    "newsletter" | "subscriber" | null
+  >(null);
+  const [deleteItem, setDeleteItem] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [newNewsletter, setNewNewsletter] = useState({
+    subject: "",
+    content: "",
+  });
+  const [newSubscriber, setNewSubscriber] = useState({
+    email: "",
+    name: "",
+    tags: [] as string[],
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("active");
 
-  // Sample newsletters with more detailed data
-  const newsletters: Newsletter[] = [
-    {
-      id: 1,
-      subject: "Summer Collection Launch",
-      content:
-        "Discover our stunning new summer collection featuring vibrant colors and elegant designs perfect for your special moments...",
-      sentDate: "May 15, 2023",
-      recipients: 342,
-      openRate: "24%",
-      clickRate: "8%",
-      status: "sent",
-    },
-    {
-      id: 2,
-      subject: "Special Discount for Wedding Albums",
-      content:
-        "Celebrate love with our exclusive wedding album collection. Get 20% off on all premium wedding albums this month...",
-      sentDate: "April 2, 2023",
-      recipients: 328,
-      openRate: "32%",
-      clickRate: "12%",
-      status: "sent",
-    },
-    {
-      id: 3,
-      subject: "New Baby Album Designs",
-      content:
-        "Welcome your little bundle of joy with our adorable new baby album designs. Capture every precious moment...",
-      sentDate: "March 10, 2023",
-      recipients: 315,
-      openRate: "28%",
-      clickRate: "10%",
-      status: "sent",
-    },
-    {
-      id: 4,
-      subject: "Holiday Season Offers",
-      content: "Make this holiday season memorable with our special offers on family photo albums and gift packages...",
-      sentDate: "December 5, 2022",
-      recipients: 298,
-      openRate: "35%",
-      clickRate: "15%",
-      status: "sent",
-    },
-  ]
+  // Load data
+  useEffect(() => {
+    loadNewsletters();
+  }, []);
 
-  // Sample subscribers with more data
-  const subscribers: Subscriber[] = [
-    {
-      id: 1,
-      email: "john.doe@example.com",
-      name: "John Doe",
-      joinedDate: "May 20, 2023",
-      status: "Active",
-      tags: ["Wedding", "Premium"],
-    },
-    {
-      id: 2,
-      email: "jane.smith@example.com",
-      name: "Jane Smith",
-      joinedDate: "May 18, 2023",
-      status: "Active",
-      tags: ["Baby", "Family"],
-    },
-    {
-      id: 3,
-      email: "robert.johnson@example.com",
-      name: "Robert Johnson",
-      joinedDate: "May 15, 2023",
-      status: "Active",
-      tags: ["Corporate"],
-    },
-    {
-      id: 4,
-      email: "emily.wilson@example.com",
-      name: "Emily Wilson",
-      joinedDate: "May 12, 2023",
-      status: "Active",
-      tags: ["Wedding"],
-    },
-    {
-      id: 5,
-      email: "michael.brown@example.com",
-      name: "Michael Brown",
-      joinedDate: "May 10, 2023",
-      status: "Active",
-      tags: ["Family"],
-    },
-    {
-      id: 6,
-      email: "sarah.davis@example.com",
-      name: "Sarah Davis",
-      joinedDate: "May 5, 2023",
-      status: "Inactive",
-      tags: ["Baby"],
-    },
-    {
-      id: 7,
-      email: "david.miller@example.com",
-      name: "David Miller",
-      joinedDate: "May 1, 2023",
-      status: "Active",
-      tags: ["Premium"],
-    },
-    {
-      id: 8,
-      email: "jennifer.taylor@example.com",
-      name: "Jennifer Taylor",
-      joinedDate: "April 28, 2023",
-      status: "Active",
-      tags: ["Wedding", "Family"],
-    },
-  ]
+  useEffect(() => {
+    loadSubscribers();
+  }, [statusFilter, searchQuery]);
 
-  const canSendNewsletters = hasPermission("send_newsletters")
+  const loadNewsletters = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("newsletter_logs")
+        .select("*")
+        .order("sent_at", { ascending: false });
+
+      if (error) throw error;
+      setNewsletters(data || []);
+    } catch (error) {
+      console.error("Error loading newsletters:", error);
+      toast.error("Failed to load newsletters");
+    }
+  };
+
+  const loadSubscribers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/newsletter/subscribers?status=${statusFilter}&search=${searchQuery}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch subscribers");
+      }
+
+      setSubscribers(data);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to load subscribers";
+      toast.error(errorMessage);
+      console.error("Error loading subscribers:", error);
+      setSubscribers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const canSendNewsletters = hasPermission("send_newsletters");
+  const canManageSubscribers = hasPermission("manage_subscribers");
 
   // Filter subscribers based on search
   const filteredSubscribers = subscribers.filter(
     (subscriber) =>
       subscriber.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      subscriber.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      (subscriber.name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+  );
 
   // Newsletter actions
-  const handleViewNewsletter = (newsletter: Newsletter) => {
-    setSelectedNewsletter(newsletter)
-    setNewsletterDetailOpen(true)
-  }
+  const handleCreateNewsletter = async () => {
+    try {
+      const response = await fetch("/api/newsletter/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newNewsletter),
+      });
 
-  const handleDownloadNewsletter = (newsletter: Newsletter) => {
-    // Simulate download
-    console.log("Downloading newsletter:", newsletter.subject)
-    // In real app, this would trigger a download
-  }
+      if (!response.ok) {
+        throw new Error("Failed to send newsletter");
+      }
+
+      toast.success("Newsletter sent successfully");
+      setCreateNewsletterOpen(false);
+      setNewNewsletter({ subject: "", content: "" });
+      loadNewsletters();
+    } catch (error) {
+      console.error("Error sending newsletter:", error);
+      toast.error("Failed to send newsletter");
+    }
+  };
+
+  const handleAddSubscriber = async () => {
+    try {
+      const { error } = await supabase.from("newsletter_subscribers").insert([
+        {
+          email: newSubscriber.email,
+          name: newSubscriber.name || null,
+          status: "active",
+          tags: newSubscriber.tags,
+          metadata: {
+            source: "admin_panel",
+            added_at: new Date().toISOString(),
+          },
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success("Subscriber added successfully");
+      setAddSubscriberOpen(false);
+      setNewSubscriber({ email: "", name: "", tags: [] });
+      loadSubscribers();
+    } catch (error) {
+      console.error("Error adding subscriber:", error);
+      toast.error("Failed to add subscriber");
+    }
+  };
+
+  const handleUpdateSubscriber = async () => {
+    if (!selectedSubscriber) return;
+
+    try {
+      const { error } = await supabase
+        .from("newsletter_subscribers")
+        .update({
+          name: newSubscriber.name || null,
+          tags: newSubscriber.tags,
+          metadata: {
+            ...selectedSubscriber.metadata,
+            updated_at: new Date().toISOString(),
+          },
+        })
+        .eq("id", selectedSubscriber.id);
+
+      if (error) throw error;
+
+      toast.success("Subscriber updated successfully");
+      setEditSubscriberOpen(false);
+      setSelectedSubscriber(null);
+      setNewSubscriber({ email: "", name: "", tags: [] });
+      loadSubscribers();
+    } catch (error) {
+      console.error("Error updating subscriber:", error);
+      toast.error("Failed to update subscriber");
+    }
+  };
+
+  const handleDeleteSubscriber = async () => {
+    if (!deleteItem) return;
+
+    try {
+      const { error } = await supabase
+        .from("newsletter_subscribers")
+        .update({ status: "unsubscribed" })
+        .eq("id", deleteItem.id);
+
+      if (error) throw error;
+
+      toast.success("Subscriber unsubscribed successfully");
+      setDeleteConfirmOpen(false);
+      setDeleteItem(null);
+      loadSubscribers();
+    } catch (error) {
+      console.error("Error unsubscribing subscriber:", error);
+      toast.error("Failed to unsubscribe subscriber");
+    }
+  };
+
+  const handleViewNewsletter = (newsletter: Newsletter) => {
+    setSelectedNewsletter(newsletter);
+    setNewsletterDetailOpen(true);
+  };
 
   const handleDeleteNewsletter = (newsletter: Newsletter) => {
-    setDeleteType("newsletter")
-    setDeleteItem(newsletter)
-    setDeleteConfirmOpen(true)
-  }
+    setDeleteType("newsletter");
+    setDeleteItem(newsletter);
+    setDeleteConfirmOpen(true);
+  };
 
-  // Subscriber actions
-  const handleEmailSubscriber = (subscriber: Subscriber) => {
-    window.location.href = `mailto:${subscriber.email}`
-  }
+  const handleConfirmDelete = async () => {
+    if (!deleteItem) return;
 
-  const handleEditSubscriber = (subscriber: Subscriber) => {
-    setSelectedSubscriber(subscriber)
-    setEditSubscriberOpen(true)
-  }
-
-  const handleDeleteSubscriber = (subscriber: Subscriber) => {
-    setDeleteType("subscriber")
-    setDeleteItem(subscriber)
-    setDeleteConfirmOpen(true)
-  }
-
-  const handleConfirmDelete = () => {
     if (deleteType === "newsletter") {
-      console.log("Deleting newsletter:", deleteItem.subject)
+      try {
+        const { error } = await supabase
+          .from("newsletter_logs")
+          .delete()
+          .eq("id", deleteItem.id);
+
+        if (error) throw error;
+
+        toast.success("Newsletter deleted successfully");
+        setDeleteConfirmOpen(false);
+        setDeleteItem(null);
+        loadNewsletters();
+      } catch (error) {
+        console.error("Error deleting newsletter:", error);
+        toast.error("Failed to delete newsletter");
+      }
     } else if (deleteType === "subscriber") {
-      console.log("Deleting subscriber:", deleteItem.email)
+      await handleDeleteSubscriber();
     }
-    setDeleteConfirmOpen(false)
-    setDeleteType(null)
-    setDeleteItem(null)
-  }
+  };
+
+  const handleSubscriberAction = async (
+    id: string,
+    action: string,
+    name?: string
+  ) => {
+    try {
+      const response = await fetch("/api/admin/newsletter/subscribers", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, action, name }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to perform action");
+      }
+
+      toast.success(data.message);
+      loadSubscribers();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to perform action"
+      );
+    }
+  };
+
+  const handleUpdateName = async (id: string) => {
+    const name = prompt("Enter new name:");
+    if (name) {
+      await handleSubscriberAction(id, "update_name", name);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <Alert className="bg-blue-50 border-blue-200">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-800">Newsletter Management</AlertTitle>
-        <AlertDescription className="text-blue-700">
-          You are viewing as <strong>{role}</strong>.
-          {canSendNewsletters
-            ? " You can create and send newsletters to subscribers."
-            : " You don't have permission to manage newsletters."}
-        </AlertDescription>
-      </Alert>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Newsletter Management</h1>
+        <div className="flex gap-2">
+          {canSendNewsletters && (
+            <Button onClick={() => setCreateNewsletterOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Newsletter
+            </Button>
+          )}
+          {canManageSubscribers && (
+            <Button
+              variant="outline"
+              onClick={() => setAddSubscriberOpen(true)}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Add Subscriber
+            </Button>
+          )}
+        </div>
+      </div>
 
-      {!canSendNewsletters && (
-        <Alert variant="default" className="mb-4 bg-red-50 border-red-200 text-red-800">
-          <Lock className="h-4 w-4 text-red-600" />
-          <AlertTitle>Access Restricted</AlertTitle>
-          <AlertDescription>
-            You don't have permission to manage newsletters. This feature is only available to Superadmin users.
-          </AlertDescription>
-        </Alert>
-      )}
+      <Tabs defaultValue="subscribers" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
+          <TabsTrigger value="newsletters">Newsletters</TabsTrigger>
+        </TabsList>
 
-      <RoleBasedContent
-        permissions={["send_newsletters"]}
-        fallback={
+        <TabsContent value="subscribers" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Newsletter Management</CardTitle>
+              <CardTitle>Subscribers</CardTitle>
               <CardDescription>
-                This feature is restricted to users with newsletter management permissions.
+                Manage your newsletter subscribers
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-center h-40">
-                <div className="text-center">
-                  <Lock className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Contact an administrator to request access to this feature.</p>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search subscribers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
                 </div>
+              </div>
+
+              <div className="rounded-md border">
+                <div className="grid grid-cols-6 gap-4 p-4 bg-gray-50 font-medium text-sm text-gray-500">
+                  <div>Name</div>
+                  <div>Email</div>
+                  <div>Status</div>
+                  <div>Tags</div>
+                  <div>Joined</div>
+                  <div className="text-right">Actions</div>
+                </div>
+                {isLoading ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Loading...
+                  </div>
+                ) : filteredSubscribers.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    No subscribers found
+                  </div>
+                ) : (
+                  filteredSubscribers.map((subscriber) => (
+                    <div
+                      key={subscriber.id}
+                      className="grid grid-cols-6 gap-4 p-4 border-t items-center"
+                    >
+                      <div>{subscriber.name || "N/A"}</div>
+                      <div>{subscriber.email}</div>
+                      <div>
+                        <Badge
+                          variant={
+                            subscriber.status === "active"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {subscriber.status}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {subscriber.tags.map((tag) => (
+                          <Badge key={tag} variant="outline">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div>
+                        {new Date(subscriber.created_at).toLocaleDateString()}
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        {canManageSubscribers && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedSubscriber(subscriber);
+                                setNewSubscriber({
+                                  email: subscriber.email,
+                                  name: subscriber.name || "",
+                                  tags: subscriber.tags,
+                                });
+                                setEditSubscriberOpen(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setDeleteType("subscriber");
+                                setDeleteItem(subscriber);
+                                setDeleteConfirmOpen(true);
+                              }}
+                            >
+                              <Trash className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
-        }
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight">Newsletter Management</h2>
-          <Button onClick={() => setCreateNewsletterOpen(true)}>
-            <Send className="mr-2 h-4 w-4" />
-            Create Newsletter
-          </Button>
-        </div>
+        </TabsContent>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <TabsContent value="newsletters" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Subscribers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+            <CardHeader>
+              <CardTitle>Newsletters</CardTitle>
+              <CardDescription>
+                View and manage your sent newsletters
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">342</div>
-              <p className="text-xs text-muted-foreground">+12 this week</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Newsletters Sent</CardTitle>
-              <Mail className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">24</div>
-              <p className="text-xs text-muted-foreground">Last sent 3 days ago</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Open Rate</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">28%</div>
-              <p className="text-xs text-muted-foreground">Industry avg: 21%</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unsubscribe Rate</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0.8%</div>
-              <p className="text-xs text-muted-foreground">Industry avg: 1.2%</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="newsletters" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="newsletters">Newsletters</TabsTrigger>
-            <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="newsletters" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sent Newsletters</CardTitle>
-                <CardDescription>View and manage your sent newsletters</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="relative w-full overflow-auto">
-                  <table className="w-full caption-bottom text-sm">
-                    <thead className="[&_tr]:border-b">
-                      <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Subject</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                          Sent Date
-                        </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                          Recipients
-                        </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                          Open Rate
-                        </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="[&_tr:last-child]:border-0">
-                      {newsletters.map((newsletter) => (
-                        <tr
-                          key={newsletter.id}
-                          className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted cursor-pointer"
+              <div className="rounded-md border">
+                <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 font-medium text-sm text-gray-500">
+                  <div>Subject</div>
+                  <div>Status</div>
+                  <div>Recipients</div>
+                  <div>Sent Date</div>
+                  <div className="text-right">Actions</div>
+                </div>
+                {isLoading ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Loading...
+                  </div>
+                ) : newsletters.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500">
+                    No newsletters found
+                  </div>
+                ) : (
+                  newsletters.map((newsletter) => (
+                    <div
+                      key={newsletter.id}
+                      className="grid grid-cols-5 gap-4 p-4 border-t items-center"
+                    >
+                      <div>{newsletter.subject}</div>
+                      <div>
+                        <Badge
+                          variant={
+                            newsletter.status === "sent"
+                              ? "default"
+                              : newsletter.status === "failed"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {newsletter.status}
+                        </Badge>
+                      </div>
+                      <div>{newsletter.metadata.recipient_count}</div>
+                      <div>
+                        {new Date(newsletter.sent_at).toLocaleDateString()}
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleViewNewsletter(newsletter)}
                         >
-                          <td className="p-4 align-middle font-medium">{newsletter.subject}</td>
-                          <td className="p-4 align-middle">{newsletter.sentDate}</td>
-                          <td className="p-4 align-middle">{newsletter.recipients}</td>
-                          <td className="p-4 align-middle">{newsletter.openRate}</td>
-                          <td className="p-4 align-middle">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleViewNewsletter(newsletter)
-                                }}
-                              >
-                                <Mail className="h-4 w-4" />
-                                <span className="sr-only">View</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDownloadNewsletter(newsletter)
-                                }}
-                              >
-                                <Download className="h-4 w-4" />
-                                <span className="sr-only">Download</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDeleteNewsletter(newsletter)
-                                }}
-                              >
-                                <Trash className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="subscribers" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Subscribers</CardTitle>
-                  <CardDescription>Manage your newsletter subscribers</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                  <Button size="sm" onClick={() => setAddSubscriberOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Subscriber
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search subscribers..."
-                      className="pl-8"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="relative w-full overflow-auto">
-                  <table className="w-full caption-bottom text-sm">
-                    <thead className="[&_tr]:border-b">
-                      <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                          Joined Date
-                        </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tags</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="[&_tr:last-child]:border-0">
-                      {filteredSubscribers.map((subscriber) => (
-                        <tr
-                          key={subscriber.id}
-                          className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                          <Info className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteNewsletter(newsletter)}
                         >
-                          <td className="p-4 align-middle font-medium">{subscriber.name}</td>
-                          <td className="p-4 align-middle">{subscriber.email}</td>
-                          <td className="p-4 align-middle">{subscriber.joinedDate}</td>
-                          <td className="p-4 align-middle">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                subscriber.status === "Active"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {subscriber.status}
-                            </span>
-                          </td>
-                          <td className="p-4 align-middle">
-                            <div className="flex gap-1 flex-wrap">
-                              {subscriber.tags.map((tag) => (
-                                <Badge key={tag} variant="secondary" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="p-4 align-middle">
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => handleEmailSubscriber(subscriber)}>
-                                <Mail className="h-4 w-4" />
-                                <span className="sr-only">Email</span>
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleEditSubscriber(subscriber)}>
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteSubscriber(subscriber)}>
-                                <Trash className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </RoleBasedContent>
+                          <Trash className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-      {/* Create Newsletter Modal */}
-      <Dialog open={createNewsletterOpen} onOpenChange={setCreateNewsletterOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Create Newsletter Dialog */}
+      <Dialog
+        open={createNewsletterOpen}
+        onOpenChange={setCreateNewsletterOpen}
+      >
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Newsletter</DialogTitle>
-            <DialogDescription>Create and send a newsletter to your subscribers</DialogDescription>
+            <DialogDescription>
+              Create and send a new newsletter to all subscribers
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="subject">Subject</Label>
-              <Input id="subject" placeholder="Enter newsletter subject" />
+              <Input
+                id="subject"
+                value={newNewsletter.subject}
+                onChange={(e) =>
+                  setNewNewsletter({
+                    ...newNewsletter,
+                    subject: e.target.value,
+                  })
+                }
+              />
             </div>
             <div>
               <Label htmlFor="content">Content</Label>
-              <Textarea id="content" placeholder="Write your newsletter content here..." className="min-h-[200px]" />
-            </div>
-            <div>
-              <Label htmlFor="recipients">Recipients</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select recipient group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Subscribers (342)</SelectItem>
-                  <SelectItem value="active">Active Subscribers (298)</SelectItem>
-                  <SelectItem value="wedding">Wedding Tag (156)</SelectItem>
-                  <SelectItem value="family">Family Tag (89)</SelectItem>
-                  <SelectItem value="premium">Premium Tag (67)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="schedule" />
-              <Label htmlFor="schedule">Schedule for later</Label>
+              <Textarea
+                id="content"
+                value={newNewsletter.content}
+                onChange={(e) =>
+                  setNewNewsletter({
+                    ...newNewsletter,
+                    content: e.target.value,
+                  })
+                }
+                rows={10}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateNewsletterOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setCreateNewsletterOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={() => setCreateNewsletterOpen(false)}>
-              <Send className="mr-2 h-4 w-4" />
-              Send Newsletter
-            </Button>
+            <Button onClick={handleCreateNewsletter}>Send Newsletter</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Newsletter Detail Modal */}
-      <Dialog open={newsletterDetailOpen} onOpenChange={setNewsletterDetailOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              {selectedNewsletter?.subject}
-            </DialogTitle>
-            <DialogDescription>Newsletter details and analytics</DialogDescription>
-          </DialogHeader>
-          {selectedNewsletter && (
-            <div className="space-y-6">
-              {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold">{selectedNewsletter.recipients}</div>
-                  <div className="text-sm text-muted-foreground">Recipients</div>
-                </div>
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold">{selectedNewsletter.openRate}</div>
-                  <div className="text-sm text-muted-foreground">Open Rate</div>
-                </div>
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold">{selectedNewsletter.clickRate}</div>
-                  <div className="text-sm text-muted-foreground">Click Rate</div>
-                </div>
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold">{selectedNewsletter.sentDate}</div>
-                  <div className="text-sm text-muted-foreground">Sent Date</div>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div>
-                <Label className="text-base font-semibold">Newsletter Content</Label>
-                <div className="mt-2 p-4 bg-slate-50 rounded-lg border">
-                  <p className="text-sm leading-relaxed">{selectedNewsletter.content}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewsletterDetailOpen(false)}>
-              Close
-            </Button>
-            <Button onClick={() => selectedNewsletter && handleDownloadNewsletter(selectedNewsletter)}>
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Subscriber Modal */}
+      {/* Add Subscriber Dialog */}
       <Dialog open={addSubscriberOpen} onOpenChange={setAddSubscriberOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Subscriber</DialogTitle>
-            <DialogDescription>Add a new subscriber to your newsletter list</DialogDescription>
+            <DialogTitle>Add Subscriber</DialogTitle>
+            <DialogDescription>
+              Add a new subscriber to your newsletter
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" placeholder="Enter subscriber name" />
-            </div>
-            <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="Enter email address" />
+              <Input
+                id="email"
+                type="email"
+                value={newSubscriber.email}
+                onChange={(e) =>
+                  setNewSubscriber({ ...newSubscriber, email: e.target.value })
+                }
+              />
             </div>
             <div>
-              <Label htmlFor="tags">Tags</Label>
-              <Input id="tags" placeholder="Enter tags (comma separated)" />
+              <Label htmlFor="name">Name (Optional)</Label>
+              <Input
+                id="name"
+                value={newSubscriber.name}
+                onChange={(e) =>
+                  setNewSubscriber({ ...newSubscriber, name: e.target.value })
+                }
+              />
             </div>
             <div>
-              <Label htmlFor="status">Status</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {["Wedding", "Family", "Baby", "Premium", "Corporate"].map(
+                  (tag) => (
+                    <div key={tag} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={tag}
+                        checked={newSubscriber.tags.includes(tag)}
+                        onCheckedChange={(checked) => {
+                          setNewSubscriber({
+                            ...newSubscriber,
+                            tags: checked
+                              ? [...newSubscriber.tags, tag]
+                              : newSubscriber.tags.filter((t) => t !== tag),
+                          });
+                        }}
+                      />
+                      <Label htmlFor={tag}>{tag}</Label>
+                    </div>
+                  )
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddSubscriberOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setAddSubscriberOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={() => setAddSubscriberOpen(false)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Subscriber
-            </Button>
+            <Button onClick={handleAddSubscriber}>Add Subscriber</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Subscriber Modal */}
+      {/* Edit Subscriber Dialog */}
       <Dialog open={editSubscriberOpen} onOpenChange={setEditSubscriberOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Subscriber</DialogTitle>
-            <DialogDescription>Update subscriber information</DialogDescription>
+            <DialogDescription>Edit subscriber information</DialogDescription>
           </DialogHeader>
-          {selectedSubscriber && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-name">Name</Label>
-                <Input id="edit-name" defaultValue={selectedSubscriber.name} />
-              </div>
-              <div>
-                <Label htmlFor="edit-email">Email</Label>
-                <Input id="edit-email" type="email" defaultValue={selectedSubscriber.email} />
-              </div>
-              <div>
-                <Label htmlFor="edit-tags">Tags</Label>
-                <Input id="edit-tags" defaultValue={selectedSubscriber.tags.join(", ")} />
-              </div>
-              <div>
-                <Label htmlFor="edit-status">Status</Label>
-                <Select defaultValue={selectedSubscriber.status.toLowerCase()}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={newSubscriber.name}
+                onChange={(e) =>
+                  setNewSubscriber({ ...newSubscriber, name: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {["Wedding", "Family", "Baby", "Premium", "Corporate"].map(
+                  (tag) => (
+                    <div key={tag} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-${tag}`}
+                        checked={newSubscriber.tags.includes(tag)}
+                        onCheckedChange={(checked) => {
+                          setNewSubscriber({
+                            ...newSubscriber,
+                            tags: checked
+                              ? [...newSubscriber.tags, tag]
+                              : newSubscriber.tags.filter((t) => t !== tag),
+                          });
+                        }}
+                      />
+                      <Label htmlFor={`edit-${tag}`}>{tag}</Label>
+                    </div>
+                  )
+                )}
               </div>
             </div>
-          )}
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSubscriberOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setEditSubscriberOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={() => setEditSubscriberOpen(false)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Update Subscriber
-            </Button>
+            <Button onClick={handleUpdateSubscriber}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
+      {/* Newsletter Detail Dialog */}
+      <Dialog
+        open={newsletterDetailOpen}
+        onOpenChange={setNewsletterDetailOpen}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{selectedNewsletter?.subject}</DialogTitle>
+            <DialogDescription>
+              Sent on{" "}
+              {selectedNewsletter?.sent_at
+                ? new Date(selectedNewsletter.sent_at).toLocaleString()
+                : "N/A"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Recipients
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {selectedNewsletter?.metadata.recipient_count || 0}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Open Rate
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {selectedNewsletter?.metadata.open_rate
+                      ? `${selectedNewsletter.metadata.open_rate}%`
+                      : "N/A"}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Click Rate
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {selectedNewsletter?.metadata.click_rate
+                      ? `${selectedNewsletter.metadata.click_rate}%`
+                      : "N/A"}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div>
+              <Label>Content</Label>
+              <div className="mt-2 p-4 bg-gray-50 rounded-md whitespace-pre-wrap">
+                {selectedNewsletter?.content}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this {deleteType}? This action cannot be undone.
+              Are you sure you want to{" "}
+              {deleteType === "subscriber"
+                ? "unsubscribe this subscriber"
+                : "delete this newsletter"}
+              ? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          {deleteItem && (
-            <div className="py-4">
-              <p className="text-sm">
-                <strong>
-                  {deleteType === "newsletter" ? deleteItem.subject : `${deleteItem.name} (${deleteItem.email})`}
-                </strong>
-              </p>
-            </div>
-          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
-              <Trash className="mr-2 h-4 w-4" />
               Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

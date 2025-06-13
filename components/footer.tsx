@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FaWhatsapp, FaFacebookF, FaInstagram } from "react-icons/fa";
 import { Mail, Phone } from "lucide-react";
+import { NewsletterSubscribe } from "@/components/newsletter-subscribe";
 
 const navigation = {
   company: [
@@ -155,26 +156,9 @@ export default function Footer() {
                 <p className="mt-2 text-sm text-red-200">
                   Stay updated with our latest album designs and special offers.
                 </p>
-                <form className="mt-4 sm:mt-6 flex flex-col sm:flex-row sm:max-w-md gap-3">
-                  <label htmlFor="email-address" className="sr-only">
-                    Email address
-                  </label>
-                  <Input
-                    id="email-address"
-                    name="email-address"
-                    type="email"
-                    required
-                    placeholder="Enter your email"
-                    autoComplete="email"
-                    className="w-full min-w-0 bg-white/10 border-white/20 text-white placeholder:text-red-200 focus:bg-white/20 focus:border-white/40"
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full sm:w-auto bg-white text-red-900 hover:bg-red-50 font-semibold whitespace-nowrap"
-                  >
-                    Subscribe
-                  </Button>
-                </form>
+                <div className="mt-4 sm:mt-6">
+                  <NewsletterSubscribe variant="footer" />
+                </div>
               </div>
             </div>
           </div>
