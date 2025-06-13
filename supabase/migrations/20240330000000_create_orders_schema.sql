@@ -232,4 +232,101 @@ SELECT
     (SELECT COUNT(*) FROM public.order_payments op WHERE op.order_id = o.id) as payment_count
 FROM 
     public.orders o
-    JOIN public.customers c ON c.id = o.customer_id; 
+    JOIN public.customers c ON c.id = o.customer_id;
+
+-- Create storage usage history table
+CREATE TABLE IF NOT EXISTS storage_usage_history (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    month DATE NOT NULL,
+    storage_size BIGINT NOT NULL,
+    database_size BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Create index on month for faster queries
+CREATE INDEX IF NOT EXISTS idx_storage_usage_history_month ON storage_usage_history(month);
+
+-- Function to get database statistics
+CREATE OR REPLACE FUNCTION get_database_stats()
+RETURNS TABLE (
+    total_size bigint,
+    table_count integer,
+    index_count integer
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        pg_database_size(current_database()) as total_size,
+        (SELECT count(*) FROM pg_tables WHERE schemaname = 'public') as table_count,
+        (SELECT count(*) FROM pg_indexes WHERE schemaname = 'public') as index_count;
+END;
+$$;
+
+-- Function to get storage usage
+CREATE OR REPLACE FUNCTION get_storage_usage()
+RETURNS TABLE (
+    total_size bigint,
+    bucket_sizes jsonb
+) LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        COALESCE(SUM(size), 0) as total_size,
+        jsonb_object_agg(
+            name,
+            jsonb_build_object(
+                'size', size,
+                'count', count
+            )
+        ) as bucket_sizes
+    FROM (
+        SELECT
+            name,
+            COALESCE(SUM(size), 0) as size,
+            COUNT(*) as count
+        FROM storage.objects
+        GROUP BY name
+    ) as bucket_stats;
+END;
+$$;
+
+-- Function to record monthly storage usage
+CREATE OR REPLACE FUNCTION record_monthly_storage_usage()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    current_month DATE;
+    storage_stats RECORD;
+    db_stats RECORD;
+BEGIN
+    -- Get current month (first day)
+    current_month := date_trunc('month', CURRENT_DATE);
+
+    -- Check if we already have a record for this month
+    IF EXISTS (
+        SELECT 1 FROM storage_usage_history
+        WHERE month = current_month
+    ) THEN
+        RETURN;
+    END IF;
+
+    -- Get storage usage
+    SELECT * INTO storage_stats FROM get_storage_usage();
+    
+    -- Get database usage
+    SELECT * INTO db_stats FROM get_database_stats();
+
+    -- Insert the record
+    INSERT INTO storage_usage_history (month, storage_size, database_size)
+    VALUES (current_month, storage_stats.total_size, db_stats.total_size);
+END;
+$$;
+
+-- Create a cron job to record storage usage monthly
+SELECT cron.schedule(
+    'record-storage-usage',
+    '0 0 1 * *', -- Run at midnight on the first day of each month
+    'SELECT record_monthly_storage_usage();'
+); 
