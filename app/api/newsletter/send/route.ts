@@ -1,63 +1,123 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { sendNewsletterToAllSubscribers } from "@/lib/resend";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/utils/supabase/server";
+import { Resend } from "resend";
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+if (!process.env.RESEND_API_KEY) {
+  throw new Error("RESEND_API_KEY is not set");
+}
 
-// Validation schema
-const sendNewsletterSchema = z.object({
-  subject: z.string().min(1, "Subject is required"),
-  content: z.string().min(1, "Content is required"),
-  from: z.string().email("Invalid from email").optional(),
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { subject, content, from } = sendNewsletterSchema.parse(body);
+    const { subject, content, includeUnsubscribeLink } = await request.json();
+    const supabase = await createClient();
 
-    // Send newsletter to all subscribers
-    const result = await sendNewsletterToAllSubscribers({
-      subject,
-      html: content,
-      from,
-    });
+    // Get all active subscribers
+    const { data: activeSubscribers, error: subscribersError } = await supabase
+      .from("newsletter_subscribers")
+      .select("*")
+      .eq("status", "active");
 
-    // Log the newsletter send in the database
-    await supabase.from("newsletter_logs").insert([
-      {
-        subject,
-        content,
-        sent_at: new Date().toISOString(),
-        status: "sent",
-        metadata: {
-          from,
-          recipient_count: result.data?.to?.length || 0,
-        },
-      },
-    ]);
+    if (subscribersError) {
+      console.error("Error fetching subscribers:", subscribersError);
+      throw new Error("Failed to fetch subscribers");
+    }
 
-    return NextResponse.json({
-      message: "Newsletter sent successfully",
-      data: result.data,
-    });
-  } catch (error) {
-    console.error("Failed to send newsletter:", error);
-
-    if (error instanceof z.ZodError) {
+    if (!activeSubscribers?.length) {
       return NextResponse.json(
-        { message: "Invalid input", errors: error.errors },
+        { error: "No active subscribers found" },
         { status: 400 }
       );
     }
 
+    // Create newsletter record
+    const { data: newsletter, error: newsletterError } = await supabase
+      .from("newsletter_logs")
+      .insert([
+        {
+          subject,
+          content,
+          sent_at: new Date().toISOString(),
+          status: "sent",
+          metadata: {
+            recipient_count: activeSubscribers.length,
+            include_unsubscribe_link: includeUnsubscribeLink,
+          },
+        },
+      ])
+      .select()
+      .single();
+
+    if (newsletterError) {
+      console.error("Error creating newsletter record:", newsletterError);
+      throw new Error("Failed to create newsletter record");
+    }
+
+    // Send emails to all active subscribers
+    const emailPromises = activeSubscribers.map(async (subscriber) => {
+      const unsubscribeToken = Buffer.from(subscriber.email).toString("base64");
+      const unsubscribeLink = `${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe?email=${encodeURIComponent(
+        subscriber.email
+      )}&token=${unsubscribeToken}`;
+
+      const emailContent = includeUnsubscribeLink
+        ? `${content}\n\n---\n\nTo unsubscribe from our newsletter, click here: ${unsubscribeLink}`
+        : content;
+
+      try {
+        const { data, error } = await resend.emails.send({
+          from: "G Album <marketing@galbum.net>",
+          to: subscriber.email,
+          subject,
+          html: emailContent,
+          tags: [
+            { name: "newsletter_id", value: newsletter.id },
+            { name: "subscriber_id", value: subscriber.id },
+          ],
+        });
+
+        if (error) {
+          console.error(`Error sending email to ${subscriber.email}:`, error);
+          throw error;
+        }
+
+        console.log(`Email sent successfully to ${subscriber.email}:`, data);
+        return data;
+      } catch (error) {
+        console.error(`Failed to send email to ${subscriber.email}:`, error);
+        throw error;
+      }
+    });
+
+    try {
+      const results = await Promise.all(emailPromises);
+      console.log("All emails sent successfully:", results);
+    } catch (emailError) {
+      console.error("Error sending emails:", emailError);
+      // Update newsletter status to failed
+      await supabase
+        .from("newsletter_logs")
+        .update({
+          status: "failed",
+          metadata: {
+            ...newsletter.metadata,
+            error:
+              emailError instanceof Error
+                ? emailError.message
+                : "Unknown error",
+            failed_at: new Date().toISOString(),
+          },
+        })
+        .eq("id", newsletter.id);
+      throw new Error("Failed to send emails");
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error sending newsletter:", error);
     return NextResponse.json(
-      { message: "Failed to send newsletter" },
+      { error: "Failed to send newsletter" },
       { status: 500 }
     );
   }

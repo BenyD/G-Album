@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRole } from "@/components/admin/role-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Download,
@@ -44,9 +43,15 @@ import {
   Info,
   Lock,
   BarChart3,
-  MoreVertical,
+  MoreHorizontal,
   UserX,
   Trash2,
+  Loader2,
+  ArrowUpDown,
+  Filter,
+  FileText,
+  IndianRupee,
+  Clock,
 } from "lucide-react";
 import { RoleBasedContent } from "@/components/admin/role-based-content";
 import { toast } from "sonner";
@@ -65,6 +70,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Newsletter {
   id: string;
@@ -88,6 +95,23 @@ interface Subscriber {
   updated_at: string;
 }
 
+const statusBadgeVariants: Record<
+  Subscriber["status"],
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  active: "default",
+  inactive: "secondary",
+  unsubscribed: "destructive",
+  deleted: "outline",
+};
+
+const statusBadgeClasses = {
+  active: "bg-green-100 text-green-700 border-green-200",
+  inactive: "bg-gray-100 text-gray-700 border-gray-200",
+  unsubscribed: "bg-red-100 text-red-700 border-red-200",
+  deleted: "bg-gray-50 text-gray-500 border-gray-200",
+};
+
 export default function NewsletterPage() {
   const { role, hasPermission } = useRole();
   const supabase = createClient();
@@ -102,6 +126,7 @@ export default function NewsletterPage() {
   const [selectedSubscriber, setSelectedSubscriber] =
     useState<Subscriber | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteType, setDeleteType] = useState<
     "newsletter" | "subscriber" | null
@@ -117,10 +142,14 @@ export default function NewsletterPage() {
   const [newSubscriber, setNewSubscriber] = useState({
     email: "",
     name: "",
-    tags: [] as string[],
   });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("active");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | Subscriber["status"]
+  >("all");
+  const [sortBy, setSortBy] = useState<
+    "newest" | "oldest" | "name-asc" | "name-desc"
+  >("newest");
+  const [sending, setSending] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -129,7 +158,16 @@ export default function NewsletterPage() {
 
   useEffect(() => {
     loadSubscribers();
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, debouncedSearchTerm]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const loadNewsletters = async () => {
     try {
@@ -150,7 +188,7 @@ export default function NewsletterPage() {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `/api/admin/newsletter/subscribers?status=${statusFilter}&search=${searchQuery}`
+        `/api/admin/newsletter/subscribers?status=${statusFilter}&search=${debouncedSearchTerm}`
       );
       const data = await response.json();
 
@@ -173,22 +211,84 @@ export default function NewsletterPage() {
   const canSendNewsletters = hasPermission("send_newsletters");
   const canManageSubscribers = hasPermission("manage_subscribers");
 
-  // Filter subscribers based on search
-  const filteredSubscribers = subscribers.filter(
-    (subscriber) =>
-      subscriber.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (subscriber.name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-  );
+  // Calculate statistics
+  const stats = useMemo(() => {
+    if (!subscribers)
+      return {
+        totalSubscribers: 0,
+        activeSubscribers: 0,
+        unsubscribedCount: 0,
+        inactiveCount: 0,
+      };
+
+    return {
+      totalSubscribers: subscribers.length,
+      activeSubscribers: subscribers.filter((s) => s.status === "active")
+        .length,
+      unsubscribedCount: subscribers.filter((s) => s.status === "unsubscribed")
+        .length,
+      inactiveCount: subscribers.filter((s) => s.status === "inactive").length,
+    };
+  }, [subscribers]);
+
+  // Filter and sort subscribers
+  const filteredSubscribers = useMemo(() => {
+    if (!subscribers) return [];
+
+    let filtered = [...subscribers];
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(
+        (subscriber) => subscriber.status === statusFilter
+      );
+    }
+
+    // Apply search filter
+    if (debouncedSearchTerm) {
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (subscriber) =>
+          subscriber.email.toLowerCase().includes(searchLower) ||
+          (subscriber.name?.toLowerCase() || "").includes(searchLower)
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return (
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        case "name-asc":
+          return (a.name || "").localeCompare(b.name || "");
+        case "name-desc":
+          return (b.name || "").localeCompare(a.name || "");
+        default: // newest
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+      }
+    });
+
+    return filtered;
+  }, [subscribers, statusFilter, debouncedSearchTerm, sortBy]);
 
   // Newsletter actions
   const handleCreateNewsletter = async () => {
     try {
+      setSending(true);
       const response = await fetch("/api/newsletter/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newNewsletter),
+        body: JSON.stringify({
+          subject: newNewsletter.subject,
+          content: newNewsletter.content,
+          includeUnsubscribeLink: true,
+        }),
       });
 
       if (!response.ok) {
@@ -202,6 +302,8 @@ export default function NewsletterPage() {
     } catch (error) {
       console.error("Error sending newsletter:", error);
       toast.error("Failed to send newsletter");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -212,7 +314,6 @@ export default function NewsletterPage() {
           email: newSubscriber.email,
           name: newSubscriber.name || null,
           status: "active",
-          tags: newSubscriber.tags,
           metadata: {
             source: "admin_panel",
             added_at: new Date().toISOString(),
@@ -224,7 +325,7 @@ export default function NewsletterPage() {
 
       toast.success("Subscriber added successfully");
       setAddSubscriberOpen(false);
-      setNewSubscriber({ email: "", name: "", tags: [] });
+      setNewSubscriber({ email: "", name: "" });
       loadSubscribers();
     } catch (error) {
       console.error("Error adding subscriber:", error);
@@ -240,7 +341,6 @@ export default function NewsletterPage() {
         .from("newsletter_subscribers")
         .update({
           name: newSubscriber.name || null,
-          tags: newSubscriber.tags,
           metadata: {
             ...selectedSubscriber.metadata,
             updated_at: new Date().toISOString(),
@@ -252,8 +352,6 @@ export default function NewsletterPage() {
 
       toast.success("Subscriber updated successfully");
       setEditSubscriberOpen(false);
-      setSelectedSubscriber(null);
-      setNewSubscriber({ email: "", name: "", tags: [] });
       loadSubscribers();
     } catch (error) {
       console.error("Error updating subscriber:", error);
@@ -267,18 +365,17 @@ export default function NewsletterPage() {
     try {
       const { error } = await supabase
         .from("newsletter_subscribers")
-        .update({ status: "unsubscribed" })
+        .update({ status: "deleted" })
         .eq("id", deleteItem.id);
 
       if (error) throw error;
 
-      toast.success("Subscriber unsubscribed successfully");
+      toast.success("Subscriber deleted successfully");
       setDeleteConfirmOpen(false);
-      setDeleteItem(null);
       loadSubscribers();
     } catch (error) {
-      console.error("Error unsubscribing subscriber:", error);
-      toast.error("Failed to unsubscribe subscriber");
+      console.error("Error deleting subscriber:", error);
+      toast.error("Failed to delete subscriber");
     }
   };
 
@@ -288,33 +385,34 @@ export default function NewsletterPage() {
   };
 
   const handleDeleteNewsletter = (newsletter: Newsletter) => {
-    setDeleteType("newsletter");
     setDeleteItem(newsletter);
+    setDeleteType("newsletter");
     setDeleteConfirmOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!deleteItem) return;
+    if (!deleteItem || !deleteType) return;
 
-    if (deleteType === "newsletter") {
-      try {
+    try {
+      if (deleteType === "newsletter") {
         const { error } = await supabase
           .from("newsletter_logs")
           .delete()
           .eq("id", deleteItem.id);
 
         if (error) throw error;
-
         toast.success("Newsletter deleted successfully");
-        setDeleteConfirmOpen(false);
-        setDeleteItem(null);
-        loadNewsletters();
-      } catch (error) {
-        console.error("Error deleting newsletter:", error);
-        toast.error("Failed to delete newsletter");
+      } else if (deleteType === "subscriber") {
+        await handleDeleteSubscriber();
       }
-    } else if (deleteType === "subscriber") {
-      await handleDeleteSubscriber();
+
+      setDeleteConfirmOpen(false);
+      setDeleteItem(null);
+      setDeleteType(null);
+      loadNewsletters();
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast.error("Failed to delete item");
     }
   };
 
@@ -324,260 +422,416 @@ export default function NewsletterPage() {
     name?: string
   ) => {
     try {
-      const response = await fetch("/api/admin/newsletter/subscribers", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id, action, name }),
-      });
+      let newStatus: Subscriber["status"] = "active";
+      let successMessage = "";
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to perform action");
+      switch (action) {
+        case "activate":
+          newStatus = "active";
+          successMessage = "Subscriber activated successfully";
+          break;
+        case "deactivate":
+          newStatus = "inactive";
+          successMessage = "Subscriber deactivated successfully";
+          break;
+        case "unsubscribe":
+          newStatus = "unsubscribed";
+          successMessage = "Subscriber unsubscribed successfully";
+          break;
+        default:
+          return;
       }
 
-      toast.success(data.message);
+      const { error } = await supabase
+        .from("newsletter_subscribers")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success(successMessage);
       loadSubscribers();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to perform action"
-      );
-    }
-  };
-
-  const handleUpdateName = async (id: string) => {
-    const name = prompt("Enter new name:");
-    if (name) {
-      await handleSubscriberAction(id, "update_name", name);
+      console.error("Error updating subscriber status:", error);
+      toast.error("Failed to update subscriber status");
     }
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Newsletter Management</h1>
-        <div className="flex gap-2">
-          {canSendNewsletters && (
-            <Button onClick={() => setCreateNewsletterOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Newsletter
-            </Button>
-          )}
-          {canManageSubscribers && (
+    <div className="container mx-auto space-y-8 py-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="relative">
+          <h1 className="text-2xl font-bold text-red-900">Newsletter</h1>
+          <p className="text-muted-foreground">
+            Manage newsletter subscribers and send updates
+          </p>
+          <div className="absolute -bottom-1 left-0 w-12 h-1 bg-red-600 rounded-full" />
+        </div>
+        <div className="flex items-center gap-2">
+          <RoleBasedContent permissions={["send_newsletters"]}>
             <Button
-              variant="outline"
-              onClick={() => setAddSubscriberOpen(true)}
+              onClick={() => setCreateNewsletterOpen(true)}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
-              <Users className="w-4 h-4 mr-2" />
+              <Send className="w-4 h-4 mr-2" />
+              Send Newsletter
+            </Button>
+          </RoleBasedContent>
+          <RoleBasedContent permissions={["manage_subscribers"]}>
+            <Button
+              onClick={() => setAddSubscriberOpen(true)}
+              variant="outline"
+              className="border-red-200 hover:bg-red-50"
+            >
+              <Plus className="w-4 h-4 mr-2" />
               Add Subscriber
             </Button>
-          )}
+          </RoleBasedContent>
         </div>
       </div>
 
-      <Tabs defaultValue="subscribers" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
-          <TabsTrigger value="newsletters">Newsletters</TabsTrigger>
-        </TabsList>
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Subscribers
+            </CardTitle>
+            <Users className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                stats.totalSubscribers
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Active Subscribers
+            </CardTitle>
+            <Mail className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                stats.activeSubscribers
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Unsubscribed</CardTitle>
+            <UserX className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                stats.unsubscribedCount
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inactive</CardTitle>
+            <Clock className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                stats.inactiveCount
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <TabsContent value="subscribers" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Subscribers</CardTitle>
-              <CardDescription>
-                Manage your newsletter subscribers
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search subscribers..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
+      {/* Search and Filters */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search subscribers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
+          />
+        </div>
+        <Select
+          value={statusFilter}
+          onValueChange={(value: any) => setStatusFilter(value)}
+        >
+          <SelectTrigger className="w-[180px] border-red-100">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="unsubscribed">Unsubscribed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+          <SelectTrigger className="w-[180px] border-red-100">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest First</SelectItem>
+            <SelectItem value="oldest">Oldest First</SelectItem>
+            <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+            <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-              <div className="rounded-md border">
-                <div className="grid grid-cols-6 gap-4 p-4 bg-gray-50 font-medium text-sm text-gray-500">
-                  <div>Name</div>
-                  <div>Email</div>
-                  <div>Status</div>
-                  <div>Tags</div>
-                  <div>Joined</div>
-                  <div className="text-right">Actions</div>
-                </div>
-                {isLoading ? (
-                  <div className="p-4 text-center text-gray-500">
-                    Loading...
-                  </div>
-                ) : filteredSubscribers.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">
-                    No subscribers found
-                  </div>
-                ) : (
-                  filteredSubscribers.map((subscriber) => (
-                    <div
-                      key={subscriber.id}
-                      className="grid grid-cols-6 gap-4 p-4 border-t items-center"
-                    >
-                      <div>{subscriber.name || "N/A"}</div>
-                      <div>{subscriber.email}</div>
-                      <div>
-                        <Badge
-                          variant={
-                            subscriber.status === "active"
-                              ? "default"
-                              : "secondary"
+      {/* Subscribers Table */}
+      <Card className="border-red-100">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-red-50/50">
+              <TableHead>Email</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created At</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredSubscribers.map((subscriber) => (
+              <TableRow key={subscriber.id} className="hover:bg-red-50/50">
+                <TableCell className="font-medium">
+                  {subscriber.email}
+                </TableCell>
+                <TableCell>{subscriber.name || "-"}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={statusBadgeVariants[subscriber.status]}
+                    className={cn(
+                      "mr-2",
+                      statusBadgeClasses[subscriber.status]
+                    )}
+                  >
+                    {subscriber.status.charAt(0).toUpperCase() +
+                      subscriber.status.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {format(new Date(subscriber.created_at), "PPp")}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="h-8 w-8 p-0 hover:bg-red-50"
+                      >
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedSubscriber(subscriber);
+                          setNewSubscriber({
+                            email: subscriber.email,
+                            name: subscriber.name || "",
+                          });
+                          setEditSubscriberOpen(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleSubscriberAction(subscriber.id, "delete")
+                        }
+                        className="text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                      {subscriber.status === "active" && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleSubscriberAction(subscriber.id, "deactivate")
                           }
                         >
-                          {subscriber.status}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {subscriber.tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div>
-                        {new Date(subscriber.created_at).toLocaleDateString()}
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        {canManageSubscribers && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedSubscriber(subscriber);
-                                setNewSubscriber({
-                                  email: subscriber.email,
-                                  name: subscriber.name || "",
-                                  tags: subscriber.tags,
-                                });
-                                setEditSubscriberOpen(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setDeleteType("subscriber");
-                                setDeleteItem(subscriber);
-                                setDeleteConfirmOpen(true);
-                              }}
-                            >
-                              <Trash className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="newsletters" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Newsletters</CardTitle>
-              <CardDescription>
-                View and manage your sent newsletters
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <div className="grid grid-cols-5 gap-4 p-4 bg-gray-50 font-medium text-sm text-gray-500">
-                  <div>Subject</div>
-                  <div>Status</div>
-                  <div>Recipients</div>
-                  <div>Sent Date</div>
-                  <div className="text-right">Actions</div>
-                </div>
-                {isLoading ? (
-                  <div className="p-4 text-center text-gray-500">
-                    Loading...
-                  </div>
-                ) : newsletters.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">
-                    No newsletters found
-                  </div>
-                ) : (
-                  newsletters.map((newsletter) => (
-                    <div
-                      key={newsletter.id}
-                      className="grid grid-cols-5 gap-4 p-4 border-t items-center"
-                    >
-                      <div>{newsletter.subject}</div>
-                      <div>
-                        <Badge
-                          variant={
-                            newsletter.status === "sent"
-                              ? "default"
-                              : newsletter.status === "failed"
-                                ? "destructive"
-                                : "secondary"
+                          <Clock className="w-4 h-4 mr-2" />
+                          Pause Subscriptions
+                        </DropdownMenuItem>
+                      )}
+                      {subscriber.status === "inactive" && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleSubscriberAction(subscriber.id, "activate")
                           }
                         >
-                          {newsletter.status}
-                        </Badge>
-                      </div>
-                      <div>{newsletter.metadata.recipient_count}</div>
-                      <div>
-                        {new Date(newsletter.sent_at).toLocaleDateString()}
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleViewNewsletter(newsletter)}
+                          <Users className="w-4 h-4 mr-2" />
+                          Resume Subscriptions
+                        </DropdownMenuItem>
+                      )}
+                      {subscriber.status !== "unsubscribed" && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleSubscriberAction(subscriber.id, "unsubscribe")
+                          }
+                          className="text-red-600"
                         >
-                          <Info className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteNewsletter(newsletter)}
-                        >
-                          <Trash className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                          <UserX className="w-4 h-4 mr-2" />
+                          Unsubscribe Permanently
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filteredSubscribers.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="text-center py-8 text-muted-foreground"
+                >
+                  No subscribers found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
 
-      {/* Create Newsletter Dialog */}
+      {/* Add Subscriber Dialog */}
+      <Dialog open={addSubscriberOpen} onOpenChange={setAddSubscriberOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Subscriber</DialogTitle>
+            <DialogDescription>
+              Add a new subscriber to your newsletter list.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                value={newSubscriber.email}
+                onChange={(e) =>
+                  setNewSubscriber({ ...newSubscriber, email: e.target.value })
+                }
+                placeholder="Enter email address"
+                className="border-red-100 focus:border-red-200 focus:ring-red-100"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name (Optional)</Label>
+              <Input
+                id="name"
+                value={newSubscriber.name}
+                onChange={(e) =>
+                  setNewSubscriber({ ...newSubscriber, name: e.target.value })
+                }
+                placeholder="Enter name"
+                className="border-red-100 focus:border-red-200 focus:ring-red-100"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAddSubscriberOpen(false)}
+              className="border-red-100 hover:bg-red-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddSubscriber}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Add Subscriber
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subscriber Dialog */}
+      <Dialog open={editSubscriberOpen} onOpenChange={setEditSubscriberOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Subscriber</DialogTitle>
+            <DialogDescription>
+              Update subscriber information.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                value={selectedSubscriber?.email}
+                disabled
+                className="border-red-100 bg-gray-50"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={newSubscriber.name}
+                onChange={(e) =>
+                  setNewSubscriber({ ...newSubscriber, name: e.target.value })
+                }
+                placeholder="Enter name"
+                className="border-red-100 focus:border-red-200 focus:ring-red-100"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditSubscriberOpen(false)}
+              className="border-red-100 hover:bg-red-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateSubscriber}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Update Subscriber
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Newsletter Dialog */}
       <Dialog
         open={createNewsletterOpen}
         onOpenChange={setCreateNewsletterOpen}
       >
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create Newsletter</DialogTitle>
+            <DialogTitle>Send Newsletter</DialogTitle>
             <DialogDescription>
-              Create and send a new newsletter to all subscribers
+              Create and send a new newsletter to your subscribers.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
               <Label htmlFor="subject">Subject</Label>
               <Input
                 id="subject"
@@ -588,9 +842,11 @@ export default function NewsletterPage() {
                     subject: e.target.value,
                   })
                 }
+                placeholder="Enter newsletter subject"
+                className="border-red-100 focus:border-red-200 focus:ring-red-100"
               />
             </div>
-            <div>
+            <div className="grid gap-2">
               <Label htmlFor="content">Content</Label>
               <Textarea
                 id="content"
@@ -601,7 +857,8 @@ export default function NewsletterPage() {
                     content: e.target.value,
                   })
                 }
-                rows={10}
+                placeholder="Enter newsletter content"
+                className="min-h-[200px] border-red-100 focus:border-red-200 focus:ring-red-100"
               />
             </div>
           </div>
@@ -609,133 +866,47 @@ export default function NewsletterPage() {
             <Button
               variant="outline"
               onClick={() => setCreateNewsletterOpen(false)}
+              className="border-red-100 hover:bg-red-50"
             >
               Cancel
             </Button>
-            <Button onClick={handleCreateNewsletter}>Send Newsletter</Button>
+            <Button
+              onClick={handleCreateNewsletter}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Send Newsletter
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Add Subscriber Dialog */}
-      <Dialog open={addSubscriberOpen} onOpenChange={setAddSubscriberOpen}>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Subscriber</DialogTitle>
+            <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
-              Add a new subscriber to your newsletter
+              Are you sure you want to delete this {deleteType}? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newSubscriber.email}
-                onChange={(e) =>
-                  setNewSubscriber({ ...newSubscriber, email: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="name">Name (Optional)</Label>
-              <Input
-                id="name"
-                value={newSubscriber.name}
-                onChange={(e) =>
-                  setNewSubscriber({ ...newSubscriber, name: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label>Tags</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {["Wedding", "Family", "Baby", "Premium", "Corporate"].map(
-                  (tag) => (
-                    <div key={tag} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={tag}
-                        checked={newSubscriber.tags.includes(tag)}
-                        onCheckedChange={(checked) => {
-                          setNewSubscriber({
-                            ...newSubscriber,
-                            tags: checked
-                              ? [...newSubscriber.tags, tag]
-                              : newSubscriber.tags.filter((t) => t !== tag),
-                          });
-                        }}
-                      />
-                      <Label htmlFor={tag}>{tag}</Label>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setAddSubscriberOpen(false)}
+              onClick={() => setDeleteConfirmOpen(false)}
+              className="border-red-100 hover:bg-red-50"
             >
               Cancel
             </Button>
-            <Button onClick={handleAddSubscriber}>Add Subscriber</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Subscriber Dialog */}
-      <Dialog open={editSubscriberOpen} onOpenChange={setEditSubscriberOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Subscriber</DialogTitle>
-            <DialogDescription>Edit subscriber information</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-name">Name</Label>
-              <Input
-                id="edit-name"
-                value={newSubscriber.name}
-                onChange={(e) =>
-                  setNewSubscriber({ ...newSubscriber, name: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label>Tags</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {["Wedding", "Family", "Baby", "Premium", "Corporate"].map(
-                  (tag) => (
-                    <div key={tag} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`edit-${tag}`}
-                        checked={newSubscriber.tags.includes(tag)}
-                        onCheckedChange={(checked) => {
-                          setNewSubscriber({
-                            ...newSubscriber,
-                            tags: checked
-                              ? [...newSubscriber.tags, tag]
-                              : newSubscriber.tags.filter((t) => t !== tag),
-                          });
-                        }}
-                      />
-                      <Label htmlFor={`edit-${tag}`}>{tag}</Label>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
             <Button
-              variant="outline"
-              onClick={() => setEditSubscriberOpen(false)}
+              onClick={handleConfirmDelete}
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Cancel
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
             </Button>
-            <Button onClick={handleUpdateSubscriber}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -745,91 +916,56 @@ export default function NewsletterPage() {
         open={newsletterDetailOpen}
         onOpenChange={setNewsletterDetailOpen}
       >
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selectedNewsletter?.subject}</DialogTitle>
             <DialogDescription>
               Sent on{" "}
-              {selectedNewsletter?.sent_at
-                ? new Date(selectedNewsletter.sent_at).toLocaleString()
-                : "N/A"}
+              {selectedNewsletter?.sent_at &&
+                format(new Date(selectedNewsletter.sent_at), "PPp")}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Recipients
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {selectedNewsletter?.metadata.recipient_count || 0}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Open Rate
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {selectedNewsletter?.metadata.open_rate
-                      ? `${selectedNewsletter.metadata.open_rate}%`
-                      : "N/A"}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Click Rate
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {selectedNewsletter?.metadata.click_rate
-                      ? `${selectedNewsletter.metadata.click_rate}%`
-                      : "N/A"}
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="grid gap-4 py-4">
+            <div className="rounded-lg border p-4">
+              <div
+                className="prose max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: selectedNewsletter?.content || "",
+                }}
+              />
             </div>
-            <div>
-              <Label>Content</Label>
-              <div className="mt-2 p-4 bg-gray-50 rounded-md whitespace-pre-wrap">
-                {selectedNewsletter?.content}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-lg border p-4">
+                <div className="text-sm text-muted-foreground">Recipients</div>
+                <div className="text-2xl font-bold">
+                  {selectedNewsletter?.metadata.recipient_count}
+                </div>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="text-sm text-muted-foreground">Open Rate</div>
+                <div className="text-2xl font-bold">
+                  {selectedNewsletter?.metadata.open_rate
+                    ? `${(selectedNewsletter.metadata.open_rate * 100).toFixed(1)}%`
+                    : "N/A"}
+                </div>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="text-sm text-muted-foreground">Click Rate</div>
+                <div className="text-2xl font-bold">
+                  {selectedNewsletter?.metadata.click_rate
+                    ? `${(selectedNewsletter.metadata.click_rate * 100).toFixed(1)}%`
+                    : "N/A"}
+                </div>
               </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to{" "}
-              {deleteType === "subscriber"
-                ? "unsubscribe this subscriber"
-                : "delete this newsletter"}
-              ? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDeleteConfirmOpen(false)}
+              onClick={() => setNewsletterDetailOpen(false)}
+              className="border-red-100 hover:bg-red-50"
             >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
-              Delete
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

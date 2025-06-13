@@ -3,8 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { FaWhatsapp, FaFacebookF, FaInstagram } from "react-icons/fa";
 import { Mail, Phone } from "lucide-react";
 import { NewsletterSubscribe } from "@/components/newsletter-subscribe";
