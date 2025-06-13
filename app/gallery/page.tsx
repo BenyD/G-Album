@@ -5,11 +5,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, X, Grid3X3, List, Calendar, Tag } from "lucide-react";
+import { Search, Filter, X, Grid3X3, List } from "lucide-react";
 import PageHero from "@/components/page-hero";
 import { getAllGalleryImages } from "@/lib/services/gallery";
 import type { GalleryImage } from "@/lib/services/gallery";
 import Masonry from "react-masonry-css";
+
+// Add blur data URL for image placeholder
+const blurDataURL =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRoaHSQtJSEkMjU1LS0yMi4qLjgyPj4+Oj5CQkJCQkJCQkJCQkJCQkJCQkJCQkL/2wBDAR4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=";
 
 // Optimized animation variants
 const fadeInUp = {
@@ -43,17 +47,6 @@ const staggerContainer = {
       delayChildren: 0.1,
     },
   },
-};
-
-// Add loading state detection
-const useHasLoaded = () => {
-  const [hasLoaded, setHasLoaded] = useState(false);
-
-  useEffect(() => {
-    setHasLoaded(true);
-  }, []);
-
-  return hasLoaded;
 };
 
 // Add intersection observer hook for better performance
@@ -105,7 +98,6 @@ const breakpointColumns = {
 };
 
 export default function GalleryPage() {
-  const hasLoaded = useHasLoaded();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAlbums, setSelectedAlbums] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"masonry" | "list">("masonry");
@@ -140,14 +132,20 @@ export default function GalleryPage() {
     [galleryImages]
   );
 
-  // Optimize filtered images calculation
+  // Optimize filtered images calculation with memoized search terms
+  const searchTerms = useMemo(
+    () => searchQuery.toLowerCase().split(" "),
+    [searchQuery]
+  );
+
   const filteredImages = useMemo(() => {
-    const searchLower = searchQuery.toLowerCase();
     return galleryImages.filter((image) => {
+      const imageText = `${image.alt} ${image.album_name}`.toLowerCase();
+
+      // Check if all search terms are present
       if (
         searchQuery &&
-        !image.alt.toLowerCase().includes(searchLower) &&
-        !image.album_name.toLowerCase().includes(searchLower)
+        !searchTerms.every((term) => imageText.includes(term))
       ) {
         return false;
       }
@@ -158,7 +156,7 @@ export default function GalleryPage() {
 
       return true;
     });
-  }, [searchQuery, selectedAlbums, galleryImages]);
+  }, [searchTerms, selectedAlbums, galleryImages, searchQuery]);
 
   // Optimize scroll handler with useCallback
   const handleScroll = useCallback(() => {
@@ -186,11 +184,14 @@ export default function GalleryPage() {
   }, [searchQuery]);
 
   // Debounce function
-  function debounce(fn: Function, ms: number) {
+  function debounce<T extends (...args: unknown[]) => void>(
+    fn: T,
+    ms: number
+  ): (...args: Parameters<T>) => void {
     let timer: NodeJS.Timeout;
-    return (...args: any[]) => {
+    return (...args: Parameters<T>) => {
       clearTimeout(timer);
-      timer = setTimeout(() => fn.apply(this, args), ms);
+      timer = setTimeout(() => fn(...args), ms);
     };
   }
 
@@ -385,9 +386,16 @@ export default function GalleryPage() {
                           alt={image.alt}
                           width={800}
                           height={1200}
+                          unoptimized={true}
                           className="w-full h-auto object-cover rounded-none transition-transform duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           priority={index < 4}
+                          placeholder="blur"
+                          blurDataURL={blurDataURL}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder-image.jpg";
+                          }}
                         />
                         {/* Album title overlay */}
                         <div className="absolute inset-0 flex items-end justify-start p-4 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -423,12 +431,18 @@ export default function GalleryPage() {
                             src={image.image_url}
                             alt={image.alt}
                             fill
+                            unoptimized={true}
                             className="object-cover"
                             sizes="100vw"
                             loading={index < 12 ? "eager" : "lazy"}
                             priority={index < 4}
+                            placeholder="blur"
+                            blurDataURL={blurDataURL}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/placeholder-image.jpg";
+                            }}
                           />
-                          {/* Album title overlay */}
                           <div className="absolute inset-0 flex items-end justify-start p-6 bg-gradient-to-t from-black/50 via-black/20 to-transparent">
                             <h3 className="text-white text-xl font-medium tracking-wide">
                               {image.album_name}

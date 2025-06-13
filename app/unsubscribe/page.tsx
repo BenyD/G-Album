@@ -45,7 +45,7 @@ export default function UnsubscribePage() {
         setMessage(
           "You have been successfully unsubscribed from our newsletter."
         );
-      } catch (error) {
+      } catch {
         setStatus("error");
         setMessage(
           "There was an error processing your request. Please try again later."

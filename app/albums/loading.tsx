@@ -9,7 +9,7 @@ export default function Loading() {
         className="py-24 bg-gradient-to-b from-red-50 to-white"
       />
 
-      <section className="py-6 bg-white sticky top-16 z-10 border-b border-red-100/50 backdrop-blur-lg bg-white/80">
+      <section className="py-6 sticky top-16 z-10 border-b border-red-100/50 backdrop-blur-lg bg-white/80">
         <div className="container mx-auto px-4">
           <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
             <div className="relative flex-1 max-w-md">
