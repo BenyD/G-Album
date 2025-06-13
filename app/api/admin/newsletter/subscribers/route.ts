@@ -3,6 +3,29 @@ import { createClient } from "@/lib/supabase/server";
 
 const VALID_STATUSES = ["active", "inactive", "unsubscribed", "deleted", "all"];
 
+type RolePermission = {
+  permissions: {
+    id: string;
+    name: string;
+  };
+};
+
+type Role = {
+  id: string;
+  name: string;
+  permissions: {
+    id: string;
+    name: string;
+  }[];
+};
+
+type UpdateData = {
+  status?: string;
+  unsubscribed_at?: string;
+  deleted_at?: string;
+  name?: string;
+};
+
 export async function GET(request: Request) {
   try {
     console.log("Starting GET /api/admin/newsletter/subscribers");
@@ -73,7 +96,7 @@ export async function GET(request: Request) {
 
     // Check if user has the required permission
     const hasPermission = profile.roles.role_permissions.some(
-      (rp: any) => rp.permissions.name === "manage_subscribers"
+      (rp: RolePermission) => rp.permissions.name === "manage_subscribers"
     );
 
     if (!hasPermission) {
@@ -187,8 +210,8 @@ export async function PATCH(request: Request) {
     }
 
     // Check if user has the required permission
-    const hasPermission = profile.roles.some((role: any) =>
-      role.permissions.some((p: any) => p.name === "manage_subscribers")
+    const hasPermission = profile.roles.some((role: Role) =>
+      role.permissions.some((p) => p.name === "manage_subscribers")
     );
 
     if (!hasPermission) {
@@ -204,7 +227,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    let updateData: any = {};
+    let updateData: UpdateData = {};
     let message = "";
 
     switch (action) {

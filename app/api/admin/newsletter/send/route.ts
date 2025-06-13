@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendNewsletter } from "@/lib/resend";
 
+type RolePermission = {
+  permissions: {
+    id: string;
+    name: string;
+  };
+};
+
 export async function POST(request: Request) {
   try {
     // Create Supabase client
@@ -64,7 +71,7 @@ export async function POST(request: Request) {
 
     // Check if user has the required permission
     const hasPermission = profile.roles.role_permissions.some(
-      (rp: any) => rp.permissions.name === "send_newsletters"
+      (rp: RolePermission) => rp.permissions.name === "send_newsletters"
     );
 
     if (!hasPermission) {
