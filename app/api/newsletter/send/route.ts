@@ -8,6 +8,205 @@ if (!process.env.RESEND_API_KEY) {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Email template with proper HTML structure and styling
+const createEmailTemplate = (
+  content: string,
+  unsubscribeLink: string,
+  includeUnsubscribeLink: boolean
+) => {
+  return `
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>G Album Newsletter</title>
+  <style type="text/css">
+    /* Reset styles */
+    body, p, h1, h2, h3, h4, h5, h6 {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    /* Container */
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #ffffff;
+    }
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 20px 0;
+      border-bottom: 2px solid #f4f4f4;
+    }
+    .logo {
+      max-width: 150px;
+      height: auto;
+      border: 0;
+      display: inline-block;
+    }
+    /* Content */
+    .content {
+      padding: 30px 20px;
+      font-size: 16px;
+      color: #333333;
+    }
+    .content p {
+      margin-bottom: 20px;
+    }
+    .content a {
+      color: #ff0000;
+      text-decoration: none;
+    }
+    .content a:hover {
+      text-decoration: underline;
+    }
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #666666;
+      border-top: 2px solid #f4f4f4;
+    }
+    .unsubscribe {
+      margin-top: 20px;
+      padding: 10px;
+      font-size: 12px;
+      color: #999999;
+    }
+    .unsubscribe a {
+      color: #ff0000;
+      text-decoration: underline;
+    }
+    .unsubscribe a:hover {
+      color: #cc0000;
+    }
+    /* Accent elements */
+    .accent-line {
+      height: 4px;
+      background-color: #ff0000;
+      margin: 0 auto;
+      width: 60px;
+    }
+    /* Preheader text */
+    .preheader {
+      display: none;
+      max-height: 0px;
+      overflow: hidden;
+    }
+    /* Legal text */
+    .legal {
+      font-size: 11px;
+      color: #999999;
+      line-height: 1.4;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #f4f4f4;
+    }
+    /* Responsive */
+    @media only screen and (max-width: 600px) {
+      .container {
+        width: 100% !important;
+      }
+      .content {
+        padding: 20px 15px;
+      }
+      .mobile-padding {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+      }
+    }
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #1a1a1a !important;
+      }
+      .container {
+        background-color: #2d2d2d !important;
+      }
+      .content {
+        color: #ffffff !important;
+      }
+      .footer {
+        color: #999999 !important;
+      }
+      .unsubscribe {
+        color: #666666 !important;
+      }
+      .legal {
+        color: #666666 !important;
+        border-top-color: #444444 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Preheader text for email clients -->
+  <div class="preheader" style="display: none; max-height: 0px; overflow: hidden;">
+    G Album Newsletter - Stay updated with the latest news and updates from G Album.
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <img src="https://galbum.net/logo.png" alt="G Album" class="logo" width="150" height="auto">
+      <div class="accent-line"></div>
+    </div>
+    
+    <div class="content">
+      ${content}
+    </div>
+
+    <div class="footer">
+      <p>© ${new Date().getFullYear()} G Album. All rights reserved.</p>
+      ${
+        includeUnsubscribeLink
+          ? `
+      <div class="unsubscribe">
+        <p>
+          You're receiving this email because you subscribed to G Album's newsletter.
+          <br>
+          <a href="${unsubscribeLink}">Unsubscribe</a> if you no longer wish to receive these emails.
+        </p>
+      </div>
+      `
+          : ""
+      }
+      <div class="legal">
+        <p>
+          This email was sent to you because you subscribed to G Album's newsletter. 
+          Your email address is used solely for sending you newsletters and updates about our services. 
+          We respect your privacy and will never share your information with third parties.
+        </p>
+        <p>
+          G Album, 123A Triplicane High Road, Chennai, Tamil Nadu, India<br>
+          Email: kumaranmadras@gmail.com | Phone: +91 9444639912
+        </p>
+        <p>
+          As per Indian Information Technology Rules, 2011 and Information Technology 
+          (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+};
+
 export async function POST(request: Request) {
   try {
     const { subject, content, includeUnsubscribeLink } = await request.json();
@@ -61,16 +260,18 @@ export async function POST(request: Request) {
         subscriber.email
       )}&token=${unsubscribeToken}`;
 
-      const emailContent = includeUnsubscribeLink
-        ? `${content}\n\n---\n\nTo unsubscribe from our newsletter, click here: ${unsubscribeLink}`
-        : content;
+      const emailHtml = createEmailTemplate(
+        content,
+        unsubscribeLink,
+        includeUnsubscribeLink
+      );
 
       try {
         const { data, error } = await resend.emails.send({
           from: "G Album <marketing@galbum.net>",
           to: subscriber.email,
           subject,
-          html: emailContent,
+          html: emailHtml,
           tags: [
             { name: "newsletter_id", value: newsletter.id },
             { name: "subscriber_id", value: subscriber.id },
