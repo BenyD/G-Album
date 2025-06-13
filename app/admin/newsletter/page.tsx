@@ -56,6 +56,7 @@ import {
 import { RoleBasedContent } from "@/components/admin/role-based-content";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
+import { logActivity } from "@/utils/supabase/client";
 import {
   Table,
   TableBody,
@@ -242,6 +243,11 @@ export default function NewsletterPage() {
       filtered = filtered.filter(
         (subscriber) => subscriber.status === statusFilter
       );
+    } else {
+      // By default, exclude deleted subscribers
+      filtered = filtered.filter(
+        (subscriber) => subscriber.status !== "deleted"
+      );
     }
 
     // Apply search filter
@@ -295,6 +301,12 @@ export default function NewsletterPage() {
         throw new Error("Failed to send newsletter");
       }
 
+      await logActivity("send_newsletter", {
+        subject: newNewsletter.subject,
+        recipient_count: subscribers.filter((s) => s.status === "active")
+          .length,
+      });
+
       toast.success("Newsletter sent successfully");
       setCreateNewsletterOpen(false);
       setNewNewsletter({ subject: "", content: "" });
@@ -322,6 +334,11 @@ export default function NewsletterPage() {
       ]);
 
       if (error) throw error;
+
+      await logActivity("add_newsletter_subscriber", {
+        email: newSubscriber.email,
+        name: newSubscriber.name,
+      });
 
       toast.success("Subscriber added successfully");
       setAddSubscriberOpen(false);
@@ -359,20 +376,90 @@ export default function NewsletterPage() {
     }
   };
 
+  const handleSubscriberAction = async (
+    id: string,
+    action: string,
+    name?: string
+  ) => {
+    try {
+      let newStatus: Subscriber["status"] = "active";
+      let successMessage = "";
+      let activityAction = "";
+
+      switch (action) {
+        case "activate":
+          newStatus = "active";
+          successMessage = "Subscriber activated successfully";
+          activityAction = "activate_newsletter_subscriber";
+          break;
+        case "deactivate":
+          newStatus = "inactive";
+          successMessage = "Subscriber deactivated successfully";
+          activityAction = "deactivate_newsletter_subscriber";
+          break;
+        case "unsubscribe":
+          newStatus = "unsubscribed";
+          successMessage = "Subscriber unsubscribed successfully";
+          activityAction = "unsubscribe_newsletter_subscriber";
+          break;
+        case "delete":
+          setDeleteItem(subscribers.find((s) => s.id === id));
+          setDeleteType("subscriber");
+          setDeleteConfirmOpen(true);
+          return;
+        default:
+          return;
+      }
+
+      const { error } = await supabase
+        .from("newsletter_subscribers")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await logActivity(activityAction, {
+        subscriber_id: id,
+        email: subscribers.find((s) => s.id === id)?.email,
+        name: name,
+      });
+
+      toast.success(successMessage);
+      loadSubscribers();
+    } catch (error) {
+      console.error("Error updating subscriber status:", error);
+      toast.error("Failed to update subscriber status");
+    }
+  };
+
   const handleDeleteSubscriber = async () => {
     if (!deleteItem) return;
 
     try {
+      // Log the activity before deletion
+      await logActivity("delete_newsletter_subscriber", {
+        subscriber_id: deleteItem.id,
+        email: deleteItem.email,
+        name: deleteItem.name,
+      });
+
+      // Delete the subscriber completely
       const { error } = await supabase
         .from("newsletter_subscribers")
-        .update({ status: "deleted" })
+        .delete()
         .eq("id", deleteItem.id);
 
       if (error) throw error;
 
+      // Update local state immediately
+      setSubscribers((prevSubscribers) =>
+        prevSubscribers.filter((sub) => sub.id !== deleteItem.id)
+      );
+
       toast.success("Subscriber deleted successfully");
       setDeleteConfirmOpen(false);
-      loadSubscribers();
+      setDeleteItem(null);
+      setDeleteType(null);
     } catch (error) {
       console.error("Error deleting subscriber:", error);
       toast.error("Failed to delete subscriber");
@@ -401,6 +488,12 @@ export default function NewsletterPage() {
           .eq("id", deleteItem.id);
 
         if (error) throw error;
+
+        await logActivity("delete_newsletter", {
+          newsletter_id: deleteItem.id,
+          subject: deleteItem.subject,
+        });
+
         toast.success("Newsletter deleted successfully");
       } else if (deleteType === "subscriber") {
         await handleDeleteSubscriber();
@@ -413,47 +506,6 @@ export default function NewsletterPage() {
     } catch (error) {
       console.error("Error deleting item:", error);
       toast.error("Failed to delete item");
-    }
-  };
-
-  const handleSubscriberAction = async (
-    id: string,
-    action: string,
-    name?: string
-  ) => {
-    try {
-      let newStatus: Subscriber["status"] = "active";
-      let successMessage = "";
-
-      switch (action) {
-        case "activate":
-          newStatus = "active";
-          successMessage = "Subscriber activated successfully";
-          break;
-        case "deactivate":
-          newStatus = "inactive";
-          successMessage = "Subscriber deactivated successfully";
-          break;
-        case "unsubscribe":
-          newStatus = "unsubscribed";
-          successMessage = "Subscriber unsubscribed successfully";
-          break;
-        default:
-          return;
-      }
-
-      const { error } = await supabase
-        .from("newsletter_subscribers")
-        .update({ status: newStatus })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      toast.success(successMessage);
-      loadSubscribers();
-    } catch (error) {
-      console.error("Error updating subscriber status:", error);
-      toast.error("Failed to update subscriber status");
     }
   };
 
@@ -578,10 +630,11 @@ export default function NewsletterPage() {
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="all">All Active</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
             <SelectItem value="unsubscribed">Unsubscribed</SelectItem>
+            <SelectItem value="deleted">Deleted</SelectItem>
           </SelectContent>
         </Select>
         <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>

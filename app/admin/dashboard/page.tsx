@@ -114,6 +114,17 @@ export default function DashboardPage() {
       )
       .subscribe();
 
+    const newsletterSubscription = supabase
+      .channel("newsletter_subscribers_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "newsletter_subscribers" },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
     const formSubmissionsSubscription = supabase
       .channel("contact_submissions_changes")
       .on(
@@ -130,6 +141,7 @@ export default function DashboardPage() {
     return () => {
       ordersSubscription.unsubscribe();
       customersSubscription.unsubscribe();
+      newsletterSubscription.unsubscribe();
       formSubmissionsSubscription.unsubscribe();
     };
   }, []);
