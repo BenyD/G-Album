@@ -12,6 +12,7 @@ export interface DashboardStats {
   totalGalleryImages: number;
   totalNewsletterSubscribers: number;
   totalFormSubmissions: number;
+  totalOrders: number;
   storageUsage: {
     used: number;
     total: number;
@@ -32,11 +33,37 @@ export interface DashboardStats {
     size: number;
     percentage: number;
   }[];
+  recentOrders: {
+    id: string;
+    order_number: string;
+    customer_name: string;
+    total_amount: number;
+    status: string;
+    created_at: string;
+  }[];
+  recentCustomers: {
+    id: string;
+    studio_name: string;
+    contact_name: string;
+    email: string;
+    status: string;
+    created_at: string;
+  }[];
+  recentFormSubmissions: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    message: string;
+    status: string;
+    created_at: string;
+  }[];
 }
 
 export interface UsageHistory {
-  month: string;
-  storage: number;
+  month: Date;
+  storage_size: number;
+  database_size: number;
   users: number;
 }
 
@@ -52,9 +79,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     { count: galleryImagesCount },
     { count: newsletterCount },
     { count: formSubmissionsCount },
+    { count: ordersCount },
     storageStats,
     { data: userStats },
     { data: dbStats },
+    { data: recentOrders },
+    { data: recentCustomers },
+    { data: recentFormSubmissions },
   ] = await Promise.all([
     supabase.from("albums").select("*", { count: "exact", head: true }),
     supabase.from("gallery_images").select("*", { count: "exact", head: true }),
@@ -62,11 +93,38 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .from("newsletter_subscribers")
       .select("*", { count: "exact", head: true }),
     supabase
-      .from("form_submissions")
+      .from("contact_submissions")
       .select("*", { count: "exact", head: true }),
+    supabase.from("orders").select("*", { count: "exact", head: true }),
     getStorageStats(),
     supabase.from("admin_profiles").select("*"),
     supabase.rpc("get_database_stats"),
+    supabase
+      .from("orders")
+      .select(
+        `
+        id,
+        order_number,
+        total_amount,
+        status,
+        created_at,
+        customers (
+          studio_name
+        )
+      `
+      )
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("customers")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("contact_submissions")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   // Calculate storage usage
@@ -107,6 +165,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     totalGalleryImages: galleryImagesCount || 0,
     totalNewsletterSubscribers: newsletterCount || 0,
     totalFormSubmissions: formSubmissionsCount || 0,
+    totalOrders: ordersCount || 0,
     storageUsage: {
       used: storageUsed / (1024 * 1024 * 1024), // Convert to GB
       total: 1, // 1GB
@@ -123,6 +182,31 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       newThisMonth: newUsersThisMonth,
     },
     storageBreakdown,
+    recentOrders: (recentOrders || []).map((order) => ({
+      id: order.id,
+      order_number: order.order_number,
+      customer_name: order.customers?.studio_name || "Unknown",
+      total_amount: order.total_amount,
+      status: order.status,
+      created_at: order.created_at,
+    })),
+    recentCustomers: (recentCustomers || []).map((customer) => ({
+      id: customer.id,
+      studio_name: customer.studio_name,
+      contact_name: customer.reference_name || "N/A",
+      email: customer.email,
+      status: customer.is_active ? "active" : "inactive",
+      created_at: customer.created_at,
+    })),
+    recentFormSubmissions: (recentFormSubmissions || []).map((submission) => ({
+      id: submission.id,
+      name: submission.name,
+      email: submission.email,
+      phone: submission.phone,
+      message: submission.message,
+      status: submission.status,
+      created_at: submission.created_at,
+    })),
   };
 }
 
@@ -130,10 +214,13 @@ export async function getUsageHistory(): Promise<UsageHistory[]> {
   const { data: history } = await supabase
     .from("usage_history")
     .select("*")
-    .order("month", { ascending: true })
-    .limit(5);
+    .order("month", { ascending: false })
+    .limit(12); // Get last 12 months
 
-  return history || [];
+  return (history || []).map((record) => ({
+    ...record,
+    month: new Date(record.month),
+  }));
 }
 
 export async function getStorageBreakdown(): Promise<StorageBreakdown[]> {
@@ -142,5 +229,9 @@ export async function getStorageBreakdown(): Promise<StorageBreakdown[]> {
     .select("*")
     .order("size", { ascending: false });
 
-  return breakdown || [];
+  return (breakdown || []).map((record) => ({
+    ...record,
+    size: record.size / (1024 * 1024 * 1024), // Convert to GB
+    percentage: Number(record.percentage),
+  }));
 }

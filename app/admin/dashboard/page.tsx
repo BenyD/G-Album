@@ -1,452 +1,436 @@
 "use client";
 
-import { useRole } from "@/components/admin/role-context";
-import { useAuth } from "@/components/admin/auth-context";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { getDashboardStats } from "@/lib/services/dashboard";
+import { createClient } from "@/utils/supabase/client";
+import { Button } from "@/components/ui/button";
 import {
-  ImageIcon,
-  Mail,
-  MessageSquare,
-  Info,
+  PlusCircle,
   Users,
   Package,
-  Database,
-  HardDrive,
-  Activity,
-  Zap,
-  Server,
-  Loader2,
-  Plus,
+  Mail,
   FileText,
-  UserPlus,
-  ShoppingCart,
+  Command,
+  Search,
+  Settings,
+  Loader2,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { getDashboardStats, getUsageHistory } from "@/lib/services/dashboard";
-import { getRecentOrders, type Order } from "@/lib/services/orders";
-import { getRecentCustomers, type Customer } from "@/lib/services/customers";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
+import { redirect } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import { formatDistanceToNow } from "date-fns";
+import { Separator } from "@/components/ui/separator";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { role, hasPermission, isLoading: roleLoading } = useRole();
-  const { isInitialized, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState<any>(null);
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [recentCustomers, setRecentCustomers] = useState<Customer[]>([]);
-  const [usageHistory, setUsageHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    const supabase = createClient();
+
+    async function checkUserRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setError("You must be logged in to access this page");
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("admin_profiles")
+        .select("role_id, status, roles(name)")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || profile.status !== "approved") {
+        setError("You do not have permission to access this page");
+        setIsLoading(false);
+        return;
+      }
+
+      loadDashboardData();
+    }
+
     async function loadDashboardData() {
       try {
-        const [statsData, ordersData, customersData, historyData] =
-          await Promise.all([
-            getDashboardStats(),
-            getRecentOrders(),
-            getRecentCustomers(),
-            getUsageHistory(),
-          ]);
-
-        setStats(statsData);
-        setRecentOrders(ordersData);
-        setRecentCustomers(customersData);
-        setUsageHistory(historyData);
+        const data = await getDashboardStats();
+        setStats(data);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
-        toast.error("Failed to load dashboard data");
+        setError("Failed to load dashboard data");
       } finally {
         setIsLoading(false);
       }
     }
 
-    if (isInitialized && !authLoading && !roleLoading) {
-      loadDashboardData();
-    }
-  }, [isInitialized, authLoading, roleLoading]);
+    // Set up real-time subscriptions
+    const ordersSubscription = supabase
+      .channel("orders_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
 
-  if (!isInitialized || authLoading || roleLoading || isLoading) {
+    const customersSubscription = supabase
+      .channel("customers_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "customers" },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    const formSubmissionsSubscription = supabase
+      .channel("contact_submissions_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "contact_submissions" },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    checkUserRole();
+
+    return () => {
+      ordersSubscription.unsubscribe();
+      customersSubscription.unsubscribe();
+      formSubmissionsSubscription.unsubscribe();
+    };
+  }, []);
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+          <p className="text-sm text-muted-foreground">
+            Loading dashboard data...
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (!role || role === "guest") {
-    return (
-      <Alert variant="destructive" className="max-w-lg mx-auto mt-8">
-        <AlertTitle>Access Denied</AlertTitle>
-        <AlertDescription>
-          You do not have permission to view this dashboard. Please contact an
-          administrator if you believe this is an error.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <Alert variant="destructive" className="max-w-lg mx-auto mt-8">
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>
-          Failed to load dashboard data. Please try refreshing the page.
-        </AlertDescription>
-      </Alert>
-    );
+  if (error) {
+    return <Alert variant="destructive">{error}</Alert>;
   }
 
   return (
-    <div className="space-y-4">
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="supabase">Supabase Usage</TabsTrigger>
-          {hasPermission("view_analytics") && (
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          )}
-        </TabsList>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-red-900">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Overview of your business performance and recent activity
+        </p>
+      </div>
+      <Separator className="my-4" />
 
-        <TabsContent value="overview" className="space-y-4">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks and shortcuts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex flex-col items-center gap-2"
-                  onClick={() => router.push("/admin/customers/new")}
-                >
-                  <UserPlus className="h-6 w-6" />
-                  <span>New Customer</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex flex-col items-center gap-2"
-                  onClick={() => router.push("/admin/orders/new")}
-                >
-                  <ShoppingCart className="h-6 w-6" />
-                  <span>New Order</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex flex-col items-center gap-2"
-                  onClick={() => router.push("/admin/albums/new")}
-                >
-                  <ImageIcon className="h-6 w-6" />
-                  <span>New Album</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex flex-col items-center gap-2"
-                  onClick={() => router.push("/admin/gallery/new")}
-                >
-                  <Plus className="h-6 w-6" />
-                  <span>Add to Gallery</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="gap-2 border-red-100 hover:bg-red-50"
+            onClick={() => setOpen(true)}
+          >
+            <Command className="h-4 w-4" />
+            Quick Actions
+            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+        </div>
+      </div>
 
-          {/* Business Metrics */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Albums
-                </CardTitle>
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalAlbums}</div>
-                <p className="text-xs text-muted-foreground">
-                  Active albums in the system
-                </p>
-              </CardContent>
-            </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-red-100">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Customers
+            </CardTitle>
+            <Users className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-900">
+              {stats.userStats.total}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {stats.userStats.active} active customers
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-red-100">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <Package className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-900">
+              {stats.totalOrders}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {stats.recentOrders.length} recent orders
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-red-100">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Newsletter Subscribers
+            </CardTitle>
+            <Mail className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-900">
+              {stats.totalNewsletterSubscribers}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {stats.newSubscribersThisMonth} new this month
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-red-100">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Form Submissions
+            </CardTitle>
+            <FileText className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-900">
+              {stats.totalFormSubmissions}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {stats.recentFormSubmissions.length} new this month
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Gallery Images
-                </CardTitle>
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {stats.totalGalleryImages}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Total images in gallery
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Newsletter Subscribers
-                </CardTitle>
-                <Mail className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {stats.totalNewsletterSubscribers}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Active subscribers
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Form Submissions
-                </CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {stats.totalFormSubmissions}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Total submissions
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Recent Orders */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>Latest customer orders</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {order.customer_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDistanceToNow(new Date(order.created_at), {
-                            addSuffix: true,
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={
-                            order.status === "completed"
-                              ? "default"
-                              : order.status === "pending"
-                                ? "secondary"
-                                : "destructive"
-                          }
-                        >
-                          {order.status}
-                        </Badge>
-                        <span className="text-sm font-medium">
-                          ${order.amount.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Customers */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Customers</CardTitle>
-                <CardDescription>Latest registered customers</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentCustomers.map((customer) => (
-                    <div
-                      key={customer.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {customer.studio_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {customer.email}
-                        </p>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(customer.created_at), {
-                          addSuffix: true,
-                        })}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="supabase" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Storage Usage</CardTitle>
-                <CardDescription>
-                  {stats.storageUsage.used.toFixed(2)}GB of{" "}
-                  {stats.storageUsage.total}GB used
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Used Space</span>
-                    <span className="text-sm text-muted-foreground">
-                      {stats.storageUsage.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <Progress value={stats.storageUsage.percentage} />
-                </div>
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium mb-2">
-                    Storage Breakdown
-                  </h4>
-                  <div className="space-y-2">
-                    {stats.storageBreakdown.map((item: any) => (
-                      <div
-                        key={item.category}
-                        className="flex items-center justify-between"
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="col-span-1 border-red-100">
+          <CardHeader>
+            <CardTitle className="text-red-900">Recent Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {stats.recentOrders.map((order: any) => (
+                  <TableRow key={order.id}>
+                    <TableCell>{order.order_number}</TableCell>
+                    <TableCell>{order.customer_name}</TableCell>
+                    <TableCell>{formatCurrency(order.total_amount)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          order.status === "completed"
+                            ? "success"
+                            : order.status === "pending"
+                              ? "warning"
+                              : "destructive"
+                        }
                       >
-                        <span className="text-sm text-muted-foreground">
-                          {item.category}
-                        </span>
-                        <span className="text-sm font-medium">
-                          {item.size.toFixed(2)}GB
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                        {order.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Database Usage</CardTitle>
-                <CardDescription>
-                  {stats.databaseUsage.used.toFixed(2)}MB of{" "}
-                  {stats.databaseUsage.total}MB used
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Used Space</span>
-                    <span className="text-sm text-muted-foreground">
-                      {stats.databaseUsage.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <Progress value={stats.databaseUsage.percentage} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <Card className="col-span-1 border-red-100">
+          <CardHeader>
+            <CardTitle className="text-red-900">Recent Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Studio</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {stats.recentCustomers.map((customer: any) => (
+                  <TableRow key={customer.id}>
+                    <TableCell>{customer.studio_name}</TableCell>
+                    <TableCell>{customer.contact_name}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          customer.status === "active"
+                            ? "success"
+                            : "destructive"
+                        }
+                      >
+                        {customer.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Usage History</CardTitle>
-              <CardDescription>
-                Storage and database usage over the last 5 months
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={usageHistory}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      stroke="#82ca9d"
-                    />
-                    <Tooltip />
-                    <Bar
-                      yAxisId="left"
-                      dataKey="storage"
-                      name="Storage (GB)"
-                      fill="#8884d8"
-                    />
-                    <Bar
-                      yAxisId="right"
-                      dataKey="database"
-                      name="Database (MB)"
-                      fill="#82ca9d"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <Card className="col-span-1 border-red-100">
+          <CardHeader>
+            <CardTitle className="text-red-900">
+              Recent Form Submissions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {stats.recentFormSubmissions.map((submission: any) => (
+                  <TableRow key={submission.id}>
+                    <TableCell>{submission.name}</TableCell>
+                    <TableCell>{submission.email}</TableCell>
+                    <TableCell>{submission.phone}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          submission.status === "Replied"
+                            ? "success"
+                            : "secondary"
+                        }
+                      >
+                        {submission.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {formatDistanceToNow(new Date(submission.created_at), {
+                        addSuffix: true,
+                      })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
-        {hasPermission("view_analytics") && (
-          <TabsContent value="analytics" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics</CardTitle>
-                <CardDescription>
-                  Detailed analytics and insights (coming soon)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Analytics features are under development. Check back soon for
-                  detailed insights and reporting.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder="Type a command or search..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Quick Actions">
+            <CommandItem
+              onSelect={() => {
+                router.push("/admin/customers/new");
+                setOpen(false);
+              }}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Customer
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                router.push("/admin/orders/new");
+                setOpen(false);
+              }}
+            >
+              <Package className="mr-2 h-4 w-4" />
+              New Order
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                router.push("/admin/settings");
+                setOpen(false);
+              }}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Navigation">
+            <CommandItem
+              onSelect={() => {
+                router.push("/admin/customers");
+                setOpen(false);
+              }}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Customers
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                router.push("/admin/orders");
+                setOpen(false);
+              }}
+            >
+              <Package className="mr-2 h-4 w-4" />
+              Orders
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                router.push("/admin/forms");
+                setOpen(false);
+              }}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Form Submissions
+            </CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }
