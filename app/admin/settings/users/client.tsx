@@ -23,6 +23,7 @@ import {
   UserX,
   Pencil,
   Check,
+  Save,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -77,7 +78,7 @@ interface Role {
 }
 
 export function UserManagementClient() {
-  const { hasPermission } = useRole();
+  const { hasPermission, role } = useRole();
   const [users, setUsers] = useState<UserWithProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -85,25 +86,148 @@ export function UserManagementClient() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
   const [refreshing, setRefreshing] = useState(false);
-  const supabase = createClient();
   const [editingUser, setEditingUser] = useState<UserWithProfile | null>(null);
+  const [editedUser, setEditedUser] = useState<UserWithProfile | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [approvingUser, setApprovingUser] = useState<UserWithProfile | null>(
+    null
+  );
+  const [newUserName, setNewUserName] = useState("");
+  const supabase = createClient();
 
+  // Check if user can view the page
+  const canViewUsers = hasPermission("view_users");
+  // Check if user can manage users (super_admin only)
+  const canManageUsers = hasPermission("manage_users");
+
+  // Add a new function to handle user refresh
+  const refreshUsers = async () => {
+    setRefreshing(true);
+    try {
+      const [usersData, rolesData] = await Promise.all([
+        getUsers(),
+        getRoles(),
+      ]);
+      setUsers(usersData || []);
+      setRoles(rolesData || []);
+      toast.success("Users refreshed successfully");
+    } catch (error) {
+      console.error("Error refreshing users:", error);
+      toast.error("Failed to refresh users. Please try again.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Initial data load
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [usersData, rolesData] = await Promise.all([
-          getUsers(),
-          getRoles(),
-        ]);
-        setUsers(usersData || []);
-        setRoles(rolesData || []);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to load users and roles. Please try again.");
-      }
-    };
-    fetchData();
+    refreshUsers();
   }, []);
+
+  // Handle status update
+  const handleStatusUpdate = async (
+    userId: string,
+    status: "pending" | "approved" | "suspended"
+  ) => {
+    try {
+      const { error } = await supabase
+        .from("admin_profiles")
+        .update({
+          status,
+          ...(status === "approved"
+            ? { approved_at: new Date().toISOString() }
+            : {}),
+        })
+        .eq("id", userId);
+
+      if (error) {
+        console.error("Error updating status:", error);
+        throw error;
+      }
+
+      // Get current admin user
+      const {
+        data: { user: admin },
+        error: adminError,
+      } = await supabase.auth.getUser();
+      if (adminError || !admin) throw new Error("Could not get current user");
+
+      // Log the activity
+      await logActivity("user_status_updated", {
+        user_id: userId,
+        status,
+        updated_by: admin.id,
+      });
+
+      // Refresh the users list
+      await refreshUsers();
+      toast.success("Status updated successfully");
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status. Please try again.");
+    }
+  };
+
+  // Handle role update
+  const handleRoleUpdate = async (userId: string, roleId: string) => {
+    try {
+      const { error } = await supabase
+        .from("admin_profiles")
+        .update({ role_id: roleId })
+        .eq("id", userId);
+
+      if (error) {
+        console.error("Error updating role:", error);
+        throw error;
+      }
+
+      // Get current admin user
+      const {
+        data: { user: admin },
+        error: adminError,
+      } = await supabase.auth.getUser();
+      if (adminError || !admin) throw new Error("Could not get current user");
+
+      // Log the activity
+      await logActivity("user_role_updated", {
+        user_id: userId,
+        role_id: roleId,
+        updated_by: admin.id,
+      });
+
+      // Refresh the users list
+      await refreshUsers();
+      toast.success("Role updated successfully");
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error("Failed to update role. Please try again.");
+    }
+  };
+
+  // Format status for display
+  const formatStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  };
+
+  // Get role badge color
+  const getRoleBadgeColor = (roleName: string) => {
+    const colors: Record<string, string> = {
+      super_admin: "bg-red-100 text-red-800 border-red-200",
+      admin: "bg-red-100 text-red-800 border-red-200",
+      editor: "bg-red-100 text-red-800 border-red-200",
+      viewer: "bg-red-100 text-red-800 border-red-200",
+    };
+    return colors[roleName] || "bg-gray-100 text-gray-800 border-gray-200";
+  };
+
+  // Format role name for display
+  const formatRoleName = (roleName: string) => {
+    if (!roleName) return "";
+    return roleName
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
 
   // Filter users based on search term, role, and status
   const filteredUsers = users.filter((user) => {
@@ -145,18 +269,38 @@ export function UserManagementClient() {
     }
   });
 
-  // Handle status update
-  const handleStatusUpdate = async (
-    userId: string,
-    status: "pending" | "approved" | "suspended"
-  ) => {
+  // Get pending users
+  const pendingUsers = users.filter(
+    (user) => user.profile?.status === "pending"
+  );
+
+  // Get active users (non-pending)
+  const activeUsers = users.filter(
+    (user) => user.profile?.status !== "pending"
+  );
+
+  // Update handleApproveUser to include name
+  const handleApproveUser = async (userId: string, roleId: string) => {
+    if (!newUserName.trim()) {
+      toast.error("Please enter the user's name");
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("admin_profiles")
-        .update({ status })
+        .update({
+          status: "approved",
+          role_id: roleId,
+          full_name: newUserName.trim(),
+          approved_at: new Date().toISOString(),
+        })
         .eq("id", userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error approving user:", error);
+        throw error;
+      }
 
       // Get current admin user
       const {
@@ -166,147 +310,86 @@ export function UserManagementClient() {
       if (adminError || !admin) throw new Error("Could not get current user");
 
       // Log the activity
-      await logActivity("user_status_updated", {
+      await logActivity("user_approved", {
         user_id: userId,
-        status,
+        role_id: roleId,
         updated_by: admin.id,
       });
 
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                profile: user.profile
-                  ? {
-                      ...user.profile,
-                      status,
-                    }
-                  : null,
-              }
-            : user
-        )
-      );
-      toast.success("Status updated successfully");
+      // Reset states
+      setApprovingUser(null);
+      setNewUserName("");
+
+      // Refresh the users list
+      await refreshUsers();
+      toast.success("User approved successfully");
     } catch (error) {
-      console.error("Error updating status:", error);
-      toast.error("Failed to update status. Please try again.");
+      console.error("Error approving user:", error);
+      toast.error("Failed to approve user. Please try again.");
     }
   };
 
-  // Handle refresh
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  // Add new function to handle saving changes
+  const handleSaveChanges = async () => {
+    if (!editedUser || !editingUser) return;
+
+    setIsSaving(true);
     try {
-      const [usersData, rolesData] = await Promise.all([
-        getUsers(),
-        getRoles(),
-      ]);
-      setUsers(usersData || []);
-      setRoles(rolesData || []);
-      toast.success("Data refreshed successfully");
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-      toast.error("Failed to refresh data. Please try again.");
-    } finally {
-      setRefreshing(false);
-    }
-  };
+      // Update profile details
+      const { error: profileError } = await supabase
+        .from("admin_profiles")
+        .update({
+          full_name: editedUser.profile?.full_name,
+          role_id: editedUser.profile?.role_id,
+          status: editedUser.profile?.status,
+          ...(editedUser.profile?.status === "approved" &&
+          !editingUser.profile?.approved_at
+            ? { approved_at: new Date().toISOString() }
+            : {}),
+        })
+        .eq("id", editedUser.profile?.id);
 
-  // Format status for display
-  const formatStatus = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-  };
+      if (profileError) throw profileError;
 
-  // Handle edit save
-  const handleEditSave = async () => {
-    if (!editingUser) return;
+      // Get current admin user for activity logging
+      const {
+        data: { user: admin },
+        error: adminError,
+      } = await supabase.auth.getUser();
+      if (adminError || !admin) throw new Error("Could not get current user");
 
-    try {
-      // Update profile if name changed
-      if (
-        editingUser.profile?.full_name !==
-        users.find((u) => u.id === editingUser.id)?.profile?.full_name
-      ) {
-        await updateUserProfile(editingUser.id, {
-          full_name: editingUser.profile?.full_name || "",
-        });
-      }
+      // Log the activity
+      await logActivity("user_updated", {
+        user_id: editedUser.id,
+        role_id: editedUser.profile?.role_id,
+        status: editedUser.profile?.status,
+        updated_by: admin.id,
+      });
 
-      // Update role if changed
-      if (
-        editingUser.profile?.role_id !==
-        users.find((u) => u.id === editingUser.id)?.profile?.role_id
-      ) {
-        await assignRole(editingUser.id, editingUser.profile?.role_id || "");
-      }
+      // Refresh the users list
+      await refreshUsers();
 
-      // Update status if changed
-      if (
-        editingUser.profile?.status !==
-        users.find((u) => u.id === editingUser.id)?.profile?.status
-      ) {
-        await updateUserStatus(
-          editingUser.id,
-          editingUser.profile?.status as "approved" | "suspended"
-        );
-      }
-
-      // Update local state
-      const updatedUsers = users.map((user) =>
-        user.id === editingUser.id
-          ? {
-              ...editingUser,
-              profile: editingUser.profile
-                ? {
-                    ...editingUser.profile,
-                    id: user.profile?.id || editingUser.id,
-                    status: editingUser.profile.status,
-                  }
-                : null,
-            }
-          : user
-      ) as UserWithProfile[];
-      setUsers(updatedUsers);
-
+      // Close the dialog
       setEditingUser(null);
+      setEditedUser(null);
+
       toast.success("User updated successfully");
     } catch (error) {
       console.error("Error updating user:", error);
-      toast.error("Failed to update user");
+      toast.error("Failed to update user. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // Get role badge color
-  const getRoleBadgeColor = (roleName: string) => {
-    const colors: Record<string, string> = {
-      super_admin: "bg-red-100 text-red-800 border-red-200",
-      admin: "bg-red-100 text-red-800 border-red-200",
-      editor: "bg-red-100 text-red-800 border-red-200",
-      viewer: "bg-red-100 text-red-800 border-red-200",
-    };
-    return colors[roleName] || "bg-gray-100 text-gray-800 border-gray-200";
-  };
-
-  // Format role name for display
-  const formatRoleName = (roleName: string) => {
-    if (!roleName) return "";
-    return roleName
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
-  };
-
-  const canManageRoles = hasPermission("manage_users");
-
-  if (!canManageRoles) {
+  // If user can't view the page, show restricted access message
+  if (!canViewUsers) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>User Management</CardTitle>
           <CardDescription>
-            This feature is restricted to users with role management
-            permissions.
+            This feature is restricted to users with appropriate permissions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -362,12 +445,7 @@ export function UserManagementClient() {
             <UserX className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {
-                users.filter((user) => user.profile?.status === "pending")
-                  .length
-              }
-            </div>
+            <div className="text-2xl font-bold">{pendingUsers.length}</div>
             <p className="text-xs text-muted-foreground">
               Users awaiting approval
             </p>
@@ -393,6 +471,55 @@ export function UserManagementClient() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Users Section */}
+      {pendingUsers.length > 0 && (
+        <Card className="border-orange-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserX className="h-5 w-5 text-orange-500" />
+              Pending Users
+            </CardTitle>
+            <CardDescription>
+              New users awaiting approval and role assignment
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pendingUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-4 border rounded-lg bg-orange-50/50"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <p className="font-medium">{user.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Joined{" "}
+                        {format(new Date(user.created_at), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                  </div>
+                  {canManageUsers ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setApprovingUser(user)}
+                        className="border-orange-200 hover:bg-orange-50"
+                      >
+                        <Check className="mr-2 h-4 w-4" />
+                        Approve User
+                      </Button>
+                    </div>
+                  ) : (
+                    <Badge variant="secondary">Pending Approval</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search and Filters */}
       <Card className="border-red-100">
@@ -435,190 +562,163 @@ export function UserManagementClient() {
                 </SelectContent>
               </Select>
 
-              <Select
-                value={sortBy}
-                onValueChange={(value) => setSortBy(value as typeof sortBy)}
-              >
-                <SelectTrigger className="w-[180px] border-red-100">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest First</SelectItem>
-                  <SelectItem value="oldest">Oldest First</SelectItem>
-                  <SelectItem value="name">Name</SelectItem>
-                </SelectContent>
-              </Select>
-
               <Button
                 variant="outline"
-                size="sm"
-                onClick={handleRefresh}
+                size="icon"
+                onClick={refreshUsers}
                 disabled={refreshing}
-                className="border-red-100 hover:bg-red-50 hover:text-red-600"
+                className="border-red-100 hover:bg-red-50"
               >
                 <RefreshCw
-                  className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                  className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
                 />
-                Refresh
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Users Table */}
-      {sortedUsers.length === 0 ? (
-        <Card className="border-red-100">
-          <CardContent className="py-16 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
-              <User className="w-8 h-8 text-red-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-red-900 mb-2">
-              No Users Found
-            </h3>
-            <p className="text-muted-foreground max-w-sm mb-6">
-              {searchTerm || roleFilter !== "all" || statusFilter !== "all"
-                ? "No users match your current filters. Try adjusting your search criteria or clearing filters."
-                : "There are no users yet."}
-            </p>
-            {(searchTerm || roleFilter !== "all" || statusFilter !== "all") && (
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="border-red-100 hover:bg-red-50"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setRoleFilter("all");
-                    setStatusFilter("all");
-                  }}
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Clear Filters
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-red-100">
+      {/* Active Users Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Users</CardTitle>
+          <CardDescription>
+            {canManageUsers
+              ? "Manage user roles, permissions, and access levels"
+              : "View user roles and access levels"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-red-50/50">
+              <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Last Active</TableHead>
+                {canManageUsers && (
+                  <TableHead className="text-right">Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedUsers.map((user) => (
-                <TableRow
-                  key={user.id}
-                  className="cursor-pointer hover:bg-red-50/50"
-                >
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
-                        <User className="h-4 w-4 text-red-500" />
+              {sortedUsers
+                .filter((user) => user.profile?.status !== "pending")
+                .map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {user.profile?.full_name || "Unnamed User"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {user.email}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{user.email}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {user.profile?.full_name || "No name set"}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={getRoleBadgeColor(
-                        user.profile?.role?.name || ""
-                      )}
-                    >
-                      {formatRoleName(user.profile?.role?.name || "Unknown")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        user.profile?.status === "suspended"
-                          ? "bg-red-100 text-red-800 border-red-200"
-                          : user.profile?.status === "approved"
-                            ? "bg-green-100 text-green-800 border-green-200"
-                            : "bg-yellow-100 text-yellow-800 border-yellow-200"
-                      }
-                    >
-                      {formatStatus(user.profile?.status || "pending")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(user.created_at), "MMM d, yyyy")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:bg-red-50 hover:text-red-600"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setEditingUser(user)}
-                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit User
-                        </DropdownMenuItem>
-                        {user.profile?.status === "suspended" ? (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusUpdate(user.id, "approved")
-                            }
-                            className="text-green-600 focus:text-green-600 focus:bg-green-50"
-                          >
-                            <Check className="mr-2 h-4 w-4" />
-                            Approve User
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusUpdate(user.id, "suspended")
-                            }
-                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                          >
-                            <Ban className="mr-2 h-4 w-4" />
-                            Suspend User
-                          </DropdownMenuItem>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={getRoleBadgeColor(
+                          user.profile?.role?.name || ""
                         )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      >
+                        {formatRoleName(user.profile?.role?.name || "")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          user.profile?.status === "approved"
+                            ? "default"
+                            : "destructive"
+                        }
+                      >
+                        {formatStatus(user.profile?.status || "")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.profile?.last_active
+                        ? format(
+                            new Date(user.profile.last_active),
+                            "MMM d, yyyy"
+                          )
+                        : "Never"}
+                    </TableCell>
+                    {canManageUsers && (
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="hover:bg-red-50 hover:text-red-600"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setEditingUser(user)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit User
+                            </DropdownMenuItem>
+                            {user.profile?.status === "suspended" && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusUpdate(user.id, "approved")
+                                }
+                                className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                              >
+                                <Check className="mr-2 h-4 w-4" />
+                                Approve User
+                              </DropdownMenuItem>
+                            )}
+                            {user.profile?.status === "approved" && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusUpdate(user.id, "suspended")
+                                }
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Suspend User
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
-        </Card>
-      )}
+        </CardContent>
+      </Card>
 
-      {/* Edit User Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+      {/* Approve User Dialog */}
+      <Dialog
+        open={!!approvingUser}
+        onOpenChange={(open) => {
+          if (!open) {
+            setApprovingUser(null);
+            setNewUserName("");
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>Approve User</DialogTitle>
             <DialogDescription>
-              Update user details, role, and status
+              Set user details and assign a role
             </DialogDescription>
           </DialogHeader>
-          {editingUser && (
+          {approvingUser && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-red-900">
@@ -626,7 +726,7 @@ export function UserManagementClient() {
                 </Label>
                 <Input
                   id="email"
-                  value={editingUser.email}
+                  value={approvingUser.email}
                   disabled
                   className="bg-muted"
                 />
@@ -637,19 +737,9 @@ export function UserManagementClient() {
                 </Label>
                 <Input
                   id="full_name"
-                  value={editingUser.profile?.full_name || ""}
-                  onChange={(e) =>
-                    setEditingUser({
-                      ...editingUser,
-                      profile: editingUser.profile
-                        ? {
-                            ...editingUser.profile,
-                            id: editingUser.profile.id,
-                            full_name: e.target.value,
-                          }
-                        : null,
-                    })
-                  }
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  placeholder="Enter user's full name"
                   className="border-red-100 focus:border-red-200 focus:ring-red-100"
                 />
               </div>
@@ -658,19 +748,17 @@ export function UserManagementClient() {
                   Role
                 </Label>
                 <Select
-                  value={editingUser.profile?.role_id || ""}
-                  onValueChange={(value) =>
-                    setEditingUser({
-                      ...editingUser,
-                      profile: editingUser.profile
-                        ? {
-                            ...editingUser.profile,
-                            id: editingUser.profile.id,
-                            role_id: value,
-                          }
-                        : null,
-                    })
-                  }
+                  value={approvingUser.profile?.role_id || ""}
+                  onValueChange={(value) => {
+                    setApprovingUser({
+                      ...approvingUser,
+                      profile: {
+                        ...(approvingUser.profile || {}),
+                        role_id: value,
+                        role: roles.find((r) => r.id === value) || null,
+                      },
+                    });
+                  }}
                 >
                   <SelectTrigger className="border-red-100">
                     <SelectValue placeholder="Select role" />
@@ -684,49 +772,195 @@ export function UserManagementClient() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="status" className="text-red-900">
-                  Status
-                </Label>
-                <Select
-                  value={editingUser.profile?.status || "pending"}
-                  onValueChange={(value) =>
-                    setEditingUser({
-                      ...editingUser,
-                      profile: editingUser.profile
-                        ? {
-                            ...editingUser.profile,
-                            id: editingUser.profile.id,
-                            status: value as "approved" | "suspended",
-                          }
-                        : null,
-                    })
-                  }
-                >
-                  <SelectTrigger className="border-red-100">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingUser(null)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setApprovingUser(null);
+                setNewUserName("");
+              }}
+              className="border-red-100 hover:bg-red-50"
+            >
               Cancel
             </Button>
             <Button
-              onClick={handleEditSave}
+              onClick={() =>
+                approvingUser &&
+                handleApproveUser(
+                  approvingUser.id,
+                  approvingUser.profile?.role_id || ""
+                )
+              }
+              disabled={!newUserName.trim() || !approvingUser?.profile?.role_id}
               className="bg-red-600 hover:bg-red-700"
             >
-              Save Changes
+              <Check className="mr-2 h-4 w-4" />
+              Approve User
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit User Dialog */}
+      {canManageUsers && (
+        <Dialog
+          open={!!editingUser}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingUser(null);
+              setEditedUser(null);
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Update user details, role, and status
+              </DialogDescription>
+            </DialogHeader>
+            {editingUser && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-red-900">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    value={editingUser.email}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="full_name" className="text-red-900">
+                    Full Name
+                  </Label>
+                  <Input
+                    id="full_name"
+                    value={
+                      editedUser?.profile?.full_name ||
+                      editingUser.profile?.full_name ||
+                      ""
+                    }
+                    onChange={(e) =>
+                      setEditedUser({
+                        ...editingUser,
+                        profile: {
+                          ...(editedUser?.profile || editingUser.profile || {}),
+                          id: editingUser.profile?.id || "",
+                          full_name: e.target.value,
+                        },
+                      })
+                    }
+                    className="border-red-100 focus:border-red-200 focus:ring-red-100"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role" className="text-red-900">
+                    Role
+                  </Label>
+                  <Select
+                    value={
+                      editedUser?.profile?.role_id ||
+                      editingUser.profile?.role_id ||
+                      ""
+                    }
+                    onValueChange={(value) =>
+                      setEditedUser({
+                        ...editingUser,
+                        profile: {
+                          ...(editedUser?.profile || editingUser.profile || {}),
+                          id: editingUser.profile?.id || "",
+                          role_id: value,
+                          role: roles.find((r) => r.id === value) || null,
+                        },
+                      })
+                    }
+                  >
+                    <SelectTrigger className="border-red-100">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {formatRoleName(role.name)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-red-900">
+                    Status
+                  </Label>
+                  <Select
+                    value={
+                      editedUser?.profile?.status ||
+                      editingUser.profile?.status ||
+                      ""
+                    }
+                    onValueChange={(value) =>
+                      setEditedUser({
+                        ...editingUser,
+                        profile: {
+                          ...(editedUser?.profile || editingUser.profile || {}),
+                          id: editingUser.profile?.id || "",
+                          status: value as "approved" | "suspended" | "pending",
+                          ...(value === "approved" &&
+                          !editingUser.profile?.approved_at
+                            ? { approved_at: new Date().toISOString() }
+                            : {}),
+                        },
+                      })
+                    }
+                  >
+                    <SelectTrigger className="border-red-100">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingUser(null);
+                  setEditedUser(null);
+                }}
+                className="border-red-100 hover:bg-red-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveChanges}
+                disabled={isSaving || !editedUser}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

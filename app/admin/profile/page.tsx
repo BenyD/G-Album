@@ -618,6 +618,223 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Role-specific sections */}
+      <Card className="border-red-100">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-red-600" />
+            Permissions & Access
+          </CardTitle>
+          <CardDescription>
+            Your current permissions and access levels
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {profile.role?.role_permissions?.map((rp) => (
+                <div
+                  key={rp.permission.name}
+                  className="flex items-center gap-2 p-3 bg-red-50 rounded-lg"
+                >
+                  <Key className="w-4 h-4 text-red-600" />
+                  <div>
+                    <p className="text-sm font-medium text-red-900">
+                      {rp.permission.name
+                        .split("_")
+                        .map(
+                          (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                        )
+                        .join(" ")}
+                    </p>
+                    <p className="text-xs text-red-600">
+                      {rp.permission.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activity Section */}
+      <Card className="border-red-100">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-red-600" />
+            Recent Activity
+          </CardTitle>
+          <CardDescription>Your recent actions in the system</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {activityLogs.length > 0 ? (
+              <div className="space-y-2">
+                {activityLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex items-start gap-3 p-3 bg-red-50 rounded-lg"
+                  >
+                    <Clock className="w-4 h-4 text-red-600 mt-1" />
+                    <div>
+                      <p className="text-sm font-medium text-red-900">
+                        {log.action
+                          .split("_")
+                          .map(
+                            (word) =>
+                              word.charAt(0).toUpperCase() + word.slice(1)
+                          )
+                          .join(" ")}
+                      </p>
+                      <p className="text-xs text-red-600">
+                        {new Date(log.created_at).toLocaleString()}
+                      </p>
+                      {log.details && (
+                        <p className="text-xs text-red-600 mt-1">
+                          {JSON.stringify(log.details)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-red-600">No recent activity</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Role-specific features */}
+      {profile.role?.name === "super_admin" && (
+        <Card className="border-red-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-red-600" />
+              Super Admin Features
+            </CardTitle>
+            <CardDescription>
+              Additional features available to super administrators
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-900">User Management</h4>
+                  <p className="text-sm text-red-600">
+                    Full access to manage all users and their roles
+                  </p>
+                </div>
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-900">System Settings</h4>
+                  <p className="text-sm text-red-600">
+                    Access to all system configuration options
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {profile.role?.name === "admin" && (
+        <Card className="border-red-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-red-600" />
+              Admin Features
+            </CardTitle>
+            <CardDescription>
+              Additional features available to administrators
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-900">
+                    Content Management
+                  </h4>
+                  <p className="text-sm text-red-600">
+                    Full access to manage all content and media
+                  </p>
+                </div>
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-900">Analytics</h4>
+                  <p className="text-sm text-red-600">
+                    Access to all analytics and reporting features
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {profile.role?.name === "editor" && (
+        <Card className="border-red-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-red-600" />
+              Editor Features
+            </CardTitle>
+            <CardDescription>
+              Additional features available to editors
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-900">Content Creation</h4>
+                  <p className="text-sm text-red-600">
+                    Create and edit content and media
+                  </p>
+                </div>
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-900">Basic Analytics</h4>
+                  <p className="text-sm text-red-600">
+                    Access to basic analytics and reports
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {profile.role?.name === "viewer" && (
+        <Card className="border-red-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-red-600" />
+              Viewer Features
+            </CardTitle>
+            <CardDescription>Features available to viewers</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-900">Content Viewing</h4>
+                  <p className="text-sm text-red-600">
+                    View all published content and media
+                  </p>
+                </div>
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h4 className="font-medium text-red-900">Basic Reports</h4>
+                  <p className="text-sm text-red-600">
+                    Access to basic reports and statistics
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

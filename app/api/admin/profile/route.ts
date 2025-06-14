@@ -12,25 +12,10 @@ export async function GET(request: Request) {
 
     const serviceClient = await createClient();
 
+    // First get the basic profile
     const { data: profileData, error: profileError } = await serviceClient
       .from("admin_profiles")
-      .select(
-        `
-        *,
-        role:roles (
-          id,
-          name,
-          description,
-          role_permissions (
-            permission:permissions (
-              id,
-              name,
-              description
-            )
-          )
-        )
-      `
-      )
+      .select("*, role:roles(id, name, description)")
       .eq("id", userId)
       .single();
 
@@ -39,7 +24,41 @@ export async function GET(request: Request) {
       return new NextResponse(profileError.message, { status: 500 });
     }
 
-    return NextResponse.json(profileData);
+    if (!profileData) {
+      return new NextResponse("Profile not found", { status: 404 });
+    }
+
+    // Then get the permissions separately
+    const { data: permissionsData, error: permissionsError } =
+      await serviceClient
+        .from("role_permissions")
+        .select(
+          `
+        permission:permissions (
+          id,
+          name,
+          description
+        )
+      `
+        )
+        .eq("role_id", profileData.role_id);
+
+    if (permissionsError) {
+      console.error("Error loading permissions:", permissionsError);
+      return new NextResponse(permissionsError.message, { status: 500 });
+    }
+
+    // Combine the data
+    const responseData = {
+      ...profileData,
+      role: {
+        ...profileData.role,
+        role_permissions:
+          permissionsData?.map((p) => ({ permission: p.permission })) || [],
+      },
+    };
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("Error in profile API route:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

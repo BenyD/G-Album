@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Clock } from "lucide-react";
 import { useRole } from "@/components/admin/role-context";
+import { useRouter } from "next/navigation";
 
 const supabase = createClient();
 
@@ -34,13 +35,14 @@ interface ActivityLog {
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const { role, hasPermission } = useRole();
   const [settings, setSettings] = useState<GeneralSettings | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedSettings, setEditedSettings] = useState<
     Partial<GeneralSettings>
   >({});
   const [userId, setUserId] = useState<string | null>(null);
-  const { role } = useRole();
   const [globalLogs, setGlobalLogs] = useState<ActivityLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [logUserFilter, setLogUserFilter] = useState<string>("");
@@ -61,6 +63,13 @@ export default function SettingsPage() {
     };
     getUser();
   }, []);
+
+  // Check if user has permission
+  useEffect(() => {
+    if (!hasPermission("manage_general_settings")) {
+      router.push("/admin/dashboard");
+    }
+  }, [hasPermission, router]);
 
   // Fetch settings
   const { data: settingsData, isLoading } = useQuery({
@@ -105,7 +114,7 @@ export default function SettingsPage() {
 
       return data as GeneralSettings;
     },
-    enabled: !!userId, // Only run query when we have a user ID
+    enabled: !!userId && hasPermission("manage_general_settings"), // Only run query when we have a user ID and user has permission
   });
 
   // Update settings mutation
@@ -295,6 +304,11 @@ export default function SettingsPage() {
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />
       </div>
     );
+  }
+
+  // If user doesn't have permission, don't render anything
+  if (!hasPermission("manage_general_settings")) {
+    return null;
   }
 
   return (

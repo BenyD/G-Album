@@ -206,13 +206,13 @@ export default function AdminSidebar() {
       title: "User Management",
       href: "/admin/settings/users",
       icon: Users,
-      permission: "manage_users",
+      permission: "view_users",
     },
     {
       title: "General Settings",
       href: "/admin/settings",
       icon: Settings,
-      permission: "view_dashboard",
+      permission: "manage_general_settings",
     },
     {
       title: "Profile",
