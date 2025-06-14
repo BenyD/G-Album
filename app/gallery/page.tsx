@@ -53,6 +53,24 @@ export default function GalleryPage() {
     restDelta: 0.001,
   });
 
+  // Set view mode based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setViewMode("list");
+      }
+    };
+
+    // Set initial view mode
+    handleResize();
+
+    // Add event listener
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Get unique album names for filtering
   const allAlbums = useMemo(() => {
     const uniqueAlbums = new Set<string>();
@@ -202,23 +220,23 @@ export default function GalleryPage() {
 
       {/* Controls Section */}
       <section className="bg-white border-b border-red-100 sticky top-[56px] z-10">
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 py-4 sm:py-6">
           {/* Search and View Controls */}
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-6">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start lg:items-center justify-between mb-4 sm:mb-6">
             {/* Search */}
-            <div className="relative flex-1 max-w-xl">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <div className="relative flex-1 w-full max-w-xl">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
               <Input
                 type="search"
                 placeholder="Search albums..."
-                className="pl-10 border-red-200 focus-visible:ring-red-500 bg-white"
+                className="pl-9 sm:pl-10 h-9 sm:h-10 text-sm border-red-200 focus-visible:ring-red-500 bg-white"
                 defaultValue={searchQuery}
                 onChange={handleSearchChange}
               />
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-red-200">
+            <div className="hidden md:flex items-center gap-2 bg-white rounded-lg p-1 border border-red-200">
               <Button
                 variant={viewMode === "masonry" ? "default" : "ghost"}
                 size="sm"
@@ -249,78 +267,61 @@ export default function GalleryPage() {
           </div>
 
           {/* Filters */}
-          <Collapsible
-            open={isFiltersOpen}
-            onOpenChange={setIsFiltersOpen}
-            className="bg-transparent"
-          >
-            <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center">
+            <Collapsible
+              open={isFiltersOpen}
+              onOpenChange={setIsFiltersOpen}
+              className="w-full sm:w-auto"
+            >
               <CollapsibleTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-red-200 text-red-700 hover:bg-red-50"
+                  className="w-full sm:w-auto h-9 sm:h-10 text-sm border-red-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                 >
-                  <Filter className="h-4 w-4 mr-2" />
+                  <Filter className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                   Filters
-                  {selectedAlbums.length > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-2 bg-red-100 text-red-700"
-                    >
-                      {selectedAlbums.length}
-                    </Badge>
-                  )}
                   <ChevronDown
-                    className={`h-4 w-4 ml-2 transition-transform ${
+                    className={`h-4 w-4 ml-2 transition-transform duration-200 ${
                       isFiltersOpen ? "rotate-180" : ""
                     }`}
                   />
                 </Button>
               </CollapsibleTrigger>
-
-              {(searchQuery || selectedAlbums.length > 0) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="border-red-200 text-red-700 hover:bg-red-50"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear All
-                </Button>
-              )}
-            </div>
-
-            <CollapsibleContent>
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-slate-700">
-                    Filter by Album:
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
+              <CollapsibleContent className="mt-2 sm:mt-0 sm:ml-2">
+                <div className="flex flex-wrap gap-2 p-2 bg-white rounded-lg border border-red-100">
                   {allAlbums.map((album) => (
-                    <Button
+                    <Badge
                       key={album}
                       variant={
                         selectedAlbums.includes(album) ? "default" : "outline"
                       }
-                      size="sm"
-                      onClick={() => toggleAlbum(album)}
-                      className={`${
+                      className={`cursor-pointer text-sm px-3 py-1 h-7 sm:h-8 ${
                         selectedAlbums.includes(album)
                           ? "bg-red-600 text-white hover:bg-red-700"
-                          : "border-red-200 text-red-700 hover:bg-red-50"
+                          : "border-red-200 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                       }`}
+                      onClick={() => toggleAlbum(album)}
                     >
                       {album}
-                    </Button>
+                    </Badge>
                   ))}
                 </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {(searchQuery || selectedAlbums.length > 0) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-9 sm:h-10 text-sm text-slate-600 hover:text-red-600 hover:bg-red-50"
+              >
+                <X className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 

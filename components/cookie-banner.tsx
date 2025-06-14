@@ -53,13 +53,13 @@ const CookieBanner = () => {
         exit={{ y: 100, opacity: 0 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg"
       >
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 py-4 sm:py-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex-1 pr-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div className="flex-1 pr-4 max-w-full">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">
                 We value your privacy
               </h3>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 mb-1 sm:mb-2">
                 We use cookies and similar technologies to provide you with a
                 better experience on our website, analyze site traffic, and
                 secure our services in accordance with our{" "}
@@ -77,29 +77,29 @@ const CookieBanner = () => {
                 Sensitive Personal Data or Information) Rules, 2011.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 min-w-[300px]">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:min-w-[300px]">
               <button
                 onClick={handleAcceptNecessary}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors active:bg-gray-300"
               >
                 Necessary Only
               </button>
               <button
                 onClick={handleCustomize}
-                className="px-4 py-2 text-sm font-medium text-red-600 border border-red-600 hover:bg-red-50 rounded-md transition-colors"
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-red-600 border border-red-600 hover:bg-red-50 rounded-md transition-colors active:bg-red-100"
               >
                 Customize
               </button>
               <button
                 onClick={handleAcceptAll}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors active:bg-red-800"
               >
                 Accept All
               </button>
             </div>
             <button
               onClick={() => setIsVisible(false)}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+              className="absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 active:bg-gray-200"
               aria-label="Close cookie banner"
             >
               <X size={20} />

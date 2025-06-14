@@ -501,18 +501,18 @@ export default function Home() {
       </section>
 
       {/* Featured Albums Section - Enhanced */}
-      <section className="py-20">
+      <section className="py-12 sm:py-20">
         <div className="container mx-auto px-4">
           <motion.div
-            className="flex flex-col md:flex-row justify-between items-center mb-12"
+            className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 sm:mb-12"
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             viewport={{ once: true, margin: "-100px" }}
           >
-            <div>
+            <div className="w-full md:w-auto">
               <motion.span
-                className="inline-block text-red-600 font-medium mb-2"
+                className="inline-block text-red-600 font-medium mb-1.5 sm:mb-2 text-sm sm:text-base"
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
@@ -520,22 +520,22 @@ export default function Home() {
               >
                 Our Showcase
               </motion.span>
-              <h2 className="text-3xl md:text-4xl font-bold text-red-900">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-red-900 mb-4 md:mb-0">
                 Featured Albums
               </h2>
             </div>
             <Link
               href="/albums"
-              className="group text-red-600 hover:text-red-700 font-medium flex items-center mt-4 md:mt-0 transition-colors duration-200"
+              className="group text-red-600 hover:text-red-700 font-medium flex items-center w-full md:w-auto justify-center md:justify-start mt-2 md:mt-0 transition-colors duration-200 text-sm sm:text-base bg-red-50 md:bg-transparent py-2 px-4 rounded-lg md:rounded-none md:p-0"
             >
               View All Albums
-              <ArrowRight className="ml-1 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {isLoading ? (
-              // Loading skeletons
+              // Loading skeletons - Optimized for mobile
               [...Array(3)].map((_, index) => (
                 <motion.div
                   key={index}
@@ -546,12 +546,12 @@ export default function Home() {
                   viewport={{ once: true, margin: "-100px" }}
                 >
                   <div className="relative overflow-hidden rounded-xl shadow-lg bg-white">
-                    <div className="relative aspect-4/5 bg-gray-200" />
-                    <div className="absolute inset-0 flex flex-col justify-end p-6">
-                      <div className="space-y-3">
-                        <div className="h-6 bg-gray-300 rounded w-3/4" />
-                        <div className="h-4 bg-gray-300 rounded w-1/2" />
-                        <div className="h-8 bg-gray-300 rounded w-1/3 mt-4" />
+                    <div className="relative aspect-[4/5] bg-gray-200" />
+                    <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6">
+                      <div className="space-y-2 sm:space-y-3">
+                        <div className="h-5 sm:h-6 bg-gray-300 rounded w-3/4" />
+                        <div className="h-3 sm:h-4 bg-gray-300 rounded w-1/2" />
+                        <div className="h-7 sm:h-8 bg-gray-300 rounded w-1/3 mt-3 sm:mt-4" />
                       </div>
                     </div>
                   </div>
@@ -559,16 +559,16 @@ export default function Home() {
               ))
             ) : featuredAlbums.length === 0 ? (
               <motion.div
-                className="col-span-3 text-center py-12"
+                className="col-span-full text-center py-8 sm:py-12"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
                 viewport={{ once: true }}
               >
-                <h3 className="text-xl font-semibold text-gray-700">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-700">
                   No featured albums yet
                 </h3>
-                <p className="text-gray-500 mt-2">
+                <p className="text-gray-500 mt-2 text-sm sm:text-base">
                   Check back soon for featured content
                 </p>
               </motion.div>
@@ -581,37 +581,40 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                   viewport={{ once: true, margin: "-100px" }}
-                  whileHover={{ y: -8 }}
+                  whileHover={{ y: -4 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:shadow-xl bg-white">
-                    <div className="relative aspect-4/5">
+                    <div className="relative aspect-[4/5]">
                       <Image
                         src={album.cover_image_url || "/placeholder.svg"}
                         alt={album.title}
                         fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        priority={index < 2}
                       />
                       {/* Enhanced gradient overlay - visible by default */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-red-900/50 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-red-900/50 to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-500" />
                       {/* Glow effect */}
                       <div className="absolute -inset-x-2 bottom-0 h-1/2 bg-red-500/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     </div>
                     {/* Content visible by default */}
-                    <div className="absolute inset-0 flex flex-col justify-end p-6 transition-all duration-500">
+                    <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 transition-all duration-500">
                       <div className="relative z-10">
-                        <h3 className="text-2xl font-bold text-white mb-2 translate-y-0 group-hover:translate-y-0 transition-transform duration-500">
+                        <h3 className="text-xl sm:text-2xl font-bold text-white mb-1.5 sm:mb-2 translate-y-0 group-hover:translate-y-0 transition-transform duration-500">
                           {album.title}
                         </h3>
-                        <p className="text-red-100 mb-4 line-clamp-2 opacity-90 group-hover:opacity-100 transition-opacity duration-500">
+                        <p className="text-red-100 mb-3 sm:mb-4 line-clamp-2 opacity-90 group-hover:opacity-100 transition-opacity duration-500 text-sm sm:text-base">
                           {album.description || "No description"}
                         </p>
                         <Link href={`/albums/${album.id}`}>
                           <Button
                             size="sm"
-                            className="bg-white/90 backdrop-blur-sm text-red-600 hover:bg-white hover:text-red-700 transition-colors duration-200 group/btn translate-y-0 group-hover:translate-y-0 opacity-90 hover:opacity-100"
+                            className="bg-white/90 backdrop-blur-sm text-red-600 hover:bg-white hover:text-red-700 transition-colors duration-200 group/btn translate-y-0 group-hover:translate-y-0 opacity-90 hover:opacity-100 h-8 sm:h-9 px-3 sm:px-4 text-sm"
                           >
                             View Album
-                            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
+                            <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
                           </Button>
                         </Link>
                       </div>
