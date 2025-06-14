@@ -1,5 +1,20 @@
 import { createClient } from "@/utils/supabase/client";
 
+interface Album {
+  id: string;
+  title: string;
+  description: string | null;
+}
+
+interface AlbumImage {
+  id: string;
+  image_url: string;
+  album_id: string;
+  order_index: number;
+  created_at: string;
+  albums: Album;
+}
+
 export interface GalleryImage {
   id: string;
   image_url: string;
@@ -24,7 +39,7 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
       album_id,
       order_index,
       created_at,
-      albums!inner (
+      albums (
         id,
         title,
         description
@@ -42,17 +57,17 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
     return [];
   }
 
-  return data.map((item) => ({
+  return data.map((item: any) => ({
     id: item.id,
     image_url: item.image_url,
     album_id: item.album_id,
-    album_name: item.albums[0].title,
-    alt: `Image from ${item.albums[0].title}${
-      item.albums[0].description ? ": " + item.albums[0].description : ""
+    album_name: item.albums?.title || "Unknown Album",
+    alt: `Image from ${item.albums?.title || "Unknown Album"}${
+      item.albums?.description ? ": " + item.albums.description : ""
     }`,
     upload_date: new Date(item.created_at).toLocaleDateString(),
     order_index: item.order_index,
-    is_visible: true, // Since we don't have is_visible in the schema, default to true
+    is_visible: true,
   }));
 }
 
