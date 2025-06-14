@@ -28,6 +28,7 @@ import {
   UserCheck,
   ShoppingCart,
   ExternalLink,
+  History,
 } from "lucide-react";
 import { useRole } from "@/components/admin/role-context";
 import { Button } from "@/components/ui/button";
@@ -207,6 +208,12 @@ export default function AdminSidebar() {
       href: "/admin/settings/users",
       icon: Users,
       permission: "view_users",
+    },
+    {
+      title: "Activity Logs",
+      href: "/admin/activity",
+      icon: History,
+      permission: "view_activity_logs",
     },
     {
       title: "General Settings",

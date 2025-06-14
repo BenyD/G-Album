@@ -111,6 +111,14 @@ const commandMenuItems = [
     group: "Navigation",
   },
   {
+    title: "Activity Logs",
+    href: "/admin/activity",
+    icon: History,
+    shortcut: "⌘L",
+    permission: "view_activity_logs",
+    group: "Navigation",
+  },
+  {
     title: "Back to Website",
     href: "/",
     icon: Home,
