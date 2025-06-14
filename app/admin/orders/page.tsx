@@ -24,6 +24,7 @@ import {
   Mail,
   Phone,
   MessageSquare,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -180,7 +180,7 @@ export default function OrdersPage() {
     reason: string;
   } | null>(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState("");
-  const { role } = useRole();
+  const { hasPermission } = useRole();
   const searchParams = useSearchParams();
   const customerFilter = searchParams.get("customer");
   const [ordersTab, setOrdersTab] = useState("active");
@@ -779,15 +779,37 @@ export default function OrdersPage() {
       order.status === "delivered" && order.amount_paid >= order.total_amount
   );
 
+  // Add permission checks for actions
+  const canManageOrders = hasPermission("manage_orders");
+  const canViewOrders = hasPermission("view_orders");
+
+  // If user doesn't have view permission, show access denied
+  if (!canViewOrders) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
+          <p className="text-gray-600">
+            You don&apos;t have permission to view this page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2 relative">
-        <h1 className="text-2xl font-bold text-red-900">Orders</h1>
-        <p className="text-muted-foreground">
-          Manage customer orders and payments
-        </p>
-        <div className="absolute -bottom-1 left-0 w-12 h-1 bg-red-600 rounded-full" />
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Orders</h1>
+        {canManageOrders && (
+          <Button
+            onClick={() => setIsAddOrderOpen(true)}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Order
+          </Button>
+        )}
       </div>
 
       {/* Statistics Cards */}
@@ -951,15 +973,6 @@ export default function OrdersPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <Button
-                onClick={() => setIsAddOrderOpen(true)}
-                className="bg-red-600 hover:bg-red-700 text-white"
-                size="sm"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Order
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -1097,64 +1110,52 @@ export default function OrdersPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedOrder(order);
-                                setIsAddPaymentOpen(true);
+                                setIsDetailsOpen(true);
                               }}
                             >
-                              <CreditCard className="w-4 h-4 mr-2" />
-                              Add Payment
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateOrderMutation.mutate({
-                                  id: order.id,
-                                  data: {
-                                    status:
-                                      order.status === "pending"
-                                        ? "in_progress"
-                                        : order.status === "in_progress"
-                                          ? "completed"
-                                          : order.status === "completed" &&
-                                              order.total_amount <=
-                                                order.amount_paid
-                                            ? "delivered"
-                                            : order.status,
-                                  },
-                                });
-                              }}
-                              disabled={
-                                !(
-                                  role === "super_admin" ||
-                                  order.status === "pending"
-                                )
-                              }
-                            >
-                              <CheckCircle2 className="w-4 h-4 mr-2" />
-                              {order.status === "pending"
-                                ? "Mark In Progress"
-                                : order.status === "in_progress"
-                                  ? "Mark Completed"
-                                  : order.status === "completed"
-                                    ? "Mark Delivered"
-                                    : "Status"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOrderToDelete(order);
-                              }}
-                              className="text-red-600"
-                              disabled={
-                                !(
-                                  role === "super_admin" ||
-                                  order.status === "pending"
-                                )
-                              }
-                            >
-                              <Trash className="w-4 h-4 mr-2" />
-                              Delete Order
-                            </DropdownMenuItem>
+                            {canManageOrders && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedOrder(order);
+                                    setIsUpdateStatusOpen(true);
+                                  }}
+                                >
+                                  <RefreshCw className="w-4 h-4 mr-2" />
+                                  Update Status
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedOrder(order);
+                                    setNewPayment({
+                                      order_id: order.id,
+                                      amount: order.balance_amount,
+                                      payment_method: "Cash",
+                                      notes: "",
+                                    });
+                                    setIsAddPaymentOpen(true);
+                                  }}
+                                >
+                                  <CircleDollarSign className="w-4 h-4 mr-2" />
+                                  Add Payment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOrderToDelete(order);
+                                  }}
+                                  className="text-red-600"
+                                >
+                                  <Trash className="w-4 h-4 mr-2" />
+                                  Delete Order
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -1257,64 +1258,52 @@ export default function OrdersPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedOrder(order);
-                                setIsAddPaymentOpen(true);
+                                setIsDetailsOpen(true);
                               }}
                             >
-                              <CreditCard className="w-4 h-4 mr-2" />
-                              Add Payment
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateOrderMutation.mutate({
-                                  id: order.id,
-                                  data: {
-                                    status:
-                                      order.status === "pending"
-                                        ? "in_progress"
-                                        : order.status === "in_progress"
-                                          ? "completed"
-                                          : order.status === "completed" &&
-                                              order.total_amount <=
-                                                order.amount_paid
-                                            ? "delivered"
-                                            : order.status,
-                                  },
-                                });
-                              }}
-                              disabled={
-                                !(
-                                  role === "super_admin" ||
-                                  order.status === "pending"
-                                )
-                              }
-                            >
-                              <CheckCircle2 className="w-4 h-4 mr-2" />
-                              {order.status === "pending"
-                                ? "Mark In Progress"
-                                : order.status === "in_progress"
-                                  ? "Mark Completed"
-                                  : order.status === "completed"
-                                    ? "Mark Delivered"
-                                    : "Status"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOrderToDelete(order);
-                              }}
-                              className="text-red-600"
-                              disabled={
-                                !(
-                                  role === "super_admin" ||
-                                  order.status === "pending"
-                                )
-                              }
-                            >
-                              <Trash className="w-4 h-4 mr-2" />
-                              Delete Order
-                            </DropdownMenuItem>
+                            {canManageOrders && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedOrder(order);
+                                    setIsUpdateStatusOpen(true);
+                                  }}
+                                >
+                                  <RefreshCw className="w-4 h-4 mr-2" />
+                                  Update Status
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedOrder(order);
+                                    setNewPayment({
+                                      order_id: order.id,
+                                      amount: order.balance_amount,
+                                      payment_method: "Cash",
+                                      notes: "",
+                                    });
+                                    setIsAddPaymentOpen(true);
+                                  }}
+                                >
+                                  <CircleDollarSign className="w-4 h-4 mr-2" />
+                                  Add Payment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOrderToDelete(order);
+                                  }}
+                                  className="text-red-600"
+                                >
+                                  <Trash className="w-4 h-4 mr-2" />
+                                  Delete Order
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

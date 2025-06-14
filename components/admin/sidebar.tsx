@@ -188,14 +188,14 @@ export default function AdminSidebar() {
       title: "Customers",
       href: "/admin/customers",
       icon: UserCheck,
-      permission: "manage_users",
+      permission: "view_customers",
       shortcut: "⌘C",
     },
     {
       title: "Orders",
       href: "/admin/orders",
       icon: ShoppingCart,
-      permission: "manage_orders",
+      permission: "view_orders",
       shortcut: "⌘O",
     },
   ];

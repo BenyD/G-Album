@@ -26,6 +26,7 @@ import {
   PlusCircle,
   UserPlus,
   FilePlus,
+  MessageSquare,
 } from "lucide-react";
 
 const commandMenuItems = [
@@ -128,7 +129,7 @@ const commandMenuItems = [
     href: "/admin/customers",
     icon: UserPlus,
     shortcut: "C",
-    permission: "manage_users",
+    permission: "manage_customers",
     group: "Quick Actions",
     action: "add_customer",
   },
@@ -140,6 +141,23 @@ const commandMenuItems = [
     permission: "manage_orders",
     group: "Quick Actions",
     action: "add_order",
+  },
+  {
+    title: "Send Newsletter",
+    href: "/admin/newsletter",
+    icon: Mail,
+    shortcut: "N",
+    permission: "manage_newsletter",
+    group: "Quick Actions",
+    action: "send_newsletter",
+  },
+  {
+    title: "View Form Submissions",
+    href: "/admin/submissions",
+    icon: MessageSquare,
+    shortcut: "F",
+    permission: "view_submissions",
+    group: "Quick Actions",
   },
 ];
 

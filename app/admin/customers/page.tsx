@@ -27,7 +27,6 @@ import {
   Loader2,
   UserX,
   CheckCircle2,
-  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,6 +87,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { AddCustomerDialog } from "@/components/admin/customers/AddCustomerDialog";
+import { useRole } from "@/components/admin/role-context";
 
 const supabase = createClient();
 
@@ -122,6 +122,10 @@ const orderStatusBadgeVariants: Record<
 export default function CustomersPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { hasPermission } = useRole();
+  const searchParams = useSearchParams();
+
+  // State hooks
   const [searchTerm, setSearchTerm] = useState("");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
@@ -146,32 +150,12 @@ export default function CustomersPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editForm, setEditForm] = useState(defaultFormState);
-  const searchParams = useSearchParams();
 
-  // Handle action query parameter
-  useEffect(() => {
-    const action = searchParams.get("action");
-    if (action === "add") {
-      setIsAddCustomerOpen(true);
-    }
-  }, [searchParams]);
+  // Permission checks
+  const canManageCustomers = hasPermission("manage_customers");
+  const canViewCustomers = hasPermission("view_customers");
 
-  // Handle modal state changes
-  const handleAddCustomerOpenChange = (open: boolean) => {
-    setIsAddCustomerOpen(open);
-    if (!open) {
-      // Remove the action parameter when modal is closed
-      const url = new URL(window.location.href);
-      url.searchParams.delete("action");
-      window.history.replaceState(
-        {},
-        document.title,
-        url.pathname + url.search
-      );
-    }
-  };
-
-  // Fetch customers
+  // Query hooks
   const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
@@ -185,7 +169,6 @@ export default function CustomersPage() {
     },
   });
 
-  // Fetch active flags
   const { data: activeFlags } = useQuery({
     queryKey: ["active-flags"],
     queryFn: async () => {
@@ -198,7 +181,6 @@ export default function CustomersPage() {
     },
   });
 
-  // Add new query for all customer orders
   const { data: allCustomerOrders } = useQuery({
     queryKey: ["all-customer-orders"],
     queryFn: async () => {
@@ -212,43 +194,7 @@ export default function CustomersPage() {
     },
   });
 
-  // Calculate customer statistics
-  const customerStats = useMemo(() => {
-    if (!allCustomerOrders) return new Map();
-
-    const stats = new Map<
-      string,
-      {
-        totalOrders: number;
-        totalSpent: number;
-        activeOrders: number;
-        pendingAmount: number;
-      }
-    >();
-
-    allCustomerOrders.forEach((order) => {
-      const customerId = order.customer_id;
-      const currentStats = stats.get(customerId) || {
-        totalOrders: 0,
-        totalSpent: 0,
-        activeOrders: 0,
-        pendingAmount: 0,
-      };
-
-      stats.set(customerId, {
-        totalOrders: currentStats.totalOrders + 1,
-        totalSpent: currentStats.totalSpent + order.amount_paid,
-        activeOrders:
-          currentStats.activeOrders + (order.status !== "delivered" ? 1 : 0),
-        pendingAmount:
-          currentStats.pendingAmount + (order.total_amount - order.amount_paid),
-      });
-    });
-
-    return stats;
-  }, [allCustomerOrders]);
-
-  // Delete customer mutation
+  // Mutation hooks
   const deleteCustomerMutation = useMutation({
     mutationFn: async (customerId: string) => {
       // Fetch customer details before deletion for logging
@@ -292,7 +238,6 @@ export default function CustomersPage() {
     },
   });
 
-  // Update customer mutation
   const updateCustomerMutation = useMutation({
     mutationFn: async (customer: Customer) => {
       // Fetch current customer data for comparison
@@ -351,7 +296,6 @@ export default function CustomersPage() {
     },
   });
 
-  // Flag customer mutation
   const flagCustomerMutation = useMutation({
     mutationFn: async (input: CreateCustomerFlagInput) => {
       // Get current user id
@@ -395,7 +339,6 @@ export default function CustomersPage() {
     },
   });
 
-  // Add resolve flag mutation
   const resolveFlagMutation = useMutation({
     mutationFn: async ({
       flagId,
@@ -450,39 +393,117 @@ export default function CustomersPage() {
     },
   });
 
-  const handleStatusChange = (customer: Customer) => {
-    updateCustomerMutation.mutate({
-      ...customer,
-      is_active: !customer.is_active,
+  // Effect hooks
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (action === "add") {
+      setIsAddCustomerOpen(true);
+    }
+  }, [searchParams]);
+
+  // Memoized values
+  const customerStats = useMemo(() => {
+    if (!allCustomerOrders) return new Map();
+
+    const stats = new Map<
+      string,
+      {
+        totalOrders: number;
+        totalSpent: number;
+        activeOrders: number;
+        pendingAmount: number;
+      }
+    >();
+
+    allCustomerOrders.forEach((order) => {
+      const customerId = order.customer_id;
+      const currentStats = stats.get(customerId) || {
+        totalOrders: 0,
+        totalSpent: 0,
+        activeOrders: 0,
+        pendingAmount: 0,
+      };
+
+      stats.set(customerId, {
+        totalOrders: currentStats.totalOrders + 1,
+        totalSpent: currentStats.totalSpent + order.amount_paid,
+        activeOrders:
+          currentStats.activeOrders + (order.status !== "delivered" ? 1 : 0),
+        pendingAmount:
+          currentStats.pendingAmount + (order.total_amount - order.amount_paid),
+      });
     });
-  };
 
-  const handleFlagCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomer) return;
+    return stats;
+  }, [allCustomerOrders]);
 
-    flagCustomerMutation.mutate({
-      customer_id: selectedCustomer.id,
-      reason: flagReason,
+  const filteredCustomers = useMemo(() => {
+    if (!customersData) return [];
+
+    return customersData.filter((customer) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        customer.studio_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone.includes(searchTerm);
+
+      const matchesFilter =
+        customerFilter === "all" ||
+        (customerFilter === "active" && customer.is_active) ||
+        (customerFilter === "inactive" && !customer.is_active);
+
+      return matchesSearch && matchesFilter;
     });
-  };
+  }, [customersData, searchTerm, customerFilter]);
 
-  const handleResolveFlag = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCustomer) return;
-
-    const activeFlag = activeFlags?.find(
-      (flag) => flag.customer_id === selectedCustomer.id
-    );
-    if (!activeFlag) return;
-
-    resolveFlagMutation.mutate({
-      flagId: activeFlag.id,
-      resolutionNote: resolveNote,
+  const sortedCustomers = useMemo(() => {
+    return [...filteredCustomers].sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        case "oldest":
+          return (
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        case "name":
+          return a.studio_name.localeCompare(b.studio_name);
+        default:
+          return 0;
+      }
     });
-  };
+  }, [filteredCustomers, sortBy]);
 
-  // Check if a customer is flagged
+  // Callback hooks
+  const handleAddCustomerOpenChange = useCallback((open: boolean) => {
+    setIsAddCustomerOpen(open);
+    if (!open) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("action");
+      window.history.replaceState(
+        {},
+        document.title,
+        url.pathname + url.search
+      );
+    }
+  }, []);
+
+  const handleStatusChange = useCallback(
+    (customer: Customer) => {
+      updateCustomerMutation.mutate({
+        ...customer,
+        is_active: !customer.is_active,
+      });
+    },
+    [updateCustomerMutation]
+  );
+
+  const handleRowClick = useCallback((customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsDetailsOpen(true);
+  }, []);
+
   const isCustomerFlagged = useCallback(
     (customerId: string) => {
       return activeFlags?.some((flag) => flag.customer_id === customerId);
@@ -490,51 +511,38 @@ export default function CustomersPage() {
     [activeFlags]
   );
 
-  const handleRowClick = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setIsDetailsOpen(true);
-  };
+  const handleFlagCustomer = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedCustomer) return;
 
-  // Filter and sort customers
-  const filteredCustomers = useMemo(() => {
-    if (!customersData) return [];
-
-    let filtered = [...customersData];
-
-    // Apply status filter
-    if (customerFilter !== "all") {
-      filtered = filtered.filter((customer) => {
-        if (customerFilter === "active") return customer.is_active;
-        if (customerFilter === "inactive") return !customer.is_active;
-        if (customerFilter === "flagged") return isCustomerFlagged(customer.id);
-        if (customerFilter === "unflagged")
-          return !isCustomerFlagged(customer.id);
-        return true;
+      flagCustomerMutation.mutate({
+        customer_id: selectedCustomer.id,
+        reason: flagReason,
       });
-    }
+    },
+    [selectedCustomer, flagReason, flagCustomerMutation]
+  );
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "oldest":
-          return (
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-        case "name-asc":
-          return a.studio_name.localeCompare(b.studio_name);
-        case "name-desc":
-          return b.studio_name.localeCompare(a.studio_name);
-        default: // newest
-          return (
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-      }
-    });
+  const handleResolveFlag = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!selectedCustomer) return;
 
-    return filtered;
-  }, [customersData, customerFilter, sortBy, isCustomerFlagged]);
+      const activeFlag = activeFlags?.find(
+        (flag) => flag.customer_id === selectedCustomer.id
+      );
+      if (!activeFlag) return;
 
-  const handleDeleteCustomer = () => {
+      resolveFlagMutation.mutate({
+        flagId: activeFlag.id,
+        resolutionNote: resolveNote,
+      });
+    },
+    [selectedCustomer, activeFlags, resolveNote, resolveFlagMutation]
+  );
+
+  const handleDeleteCustomer = useCallback(() => {
     if (!selectedCustomer?.id) {
       console.error("No customer selected for deletion");
       return;
@@ -544,17 +552,20 @@ export default function CustomersPage() {
     } catch (error) {
       console.error("Error in handleDeleteCustomer:", error);
     }
-  };
+  }, [selectedCustomer, deleteCustomerMutation]);
 
-  const handleEditCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCustomer) return;
+  const handleEditCustomer = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editingCustomer) return;
 
-    updateCustomerMutation.mutate({
-      ...editingCustomer,
-      ...editForm,
-    });
-  };
+      updateCustomerMutation.mutate({
+        ...editingCustomer,
+        ...editForm,
+      });
+    },
+    [editingCustomer, editForm, updateCustomerMutation]
+  );
 
   // Add new query for customer orders
   const { data: customerOrders } = useQuery({
@@ -604,9 +615,25 @@ export default function CustomersPage() {
     };
   }, [customerOrders]);
 
+  // If user doesn't have view permission, show access denied
+  if (!canViewCustomers) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
+          <p className="text-gray-600">
+            You don&apos;t have permission to view this page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoadingCustomers) {
     return <div>Loading...</div>;
   }
+
+  // Rest of the component code...
 
   return (
     <div className="container mx-auto space-y-8 py-6">
@@ -798,14 +825,15 @@ export default function CustomersPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button
-                onClick={() => setIsAddCustomerOpen(true)}
-                className="bg-red-600 hover:bg-red-700 text-white"
-                size="sm"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Customer
-              </Button>
+              {canManageCustomers && (
+                <Button
+                  onClick={() => setIsAddCustomerOpen(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Customer
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -859,7 +887,7 @@ export default function CustomersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCustomers.map((customer) => (
+              {sortedCustomers.map((customer) => (
                 <TableRow
                   key={customer.id}
                   className="cursor-pointer hover:bg-red-50/50"
@@ -937,93 +965,57 @@ export default function CustomersPage() {
                           <ShoppingBag className="w-4 h-4 mr-2" />
                           View Orders
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStatusChange(customer);
-                          }}
-                        >
-                          {customer.is_active ? (
-                            <>
-                              <UserX className="w-4 h-4 mr-2" />
-                              Mark Inactive
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="w-4 h-4 mr-2" />
-                              Mark Active
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingCustomer(customer);
-                            setEditForm({
-                              studio_name: customer.studio_name,
-                              email: customer.email,
-                              phone: customer.phone,
-                              address: customer.address,
-                              reference_phone: customer.reference_phone ?? null,
-                              reference_name: customer.reference_name ?? null,
-                            });
-                            setIsEditCustomerOpen(true);
-                          }}
-                        >
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Edit Customer
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCustomer(customer);
-                            setIsDetailsOpen(true);
-                          }}
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        {isCustomerFlagged(customer.id) ? (
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCustomer(customer);
-                              setIsResolveFlagOpen(true);
-                            }}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                          >
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Resolve Flag
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCustomer(customer);
-                              setIsFlagCustomerOpen(true);
-                            }}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <AlertTriangle className="w-4 h-4 mr-2" />
-                            Flag Customer
-                          </DropdownMenuItem>
+                        {canManageCustomers && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(customer);
+                              }}
+                            >
+                              {customer.is_active ? (
+                                <>
+                                  <UserX className="w-4 h-4 mr-2" />
+                                  Mark Inactive
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="w-4 h-4 mr-2" />
+                                  Mark Active
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingCustomer(customer);
+                                setEditForm({
+                                  studio_name: customer.studio_name,
+                                  email: customer.email,
+                                  phone: customer.phone,
+                                  address: customer.address,
+                                  reference_name: customer.reference_name,
+                                  reference_phone: customer.reference_phone,
+                                });
+                                setIsEditCustomerOpen(true);
+                              }}
+                            >
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Edit Customer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCustomer(customer);
+                                setIsDeleteCustomerOpen(true);
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash className="w-4 h-4 mr-2" />
+                              Delete Customer
+                            </DropdownMenuItem>
+                          </>
                         )}
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (customer) {
-                              console.log(
-                                "Setting customer to delete:",
-                                customer
-                              );
-                              setIsDeleteCustomerOpen(true);
-                            }
-                          }}
-                          className="text-red-600"
-                        >
-                          <Trash className="w-4 h-4 mr-2" />
-                          Delete Customer
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

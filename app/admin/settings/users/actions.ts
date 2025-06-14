@@ -13,6 +13,8 @@ export type UserWithProfile = {
     full_name: string | null;
     role_id: string | null;
     status: "pending" | "approved" | "suspended";
+    approved_at?: string;
+    last_active?: string;
     role?: {
       id: string;
       name: string;
