@@ -68,7 +68,11 @@ export default function SettingsPage() {
 
   // Check if user has permission
   useEffect(() => {
-    if (!isLoading && !hasPermission("manage_general_settings")) {
+    if (
+      !isLoading &&
+      !hasPermission("manage_general_settings") &&
+      !hasPermission("view_activity_logs")
+    ) {
       router.push("/admin/dashboard");
     }
   }, [hasPermission, router, isLoading]);
@@ -116,7 +120,10 @@ export default function SettingsPage() {
 
       return data as GeneralSettings;
     },
-    enabled: !!userId && hasPermission("manage_general_settings"), // Only run query when we have a user ID and user has permission
+    enabled:
+      !!userId &&
+      (hasPermission("manage_general_settings") ||
+        hasPermission("view_activity_logs")), // Only run query when we have a user ID and user has permission
   });
 
   // Update settings mutation
@@ -252,7 +259,7 @@ export default function SettingsPage() {
 
   // Use new fetchLogs in effect
   useEffect(() => {
-    if (role === "super_admin") {
+    if (hasPermission("view_activity_logs")) {
       const fetchLogs = async () => {
         try {
           let query = supabase
@@ -269,7 +276,7 @@ export default function SettingsPage() {
             .range((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE - 1);
 
           if (logUserFilter) {
-            query = query.eq("admin_profile_id", logUserFilter);
+            query = query.eq("user_id", logUserFilter);
           }
           if (logActionFilter) {
             query = query.ilike("action", `%${logActionFilter}%`);
@@ -298,7 +305,7 @@ export default function SettingsPage() {
           setIsLoadingLogs(false);
         });
     }
-  }, [role, logUserFilter, logActionFilter, logPage]);
+  }, [hasPermission, logUserFilter, logActionFilter, logPage]);
 
   if (isLoading || isLoadingSettings) {
     return (
@@ -309,7 +316,10 @@ export default function SettingsPage() {
   }
 
   // If user doesn't have permission, don't render anything
-  if (!hasPermission("manage_general_settings")) {
+  if (
+    !hasPermission("manage_general_settings") &&
+    !hasPermission("view_activity_logs")
+  ) {
     return null;
   }
 
@@ -412,7 +422,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {role === "super_admin" && (
+      {hasPermission("view_activity_logs") && (
         <Card className="mt-8 border-red-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
