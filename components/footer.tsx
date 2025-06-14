@@ -3,7 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FaWhatsapp, FaFacebookF, FaInstagram } from "react-icons/fa";
+import {
+  FaWhatsapp,
+  FaFacebookF,
+  FaInstagram,
+  FaYoutube,
+} from "react-icons/fa";
 import { Mail, Phone } from "lucide-react";
 import { NewsletterSubscribe } from "@/components/newsletter-subscribe";
 
@@ -22,28 +27,33 @@ const navigation = {
   social: [
     {
       name: "WhatsApp",
-      href: "https://wa.me/1234567890", // Replace with your actual WhatsApp number
+      href: "https://whatsapp.com/channel/0029VaCdY0S5Ui2PrlQZ5z0T", // Replace with your actual WhatsApp number
       icon: FaWhatsapp,
     },
     {
       name: "Email",
-      href: "mailto:contact@galbum.com", // Replace with your actual email
+      href: "mailto:galbum99@gmail.com", // Replace with your actual email
       icon: Mail,
     },
     {
       name: "Phone",
-      href: "tel:+1234567890", // Replace with your actual phone number
+      href: "tel:+919514422244", // Replace with your actual phone number
       icon: Phone,
     },
     {
       name: "Facebook",
-      href: "#",
+      href: "https://www.facebook.com/g.album.2024?mibextid=ZbWKwL",
       icon: FaFacebookF,
     },
     {
       name: "Instagram",
-      href: "#",
+      href: "https://www.instagram.com/galbum99",
       icon: FaInstagram,
+    },
+    {
+      name: "YouTube",
+      href: "https://youtube.com/@galbum99?si=NLMHNNmbSDGnlX1o",
+      icon: FaYoutube,
     },
   ],
 };

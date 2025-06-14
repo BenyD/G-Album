@@ -176,26 +176,36 @@ export default function ContactPage() {
                 {contactInfo.map((contact, index) => (
                   <motion.div
                     key={index}
-                    className="flex items-start p-6 bg-linear-to-br from-white to-red-50 rounded-xl shadow-md border border-red-100"
+                    className="flex items-start p-6 bg-gradient-to-br from-white to-red-50 rounded-xl shadow-md border border-red-100 hover:shadow-lg transition-all duration-300"
                     variants={fadeInUp}
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ scale: 1.02, y: -2 }}
                     transition={{ duration: 0.2 }}
                   >
                     <motion.div
-                      className="w-12 h-12 bg-linear-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mr-4 shrink-0"
-                      whileHover={{ rotate: 360 }}
+                      className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mr-4 shrink-0 shadow-md"
+                      whileHover={{ rotate: 360, scale: 1.1 }}
                       transition={{ duration: 0.6 }}
                     >
                       <contact.icon className="h-6 w-6 text-white" />
                     </motion.div>
-                    <div>
-                      <h3 className="font-semibold text-lg text-red-900 mb-1">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg text-red-900 mb-2">
                         {contact.title}
                       </h3>
                       {contact.details.map((detail, i) => (
-                        <p key={i} className="text-slate-600">
+                        <a
+                          key={i}
+                          href={
+                            contact.title === "Phone"
+                              ? `tel:${detail}`
+                              : contact.title === "Email"
+                                ? `mailto:${detail}`
+                                : "#"
+                          }
+                          className="block text-slate-600 hover:text-red-600 transition-colors duration-200 mb-1"
+                        >
                           {detail}
-                        </p>
+                        </a>
                       ))}
                     </div>
                   </motion.div>
@@ -232,51 +242,52 @@ export default function ContactPage() {
                 <h2 className="text-2xl md:text-3xl font-bold mb-4 text-red-900">
                   Our Office
                 </h2>
-                <p className="text-slate-600 mb-6">
+                <p className="text-slate-600 mb-8">
                   Visit our creative studio where we design and craft beautiful
                   photo albums.
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-6">
                   {[
                     {
-                      src: "/modern-photo-studio-reception.png",
+                      src: "/images/contact/contact_inside-1.jpg",
                       alt: "G Album Office Reception",
+                      caption: "Modern Reception Area",
                     },
                     {
-                      src: "/placeholder.svg?height=400&width=400&query=photo album design studio workspace",
+                      src: "/images/contact/contact_outside-1.jpg",
                       alt: "G Album Design Studio",
+                      caption: "Studio Entrance",
                     },
                     {
-                      src: "/placeholder.svg?height=400&width=400&query=photo album printing equipment",
+                      src: "/images/contact/contact_outside-2.jpg",
                       alt: "G Album Printing Area",
+                      caption: "Creative Workspace",
                     },
                     {
-                      src: "/placeholder.svg?height=600&width=800&query=photo album showroom with samples",
+                      src: "/images/contact/contact_inside-2.jpeg",
                       alt: "G Album Showroom",
-                      className: "md:col-span-2",
-                    },
-                    {
-                      src: "/placeholder.svg?height=400&width=400&query=photo album binding and finishing area",
-                      alt: "G Album Finishing Area",
+                      caption: "Album Showroom",
                     },
                   ].map((image, index) => (
                     <motion.div
                       key={index}
-                      className={`relative aspect-square rounded-lg overflow-hidden shadow-md ${
-                        image.className || ""
-                      }`}
+                      className="group relative aspect-square rounded-xl overflow-hidden shadow-md"
                       variants={fadeInUp}
-                      whileHover={{ scale: 1.05 }}
+                      whileHover={{ scale: 1.02 }}
                       transition={{ duration: 0.2 }}
                     >
                       <Image
                         src={image.src}
                         alt={image.alt}
                         fill
-                        className="object-cover"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
                         loading={index < 2 ? "eager" : "lazy"}
-                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        sizes="(max-width: 768px) 50vw, 25vw"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        <p className="text-sm font-medium">{image.caption}</p>
+                      </div>
                     </motion.div>
                   ))}
                 </div>
@@ -322,12 +333,12 @@ export default function ContactPage() {
 
                 <div className="relative z-10">
                   <motion.h2
-                    className="text-2xl md:text-3xl font-bold mb-6 text-red-900"
+                    className="text-2xl md:text-3xl font-bold mb-2 text-red-900"
                     variants={fadeInUp}
                   >
                     Send us a message
                   </motion.h2>
-                  <motion.p className="text-slate-600 mb-6" variants={fadeInUp}>
+                  <motion.p className="text-slate-600 mb-8" variants={fadeInUp}>
                     Fill out the form below and we&apos;ll get back to you as
                     soon as possible.
                   </motion.p>
@@ -344,27 +355,33 @@ export default function ContactPage() {
                       variants={fadeInUp}
                     >
                       <div className="space-y-2">
-                        <Label htmlFor="name" className="text-slate-700">
+                        <Label
+                          htmlFor="name"
+                          className="text-slate-700 font-medium"
+                        >
                           Name
                         </Label>
                         <Input
                           id="name"
                           placeholder="Your name"
-                          className="border-red-200 focus-visible:ring-red-500"
+                          className="border-red-200 focus-visible:ring-red-500 transition-all duration-200 hover:border-red-300"
                           required
                           value={formData.name}
                           onChange={handleInputChange}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-slate-700">
+                        <Label
+                          htmlFor="email"
+                          className="text-slate-700 font-medium"
+                        >
                           Email (Optional)
                         </Label>
                         <Input
                           id="email"
                           type="email"
                           placeholder="Your email"
-                          className="border-red-200 focus-visible:ring-red-500"
+                          className="border-red-200 focus-visible:ring-red-500 transition-all duration-200 hover:border-red-300"
                           value={formData.email}
                           onChange={handleInputChange}
                         />
@@ -372,13 +389,16 @@ export default function ContactPage() {
                     </motion.div>
 
                     <motion.div className="space-y-2" variants={fadeInUp}>
-                      <Label htmlFor="phone" className="text-slate-700">
+                      <Label
+                        htmlFor="phone"
+                        className="text-slate-700 font-medium"
+                      >
                         Phone Number *
                       </Label>
                       <Input
                         id="phone"
                         placeholder="Your phone number"
-                        className="border-red-200 focus-visible:ring-red-500"
+                        className="border-red-200 focus-visible:ring-red-500 transition-all duration-200 hover:border-red-300"
                         required
                         value={formData.phone}
                         onChange={handleInputChange}
@@ -386,14 +406,17 @@ export default function ContactPage() {
                     </motion.div>
 
                     <motion.div className="space-y-2" variants={fadeInUp}>
-                      <Label htmlFor="message" className="text-slate-700">
+                      <Label
+                        htmlFor="message"
+                        className="text-slate-700 font-medium"
+                      >
                         Message
                       </Label>
                       <textarea
                         id="message"
                         rows={4}
                         placeholder="Your message"
-                        className="w-full rounded-md border border-red-200 p-3 text-sm focus:outline-hidden focus:ring-2 focus:ring-red-500"
+                        className="w-full rounded-md border border-red-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200 hover:border-red-300 resize-none"
                         required
                         value={formData.message}
                         onChange={handleInputChange}
@@ -407,7 +430,7 @@ export default function ContactPage() {
                     >
                       <Button
                         type="submit"
-                        className="w-full bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                        className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium py-2.5 transition-all duration-200 shadow-md hover:shadow-lg"
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? (

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Truck, Camera, Clock, MessageSquare } from "lucide-react";
 import PageHero from "@/components/page-hero";
 import { useState, useEffect } from "react";
+import { aboutConfig } from "@/config/about";
 
 // Optimized animation variants with reduced motion support
 const fadeInUp = {
@@ -66,77 +67,76 @@ const useInView = () => {
 export default function AboutPage() {
   const hasLoaded = useHasLoaded();
   const [aboutRef, isAboutInView] = useInView();
-  const [techRef, isTechInView] = useInView();
 
   // Sample team members
   const teamMembers = [
     {
-      name: "Rahul Sharma",
-      role: "Founder & Creative Director",
-      image: "/professional-indian-man-portrait.png",
+      name: "Kumaran A",
+      role: "Founder & Managing Director",
+      image: "/images/staff/kumaran.jpeg",
       bio: "With over 15 years of experience in photography and album design, Rahul founded G Album with a vision to create affordable yet premium quality photo albums.",
     },
     {
-      name: "Priya Patel",
-      role: "Lead Designer",
-      image: "/professional-indian-woman-portrait.png",
+      name: "Jagadeesh",
+      role: "Manager",
+      image: "/images/staff/jagadeesh.jpeg",
       bio: "Priya brings her artistic vision and attention to detail to every album design, ensuring each one tells a unique story.",
     },
     {
-      name: "Vikram Singh",
-      role: "Production Manager",
-      image: "/professional-indian-man-portrait-2.png",
-      bio: "Vikram oversees our production process, ensuring that every album meets our high standards of quality and craftsmanship.",
+      name: "Sumitra",
+      role: "Office Incharge",
+      image: "/images/staff/sumithra.jpeg",
+      bio: "Sumitra oversees our production process, ensuring that every album meets our high standards of quality and craftsmanship.",
     },
     {
-      name: "Ananya Desai",
-      role: "Customer Relations",
-      image: "/placeholder-aldzd.png",
-      bio: "Ananya is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
-    },
-  ];
-
-  const technologies = [
-    {
-      name: "HP Indigo Digital Press",
-      title: "Professional Printing",
-      description:
-        "State-of-the-art digital printing technology delivering vibrant, high-resolution images with exceptional color accuracy and detail.",
-      image: "/hp-indigo-press.png",
-      tags: ["High Quality", "Color Accuracy", "Professional Grade"],
+      name: "Jagendran",
+      role: "Front Desk Executive",
+      image: "/images/staff/jagendran.jpg",
+      bio: "Jagendran is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
     },
     {
-      name: "Automatic Binding Machine",
-      title: "Precision Binding",
-      description:
-        "Advanced binding equipment ensuring durability and perfect finishing for every album we create.",
-      image: "/placeholder-8i1yi.png",
-      tags: ["Durability", "Precision", "Quality Finish"],
+      name: "Amul",
+      role: "Designer",
+      image: "/images/staff/amul.jpeg",
+      bio: "Amul is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
     },
     {
-      name: "UV Coating System",
-      title: "Protection & Enhancement",
-      description:
-        "Advanced coating technology that protects images from fading while enhancing colors and providing a premium feel.",
-      image: "/uv-coating-machine.png",
-      tags: ["Protection", "Enhancement", "Longevity"],
+      name: "Kavitha",
+      role: "Incharge Assistant",
+      image: "/images/staff/kavitha.jpeg",
+      bio: "Kavitha is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
     },
     {
-      name: "Laser Cutting Machine",
-      title: "Custom Designs",
-      description:
-        "Precision cutting technology for custom album covers and intricate design elements that make each album unique.",
-      image:
-        "/placeholder.svg?height=600&width=800&query=laser cutting machine for albums",
-      tags: ["Precision", "Customization", "Innovation"],
+      name: "Esaki",
+      role: "Manufacturing Executive",
+      image: "/images/staff/esaki.jpg",
+      bio: "Esaki is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
+    },
+    {
+      name: "Esakiraj",
+      role: "Manufacturing Assistant",
+      image: "/images/staff/esakiraja.jpeg",
+      bio: "Esakiraj is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
+    },
+    {
+      name: "Sylaja",
+      role: "Staff",
+      image: "/images/staff/sylaja.jpeg",
+      bio: "Sylaja is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
+    },
+    {
+      name: "Kishore",
+      role: "Staff",
+      image: "/images/staff/kishore.jpg",
+      bio: "Kishore is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
     },
   ];
 
   return (
     <div className="flex flex-col min-h-screen pt-16">
       <PageHero
-        title="About G Album"
-        subtitle="Crafting memories into beautiful albums since 2018"
+        title={aboutConfig.hero.title}
+        subtitle={aboutConfig.hero.subtitle}
         className="py-20"
       />
 
@@ -153,7 +153,7 @@ export default function AboutPage() {
               transition={{ duration: 0.4 }}
             >
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-red-900">
-                Our Story
+                {aboutConfig.story.title}
               </h2>
               <div className="space-y-4 text-slate-700">
                 <motion.div
@@ -162,21 +162,11 @@ export default function AboutPage() {
                   animate={isAboutInView ? "animate" : "initial"}
                   className="space-y-4"
                 >
-                  <motion.p variants={fadeInUp}>
-                    Since 2018, G Album has been crafting affordable,
-                    professional photo albums, striving consistently to meet and
-                    exceed the expectations of our customers.
-                  </motion.p>
-                  <motion.p variants={fadeInUp}>
-                    Our primary focus has always been ensuring our clients
-                    experience top-tier quality and contentment from our
-                    offerings.
-                  </motion.p>
-                  <motion.p variants={fadeInUp}>
-                    Additionally, we consistently leverage advanced, modern
-                    technology to fulfill the diverse requirements of our
-                    customers.
-                  </motion.p>
+                  {aboutConfig.story.paragraphs.map((paragraph, index) => (
+                    <motion.p key={index} variants={fadeInUp}>
+                      {paragraph}
+                    </motion.p>
+                  ))}
                 </motion.div>
               </div>
             </motion.div>
@@ -194,8 +184,8 @@ export default function AboutPage() {
                 transition={{ duration: 0.2 }}
               >
                 <Image
-                  src="/images/about-image.jpeg"
-                  alt="G Album workshop"
+                  src="/images/about/about-image.jpg"
+                  alt="G Album Team"
                   width={600}
                   height={400}
                   className="w-full object-cover"
@@ -216,22 +206,20 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Technology We Use - Bento Grid */}
+      {/* Our Process - Bento Grid */}
       <section className="bg-white py-24">
         <div className="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
           <motion.div
-            ref={techRef}
             initial={{ opacity: 0, y: 10 }}
-            animate={
-              isTechInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
-            }
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             <h2 className="text-base/7 font-semibold text-red-600">
-              Advanced Technology
+              {aboutConfig.process.title}
             </h2>
             <p className="mt-2 max-w-lg text-4xl font-semibold tracking-tight text-pretty text-gray-950 sm:text-5xl">
-              Everything we use to craft perfect albums
+              {aboutConfig.process.subtitle}
             </p>
           </motion.div>
           <motion.div
@@ -241,61 +229,17 @@ export default function AboutPage() {
             whileInView="animate"
             viewport={{ once: true, margin: "-50px" }}
           >
-            {/* Technology cards with optimized animations */}
-            <motion.div
-              className="relative lg:col-span-4"
-              variants={fadeInUp}
-              whileHover={{ scale: 1.01 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="absolute inset-px rounded-lg bg-white max-lg:rounded-t-4xl lg:rounded-tl-4xl" />
-              <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)] lg:rounded-tl-[calc(2rem+1px)]">
-                <Image
-                  alt={technologies[0].name}
-                  src={technologies[0].image || "/placeholder.svg"}
-                  className="h-80 object-cover object-center"
-                  width={800}
-                  height={320}
-                  priority
-                />
-                <div className="p-10 pt-4">
-                  <h3 className="text-sm/4 font-semibold text-red-600">
-                    {technologies[0].name}
-                  </h3>
-                  <p className="mt-2 text-lg font-medium tracking-tight text-gray-950">
-                    {technologies[0].title}
-                  </p>
-                  <p className="mt-2 max-w-lg text-sm/6 text-gray-600">
-                    {technologies[0].description}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {technologies[0].tags.map((tag, i) => (
-                      <motion.span
-                        key={i}
-                        className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs"
-                        initial={{ opacity: 0, scale: 0 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.1 }}
-                      >
-                        {tag}
-                      </motion.span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="pointer-events-none absolute inset-px rounded-lg shadow-xs ring-1 ring-black/5 max-lg:rounded-t-4xl lg:rounded-tl-4xl" />
-            </motion.div>
-
-            {/* Other technology cards */}
-            {technologies.slice(1).map((tech, index) => (
+            {aboutConfig.process.steps.map((process, index) => (
               <motion.div
                 key={index}
                 className={`relative ${
                   index === 0
-                    ? "lg:col-span-2"
+                    ? "lg:col-span-4"
                     : index === 1
-                    ? "lg:col-span-2"
-                    : "lg:col-span-4"
+                      ? "lg:col-span-2"
+                      : index === 2
+                        ? "lg:col-span-2"
+                        : "lg:col-span-4"
                 }`}
                 variants={fadeInUp}
                 whileHover={{ scale: 1.01 }}
@@ -304,41 +248,45 @@ export default function AboutPage() {
                 <div
                   className={`absolute inset-px rounded-lg bg-white ${
                     index === 0
-                      ? "lg:rounded-tr-4xl"
+                      ? "lg:rounded-tl-4xl"
                       : index === 1
-                      ? "lg:rounded-bl-4xl"
-                      : "max-lg:rounded-b-4xl lg:rounded-br-4xl"
+                        ? "lg:rounded-tr-4xl"
+                        : index === 2
+                          ? "lg:rounded-bl-4xl"
+                          : "lg:rounded-br-4xl"
                   }`}
                 />
                 <div
                   className={`relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] ${
                     index === 0
-                      ? "lg:rounded-tr-[calc(2rem+1px)]"
+                      ? "lg:rounded-tl-[calc(2rem+1px)]"
                       : index === 1
-                      ? "lg:rounded-bl-[calc(2rem+1px)]"
-                      : "max-lg:rounded-b-[calc(2rem+1px)] lg:rounded-br-[calc(2rem+1px)]"
+                        ? "lg:rounded-tr-[calc(2rem+1px)]"
+                        : index === 2
+                          ? "lg:rounded-bl-[calc(2rem+1px)]"
+                          : "lg:rounded-br-[calc(2rem+1px)]"
                   }`}
                 >
                   <Image
-                    alt={tech.name}
-                    src={tech.image || "/placeholder.svg"}
+                    alt={process.name}
+                    src={process.image || "/placeholder.svg"}
                     className="h-80 object-cover object-center"
                     width={800}
                     height={320}
-                    priority
+                    priority={index < 2}
                   />
                   <div className="p-10 pt-4">
                     <h3 className="text-sm/4 font-semibold text-red-600">
-                      {tech.name}
+                      {process.name}
                     </h3>
                     <p className="mt-2 text-lg font-medium tracking-tight text-gray-950">
-                      {tech.title}
+                      {process.title}
                     </p>
                     <p className="mt-2 max-w-lg text-sm/6 text-gray-600">
-                      {tech.description}
+                      {process.description}
                     </p>
                     <div className="flex flex-wrap gap-2 mt-4">
-                      {tech.tags.map((tag, i) => (
+                      {process.tags.map((tag, i) => (
                         <motion.span
                           key={i}
                           className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs"
@@ -355,10 +303,12 @@ export default function AboutPage() {
                 <div
                   className={`pointer-events-none absolute inset-px rounded-lg shadow-xs ring-1 ring-black/5 ${
                     index === 0
-                      ? "lg:rounded-tr-4xl"
+                      ? "lg:rounded-tl-4xl"
                       : index === 1
-                      ? "lg:rounded-bl-4xl"
-                      : "max-lg:rounded-b-4xl lg:rounded-br-4xl"
+                        ? "lg:rounded-tr-4xl"
+                        : index === 2
+                          ? "lg:rounded-bl-4xl"
+                          : "lg:rounded-br-4xl"
                   }`}
                 />
               </motion.div>
@@ -404,7 +354,7 @@ export default function AboutPage() {
             transition={{ duration: 0.4 }}
             viewport={{ once: true, margin: "-50px" }}
           >
-            Why Choose Us
+            {aboutConfig.whyChooseUs.title}
           </motion.h2>
 
           <motion.div
@@ -414,33 +364,7 @@ export default function AboutPage() {
             whileInView="animate"
             viewport={{ once: true, margin: "-50px" }}
           >
-            {/* Feature cards with optimized animations */}
-            {[
-              {
-                icon: Truck,
-                title: "Delivery Around India",
-                description:
-                  "Across all working days, we use reliable carriers to deliver our products throughout India, ensuring your package reaches you promptly.",
-              },
-              {
-                icon: Camera,
-                title: "Latest Technology",
-                description:
-                  "We utilize advanced industrial tech to construct expert-level albums. We also deploy potent printing machines for superior image clarity.",
-              },
-              {
-                icon: Clock,
-                title: "Handcrafted Pads",
-                description:
-                  "Each of our albums is meticulously handcrafted, showcasing inventive patterns and securing the longevity and durability of all your cherished pages.",
-              },
-              {
-                icon: MessageSquare,
-                title: "Customer Service",
-                description:
-                  "Our dedication is towards supplying our clients with superior service, leading them throughout the entire journey, guaranteeing their gratification.",
-              },
-            ].map((feature, index) => (
+            {aboutConfig.whyChooseUs.features.map((feature, index) => (
               <motion.div
                 key={index}
                 className="bg-linear-to-br from-white to-red-50 p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-red-100"
@@ -453,7 +377,18 @@ export default function AboutPage() {
                   whileHover={{ rotate: 180 }}
                   transition={{ duration: 0.4 }}
                 >
-                  <feature.icon className="h-8 w-8 text-white" />
+                  {feature.icon === "Truck" && (
+                    <Truck className="h-8 w-8 text-white" />
+                  )}
+                  {feature.icon === "Camera" && (
+                    <Camera className="h-8 w-8 text-white" />
+                  )}
+                  {feature.icon === "Clock" && (
+                    <Clock className="h-8 w-8 text-white" />
+                  )}
+                  {feature.icon === "MessageSquare" && (
+                    <MessageSquare className="h-8 w-8 text-white" />
+                  )}
                 </motion.div>
                 <h3 className="text-xl font-semibold mb-3 text-red-900">
                   {feature.title}
