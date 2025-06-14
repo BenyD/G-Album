@@ -52,6 +52,7 @@ export default function SettingsPage() {
   const [userOptions, setUserOptions] = useState<
     { id: string; full_name: string | null }[]
   >([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get current user
   useEffect(() => {
@@ -60,19 +61,20 @@ export default function SettingsPage() {
         data: { user },
       } = await supabase.auth.getUser();
       setUserId(user?.id || null);
+      setIsLoading(false);
     };
     getUser();
   }, []);
 
   // Check if user has permission
   useEffect(() => {
-    if (!hasPermission("manage_general_settings")) {
+    if (!isLoading && !hasPermission("manage_general_settings")) {
       router.push("/admin/dashboard");
     }
-  }, [hasPermission, router]);
+  }, [hasPermission, router, isLoading]);
 
   // Fetch settings
-  const { data: settingsData, isLoading } = useQuery({
+  const { data: settingsData, isLoading: isLoadingSettings } = useQuery({
     queryKey: ["general-settings"],
     queryFn: async () => {
       if (!userId) {
@@ -298,7 +300,7 @@ export default function SettingsPage() {
     }
   }, [role, logUserFilter, logActionFilter, logPage]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingSettings) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />

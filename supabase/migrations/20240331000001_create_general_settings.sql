@@ -12,6 +12,17 @@ CREATE TABLE IF NOT EXISTS public.general_settings (
 -- Add RLS policies for general settings
 ALTER TABLE public.general_settings ENABLE ROW LEVEL SECURITY;
 
+-- Allow any authenticated user to create initial settings
+CREATE POLICY "Allow initial settings creation"
+    ON public.general_settings
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        NOT EXISTS (
+            SELECT 1 FROM public.general_settings
+        )
+    );
+
 CREATE POLICY "Allow admin read general settings"
     ON public.general_settings
     FOR SELECT
@@ -33,17 +44,6 @@ CREATE POLICY "Allow admin update general settings"
             WHERE admin_profiles.id = auth.uid()
         )
     )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM public.admin_profiles
-            WHERE admin_profiles.id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Allow admin insert general settings"
-    ON public.general_settings
-    FOR INSERT
-    TO authenticated
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.admin_profiles
