@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { motion } from "framer-motion";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,22 +9,14 @@ import PageHero from "@/components/page-hero";
 import { getAllGalleryImages } from "@/lib/services/gallery";
 import type { GalleryImage } from "@/lib/services/gallery";
 import Masonry from "react-masonry-css";
-
-// Animation variants
-const fadeInUp = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.25, ease: "easeOut" },
-};
-
-const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.02,
-      delayChildren: 0.1,
-    },
-  },
-};
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 // Breakpoints for masonry grid
 const breakpointColumns = {
@@ -45,6 +36,7 @@ export default function GalleryPage() {
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
 
   // Load gallery images
   useEffect(() => {
@@ -253,7 +245,10 @@ export default function GalleryPage() {
                 >
                   {filteredImages.slice(0, visibleItems).map((image, index) => (
                     <div key={image.id} className="mb-4 group">
-                      <div className="relative overflow-hidden rounded-lg">
+                      <div
+                        className="relative overflow-hidden rounded-lg cursor-pointer"
+                        onClick={() => setSelectedImage(image)}
+                      >
                         <Image
                           src={image.image_url}
                           alt={image.alt}
@@ -282,7 +277,8 @@ export default function GalleryPage() {
                   {filteredImages.slice(0, visibleItems).map((image, index) => (
                     <div
                       key={image.id}
-                      className="relative aspect-[16/9] sm:aspect-[21/9] overflow-hidden rounded-lg"
+                      className="relative aspect-[16/9] sm:aspect-[21/9] overflow-hidden rounded-lg cursor-pointer"
+                      onClick={() => setSelectedImage(image)}
                     >
                       <Image
                         src={image.image_url}
@@ -324,6 +320,39 @@ export default function GalleryPage() {
           )}
         </div>
       </section>
+
+      {/* Image Preview Dialog */}
+      <Dialog
+        open={!!selectedImage}
+        onOpenChange={() => setSelectedImage(null)}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-red-900">
+              {selectedImage?.album_name}
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="text-sm flex items-center gap-2 text-red-600">
+                <Badge variant="outline" className="border-red-200">
+                  {selectedImage?.upload_date}
+                </Badge>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          {selectedImage && (
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg">
+              <Image
+                src={selectedImage.image_url}
+                alt={selectedImage.alt}
+                fill
+                className="object-contain"
+                sizes="(max-width: 1024px) 100vw, 1024px"
+                priority
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

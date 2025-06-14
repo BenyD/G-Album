@@ -46,9 +46,9 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
     id: item.id,
     image_url: item.image_url,
     album_id: item.album_id,
-    album_name: item.albums.title,
-    alt: `Image from ${item.albums.title}${
-      item.albums.description ? ": " + item.albums.description : ""
+    album_name: item.albums[0].title,
+    alt: `Image from ${item.albums[0].title}${
+      item.albums[0].description ? ": " + item.albums[0].description : ""
     }`,
     upload_date: new Date(item.created_at).toLocaleDateString(),
     order_index: item.order_index,

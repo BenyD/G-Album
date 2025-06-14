@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -296,14 +295,16 @@ export default function GalleryPage() {
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
-              {selectedImage?.alt}
-            </DialogTitle>
-            <DialogDescription className="flex items-center gap-2 text-red-600">
-              <Badge variant="outline" className="border-red-200">
-                {selectedImage?.album_name}
-              </Badge>
-            </DialogDescription>
+            <div className="space-y-2">
+              <DialogTitle className="text-xl font-bold">
+                {selectedImage?.alt}
+              </DialogTitle>
+              <div className="flex items-center gap-2 text-red-600">
+                <Badge variant="outline" className="border-red-200">
+                  {selectedImage?.album_name}
+                </Badge>
+              </div>
+            </div>
           </DialogHeader>
           {selectedImage && (
             <div className="space-y-6">
