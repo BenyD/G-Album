@@ -467,7 +467,7 @@ export default function SubmissionsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2">
                       {submission.status !== "Replied" && (
                         <Button
                           variant="ghost"
@@ -574,11 +574,35 @@ export default function SubmissionsPage() {
                   <MessageSquare className="w-4 h-4 text-red-600" />
                   Message
                 </div>
-                <div className="bg-red-50/50 rounded-lg p-4">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {selectedSubmission.message}
-                  </p>
-                </div>
+                <p className="text-sm pl-6 whitespace-pre-wrap">
+                  {selectedSubmission.message}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 pt-4">
+                {selectedSubmission.status !== "Replied" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-green-200 hover:bg-green-50 hover:text-green-600"
+                    onClick={() =>
+                      handleStatusChange(selectedSubmission.id, "Replied")
+                    }
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Mark as Replied
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-200 hover:bg-red-50 hover:text-red-600"
+                  onClick={() => handleDeleteClick(selectedSubmission)}
+                >
+                  <Trash className="w-4 h-4 mr-2" />
+                  Delete Submission
+                </Button>
               </div>
 
               {/* Submission ID */}

@@ -418,10 +418,19 @@ export default function OrdersPage() {
         amount_paid: order.amount_paid,
       });
 
+      // Log order-specific activity
+      await logOrderAction(
+        order.id,
+        "order_created",
+        `Order created with total amount ₹${order.total_amount}${order.amount_paid > 0 ? ` and initial payment of ₹${order.amount_paid}` : ""}`
+      );
+
       return order;
     },
-    onSuccess: () => {
+    onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      // Refresh order logs for the newly created order
+      queryClient.invalidateQueries({ queryKey: ["orderLogs", order.id] });
       setIsAddOrderOpen(false);
       setNewOrder(defaultOrderInput);
       toast.success("Order created successfully");
@@ -743,12 +752,21 @@ export default function OrdersPage() {
     action: string,
     details: string
   ) => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("Failed to get user:", userError);
+      return;
+    }
+
     const { error } = await supabase.from("order_logs").insert([
       {
         order_id: orderId,
         action,
         details,
-        created_by: (await supabase.auth.getUser()).data.user?.id,
+        created_by: user.id,
       },
     ]);
 
