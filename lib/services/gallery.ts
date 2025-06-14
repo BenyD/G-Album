@@ -24,7 +24,7 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
       album_id,
       order_index,
       created_at,
-      albums (
+      albums!inner (
         id,
         title,
         description
@@ -42,20 +42,18 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
     return [];
   }
 
-  return data
-    .filter((item) => item.albums) // Filter out items with no album relation
-    .map((item) => ({
-      id: item.id,
-      image_url: item.image_url,
-      album_id: item.album_id,
-      album_name: item.albums[0].title,
-      alt: `Image from ${item.albums[0].title}${
-        item.albums[0].description ? ": " + item.albums[0].description : ""
-      }`,
-      upload_date: new Date(item.created_at).toLocaleDateString(),
-      order_index: item.order_index,
-      is_visible: true, // Since we don't have is_visible in the schema, default to true
-    }));
+  return data.map((item) => ({
+    id: item.id,
+    image_url: item.image_url,
+    album_id: item.album_id,
+    album_name: item.albums.title,
+    alt: `Image from ${item.albums.title}${
+      item.albums.description ? ": " + item.albums.description : ""
+    }`,
+    upload_date: new Date(item.created_at).toLocaleDateString(),
+    order_index: item.order_index,
+    is_visible: true, // Since we don't have is_visible in the schema, default to true
+  }));
 }
 
 export async function getVisibleGalleryImages(): Promise<GalleryImage[]> {
