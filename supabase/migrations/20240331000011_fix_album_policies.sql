@@ -39,11 +39,37 @@ CREATE POLICY "Allow admins to manage albums"
     ON public.albums
     FOR ALL
     TO authenticated
-    USING (is_approved_admin());
+    USING (
+        EXISTS (
+            SELECT 1 
+            FROM admin_profiles ap
+            WHERE ap.id = auth.uid()
+            AND ap.status = 'approved'
+            AND ap.role_id IN (
+                SELECT id FROM roles WHERE name IN ('super_admin', 'admin')
+            )
+        )
+    );
 
 -- Policy for managing album images (admin only)
 CREATE POLICY "Allow admins to manage album images"
     ON public.album_images
     FOR ALL
     TO authenticated
-    USING (is_approved_admin()); 
+    USING (
+        EXISTS (
+            SELECT 1 
+            FROM admin_profiles ap
+            WHERE ap.id = auth.uid()
+            AND ap.status = 'approved'
+            AND ap.role_id IN (
+                SELECT id FROM roles WHERE name IN ('super_admin', 'admin')
+            )
+        )
+    );
+
+-- Grant necessary permissions
+GRANT SELECT ON public.albums TO public;
+GRANT SELECT ON public.album_images TO public;
+GRANT ALL ON public.albums TO authenticated;
+GRANT ALL ON public.album_images TO authenticated; 
