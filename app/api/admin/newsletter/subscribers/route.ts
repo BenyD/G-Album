@@ -9,7 +9,19 @@ type Permission = {
 };
 
 type RolePermission = {
-  permissions: Permission[];
+  permission: Permission;
+};
+
+type Role = {
+  id: string;
+  name: string;
+  role_permissions: RolePermission[];
+};
+
+type AdminProfile = {
+  id: string;
+  role_id: string;
+  role: Role;
 };
 
 type UpdateData = {
@@ -21,11 +33,9 @@ type UpdateData = {
 
 export async function GET(request: Request) {
   try {
-    console.log("Starting GET /api/admin/newsletter/subscribers");
     const supabase = await createClient();
 
     // Get the current user
-    console.log("Fetching user...");
     const {
       data: { user },
       error: userError,
@@ -40,25 +50,21 @@ export async function GET(request: Request) {
     }
 
     if (!user) {
-      console.log("No user found");
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("User authenticated:", user.id);
-
     // Get the user's profile with roles and permissions
-    console.log("Fetching user profile...");
     const { data: profile, error: profileError } = await supabase
       .from("admin_profiles")
       .select(
         `
         id,
         role_id,
-        roles!inner (
+        role:roles (
           id,
           name,
-          role_permissions!inner (
-            permissions!inner (
+          role_permissions (
+            permission:permissions (
               id,
               name
             )
@@ -78,23 +84,28 @@ export async function GET(request: Request) {
     }
 
     if (!profile) {
-      console.log("No profile found for user:", user.id);
       return NextResponse.json(
         { message: "User profile not found" },
         { status: 404 }
       );
     }
 
-    console.log("User profile found:", profile.id);
+    const typedProfile = profile as unknown as AdminProfile;
+
+    if (!typedProfile.role?.role_permissions) {
+      console.error("User has no roles or permissions:", typedProfile);
+      return NextResponse.json(
+        { message: "User has no roles or permissions" },
+        { status: 403 }
+      );
+    }
 
     // Check if user has the required permission
-    const hasPermission = profile.roles[0].role_permissions.some(
-      (rp: RolePermission) =>
-        rp.permissions.some((p) => p.name === "manage_subscribers")
+    const hasPermission = typedProfile.role.role_permissions.some(
+      (rp) => rp.permission.name === "manage_subscribers"
     );
 
     if (!hasPermission) {
-      console.log("User does not have manage_subscribers permission");
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -103,11 +114,8 @@ export async function GET(request: Request) {
     const status = searchParams.get("status") || "all";
     const search = searchParams.get("search") || "";
 
-    console.log("Query parameters:", { status, search });
-
     // Validate status parameter
     if (!VALID_STATUSES.includes(status)) {
-      console.log("Invalid status:", status);
       return NextResponse.json(
         {
           message: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`,
@@ -117,7 +125,6 @@ export async function GET(request: Request) {
     }
 
     // Build the query
-    console.log("Building query...");
     let query = supabase
       .from("newsletter_subscribers")
       .select("*")
@@ -132,7 +139,6 @@ export async function GET(request: Request) {
       query = query.or(`email.ilike.%${search}%,name.ilike.%${search}%`);
     }
 
-    console.log("Executing query...");
     const { data, error } = await query;
 
     if (error) {
@@ -143,7 +149,6 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log(`Successfully fetched ${data?.length || 0} subscribers`);
     return NextResponse.json(data || []);
   } catch (error) {
     console.error(
@@ -175,11 +180,12 @@ export async function PATCH(request: Request) {
       .select(
         `
         id,
-        roles!inner (
+        role_id,
+        role:roles (
           id,
           name,
-          role_permissions!inner (
-            permissions!inner (
+          role_permissions (
+            permission:permissions (
               id,
               name
             )
@@ -205,10 +211,19 @@ export async function PATCH(request: Request) {
       );
     }
 
+    const typedProfile = profile as unknown as AdminProfile;
+
+    if (!typedProfile.role?.role_permissions) {
+      console.error("User has no roles or permissions:", typedProfile);
+      return NextResponse.json(
+        { message: "User has no roles or permissions" },
+        { status: 403 }
+      );
+    }
+
     // Check if user has the required permission
-    const hasPermission = profile.roles[0].role_permissions.some(
-      (rp: RolePermission) =>
-        rp.permissions.some((p: Permission) => p.name === "manage_subscribers")
+    const hasPermission = typedProfile.role.role_permissions.some(
+      (rp) => rp.permission.name === "manage_subscribers"
     );
 
     if (!hasPermission) {

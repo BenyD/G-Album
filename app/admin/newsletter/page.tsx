@@ -151,12 +151,13 @@ export default function NewsletterPage() {
       const response = await fetch(
         `/api/admin/newsletter/subscribers?status=${statusFilter}&search=${debouncedSearchTerm}`
       );
-      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch subscribers");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch subscribers");
       }
 
+      const data = await response.json();
       setSubscribers(data);
     } catch (error) {
       const errorMessage =
@@ -169,20 +170,8 @@ export default function NewsletterPage() {
     }
   }, [statusFilter, debouncedSearchTerm]);
 
-  useEffect(() => {
-    loadSubscribers();
-  }, [statusFilter, debouncedSearchTerm, loadSubscribers]);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const loadNewsletters = async () => {
+  // Load newsletters
+  const loadNewsletters = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("newsletter_logs")
@@ -194,8 +183,24 @@ export default function NewsletterPage() {
     } catch (error) {
       console.error("Error loading newsletters:", error);
       toast.error("Failed to load newsletters");
+      setNewsletters([]);
     }
-  };
+  }, [supabase]);
+
+  // Load initial data
+  useEffect(() => {
+    loadSubscribers();
+    loadNewsletters();
+  }, [loadSubscribers, loadNewsletters]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Calculate statistics
   const stats = useMemo(() => {
