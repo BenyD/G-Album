@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update subscriber status
     const { error: updateError } = await supabase

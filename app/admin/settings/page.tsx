@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Clock } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useRole } from "@/components/admin/role-context";
 import { useRouter } from "next/navigation";
 
@@ -24,19 +24,10 @@ interface GeneralSettings {
   updated_by: string;
 }
 
-interface ActivityLog {
-  id: string;
-  action: string;
-  details: Record<string, unknown> | string | null;
-  created_at: string;
-  user_id: string;
-  admin_profiles?: { full_name: string | null };
-}
-
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { role, hasPermission } = useRole();
+  const { hasPermission } = useRole();
   const [settings, setSettings] = useState<GeneralSettings | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedSettings, setEditedSettings] = useState<
