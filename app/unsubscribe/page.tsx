@@ -1,111 +1,116 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
-function UnsubscribeContent() {
+export default function UnsubscribePage() {
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
-  );
-  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = async () => {
-      const email = searchParams.get("email");
-      const token = searchParams.get("token");
+  const handleUnsubscribe = useCallback(async () => {
+    const email = searchParams.get("email");
+    const token = searchParams.get("token");
 
-      if (!email || !token) {
-        setStatus("error");
-        setMessage("Invalid unsubscribe link. Please try again.");
-        return;
+    if (!email || !token) {
+      setError("Invalid unsubscribe link");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/newsletter/unsubscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, token }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to unsubscribe");
       }
 
-      try {
-        const response = await fetch(
-          `/api/newsletter/unsubscribe?email=${encodeURIComponent(
-            email
-          )}&token=${encodeURIComponent(token)}`
-        );
+      setIsSuccess(true);
+    } catch (err) {
+      console.error("Error unsubscribing:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to unsubscribe. Please try again later."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchParams]);
 
-        if (!response.ok) {
-          throw new Error("Failed to unsubscribe");
-        }
+  useEffect(() => {
+    let mounted = true;
 
-        setStatus("success");
-        setMessage(
-          "You have been successfully unsubscribed from our newsletter."
-        );
-      } catch {
-        setStatus("error");
-        setMessage(
-          "There was an error processing your request. Please try again later."
-        );
+    const unsubscribe = async () => {
+      if (mounted) {
+        await handleUnsubscribe();
       }
     };
 
     unsubscribe();
-  }, [searchParams]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [handleUnsubscribe]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">
-            Newsletter Unsubscribe
+          <CardTitle className="text-center text-2xl font-bold text-red-900">
+            {isLoading
+              ? "Processing..."
+              : isSuccess
+                ? "Successfully Unsubscribed"
+                : "Unsubscribe Failed"}
           </CardTitle>
-          <CardDescription className="text-center">
-            {status === "loading"
-              ? "Processing your request..."
-              : "Manage your newsletter subscription"}
-          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center space-y-4">
-            {status === "loading" && (
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
-            )}
-            {status === "success" && (
-              <CheckCircle2 className="h-12 w-12 text-green-500" />
-            )}
-            {status === "error" && (
-              <XCircle className="h-12 w-12 text-red-500" />
-            )}
-            <p className="text-center text-gray-600">{message}</p>
-            {status !== "loading" && (
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-red-600 mb-4" />
+              <p className="text-center text-muted-foreground">
+                Processing your request...
+              </p>
+            </div>
+          ) : isSuccess ? (
+            <div className="text-center space-y-4">
+              <p className="text-muted-foreground">
+                You have been successfully unsubscribed from our newsletter.
+              </p>
               <Button
                 onClick={() => (window.location.href = "/")}
-                className="mt-4"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
-                Return to Home
+                Return to Homepage
               </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="text-center space-y-4">
+              <p className="text-red-600">{error}</p>
+              <Button
+                onClick={() => (window.location.href = "/")}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Return to Homepage
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-export default function UnsubscribePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
-        </div>
-      }
-    >
-      <UnsubscribeContent />
-    </Suspense>
   );
 }

@@ -162,7 +162,7 @@ const createEmailTemplate = (
 
   <div class="container">
     <div class="header">
-      <img src="https://galbum.net/logo.png" alt="G Album" class="logo" width="150" height="auto">
+      <img src="${process.env.NEXT_PUBLIC_APP_URL}/logo.png" alt="G Album" class="logo" width="150" height="auto">
       <div class="accent-line"></div>
     </div>
     
