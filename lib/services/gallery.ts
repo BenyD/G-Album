@@ -6,15 +6,6 @@ interface Album {
   description: string | null;
 }
 
-interface AlbumImage {
-  id: string;
-  image_url: string;
-  album_id: string;
-  order_index: number;
-  created_at: string;
-  albums: Album;
-}
-
 export interface GalleryImage {
   id: string;
   image_url: string;
@@ -27,7 +18,27 @@ export interface GalleryImage {
   isSelected?: boolean;
 }
 
+type SupabaseResponse = {
+  id: string;
+  image_url: string;
+  album_id: string;
+  order_index: number;
+  created_at: string;
+  albums: Album;
+};
+
+// Cache for gallery images
+let galleryCache: GalleryImage[] | null = null;
+let lastFetchTime: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export async function getAllGalleryImages(): Promise<GalleryImage[]> {
+  // Check cache first
+  const now = Date.now();
+  if (galleryCache && now - lastFetchTime < CACHE_DURATION) {
+    return galleryCache;
+  }
+
   const supabase = createClient();
 
   const { data, error } = await supabase
@@ -57,7 +68,7 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
     return [];
   }
 
-  return data.map((item: any) => ({
+  const processedData = (data as unknown as SupabaseResponse[]).map((item) => ({
     id: item.id,
     image_url: item.image_url,
     album_id: item.album_id,
@@ -69,6 +80,12 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
     order_index: item.order_index,
     is_visible: true,
   }));
+
+  // Update cache
+  galleryCache = processedData;
+  lastFetchTime = now;
+
+  return processedData;
 }
 
 export async function getVisibleGalleryImages(): Promise<GalleryImage[]> {

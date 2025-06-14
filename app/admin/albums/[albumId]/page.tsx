@@ -259,32 +259,66 @@ export default function EditAlbumPage() {
         throw new Error("Please fill in the album title");
       }
 
-      // Upload new images
-      const uploadPromises = uploadedImages.map((img) =>
-        uploadImage(img.file, title.toLowerCase().replace(/\s+/g, "-"))
-      );
-      const newImageUrls = await Promise.all(uploadPromises);
+      // First, delete all images that were marked for deletion
+      if (imagesToDelete.length > 0) {
+        try {
+          await Promise.all(imagesToDelete.map((url) => deleteImage(url)));
+          console.log("Successfully deleted removed images");
+        } catch (error) {
+          console.error("Error deleting removed images:", error);
+          throw new Error("Failed to delete removed images");
+        }
+      }
 
-      // Delete removed images
-      await Promise.all(imagesToDelete.map((url) => deleteImage(url)));
+      // Upload new images
+      let newImageUrls: string[] = [];
+      if (uploadedImages.length > 0) {
+        try {
+          const uploadPromises = uploadedImages.map((img) =>
+            uploadImage(img.file, title.toLowerCase().replace(/\s+/g, "-"))
+          );
+          newImageUrls = await Promise.all(uploadPromises);
+          console.log("Successfully uploaded new images");
+        } catch (error) {
+          console.error("Error uploading new images:", error);
+          throw new Error("Failed to upload new images");
+        }
+      }
 
       // Update album
-      await updateAlbum(albumId as string, {
-        title,
-        description,
-        featured,
-        cover_image_url: coverImageUrl,
-        images: [
-          ...existingImages.map((img) => ({
-            image_url: img.image_url,
-            order_index: img.order_index,
-          })),
-          ...newImageUrls.map((url, index) => ({
-            image_url: url,
-            order_index: existingImages.length + index,
-          })),
-        ],
-      });
+      try {
+        await updateAlbum(albumId as string, {
+          title,
+          description,
+          featured,
+          cover_image_url: coverImageUrl,
+          images: [
+            ...existingImages.map((img) => ({
+              image_url: img.image_url,
+              order_index: img.order_index,
+            })),
+            ...newImageUrls.map((url, index) => ({
+              image_url: url,
+              order_index: existingImages.length + index,
+            })),
+          ],
+        });
+        console.log("Successfully updated album data");
+      } catch (error) {
+        // If album update fails, try to clean up any newly uploaded images
+        if (newImageUrls.length > 0) {
+          try {
+            await Promise.all(newImageUrls.map((url) => deleteImage(url)));
+            console.log("Cleaned up newly uploaded images after failed update");
+          } catch (cleanupError) {
+            console.error(
+              "Error cleaning up images after failed update:",
+              cleanupError
+            );
+          }
+        }
+        throw error;
+      }
 
       // Get current user
       const supabase = createClient();

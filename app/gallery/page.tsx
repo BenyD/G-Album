@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, X, Grid3X3, List } from "lucide-react";
+import { Search, Filter, X, Grid3X3, List, ChevronDown } from "lucide-react";
 import PageHero from "@/components/page-hero";
 import { getAllGalleryImages } from "@/lib/services/gallery";
 import type { GalleryImage } from "@/lib/services/gallery";
@@ -17,13 +17,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { debounce } from "lodash";
+import { motion, useScroll, useSpring } from "framer-motion";
 
 // Breakpoints for masonry grid
 const breakpointColumns = {
-  default: 4,
-  1536: 4,
+  default: 3,
+  1536: 3,
   1280: 3,
-  1024: 3,
+  1024: 2,
   768: 2,
   640: 1,
 };
@@ -32,11 +39,101 @@ export default function GalleryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAlbums, setSelectedAlbums] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"masonry" | "list">("masonry");
-  const [visibleItems, setVisibleItems] = useState(12);
+  const [visibleItems, setVisibleItems] = useState(8);
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  });
+
+  // Get unique album names for filtering
+  const allAlbums = useMemo(() => {
+    const uniqueAlbums = new Set<string>();
+    galleryImages.forEach((image) => {
+      if (image.album_name) {
+        uniqueAlbums.add(image.album_name);
+      }
+    });
+    return Array.from(uniqueAlbums).sort();
+  }, [galleryImages]);
+
+  // Filter images based on search and album selection
+  const filteredImages = useMemo(() => {
+    const searchTerms = searchQuery.toLowerCase().split(" ").filter(Boolean);
+
+    return galleryImages.filter((image) => {
+      if (!searchTerms.length && !selectedAlbums.length) return true;
+
+      const imageText = `${image.alt} ${image.album_name}`.toLowerCase();
+
+      if (
+        searchTerms.length &&
+        !searchTerms.every((term) => imageText.includes(term))
+      ) {
+        return false;
+      }
+
+      if (selectedAlbums.length && !selectedAlbums.includes(image.album_name)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [galleryImages, searchQuery, selectedAlbums]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          !isLoading &&
+          visibleItems < filteredImages.length
+        ) {
+          // Load more items in smaller chunks
+          setVisibleItems((prev) => Math.min(prev + 6, filteredImages.length));
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px", // Increased from 100px to 200px for earlier loading
+        threshold: 0.1,
+      }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [isLoading, visibleItems, filteredImages.length]);
+
+  // Debounce search input
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setSearchQuery(value);
+      }, 300),
+    []
+  );
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    debouncedSearch(value);
+  };
 
   // Load gallery images
   useEffect(() => {
@@ -57,40 +154,6 @@ export default function GalleryPage() {
     loadImages();
   }, []);
 
-  // Get unique album names for filtering
-  const allAlbums = useMemo(() => {
-    const uniqueAlbums = new Set<string>();
-    galleryImages.forEach((image) => {
-      if (image.album_name) {
-        uniqueAlbums.add(image.album_name);
-      }
-    });
-    return Array.from(uniqueAlbums).sort();
-  }, [galleryImages]);
-
-  // Filter images based on search and album selection
-  const filteredImages = useMemo(() => {
-    return galleryImages.filter((image) => {
-      const imageText = `${image.alt} ${image.album_name}`.toLowerCase();
-      const searchTerms = searchQuery.toLowerCase().split(" ");
-
-      // Check if all search terms are present
-      if (
-        searchQuery &&
-        !searchTerms.every((term) => imageText.includes(term))
-      ) {
-        return false;
-      }
-
-      // Check album filter
-      if (selectedAlbums.length && !selectedAlbums.includes(image.album_name)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [galleryImages, searchQuery, selectedAlbums]);
-
   // Toggle album selection
   const toggleAlbum = (album: string) => {
     setSelectedAlbums((prev) =>
@@ -102,11 +165,6 @@ export default function GalleryPage() {
   const clearFilters = () => {
     setSearchQuery("");
     setSelectedAlbums([]);
-  };
-
-  // Load more images
-  const loadMore = () => {
-    setVisibleItems((prev) => Math.min(prev + 12, filteredImages.length));
   };
 
   if (error) {
@@ -128,6 +186,14 @@ export default function GalleryPage() {
 
   return (
     <div className="flex flex-col min-h-screen pt-16">
+      {/* Custom Scroll Progress Bar */}
+      <motion.div
+        className="fixed top-[56px] left-0 right-0 h-0.5 bg-red-100 z-50"
+        style={{ scaleX, transformOrigin: "0%" }}
+      >
+        <div className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-700" />
+      </motion.div>
+
       <PageHero
         title="Our Gallery"
         subtitle="Explore our collection of hand crafted photo albums"
@@ -146,8 +212,8 @@ export default function GalleryPage() {
                 type="search"
                 placeholder="Search albums..."
                 className="pl-10 border-red-200 focus-visible:ring-red-500 bg-white"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                defaultValue={searchQuery}
+                onChange={handleSearchChange}
               />
             </div>
 
@@ -183,14 +249,35 @@ export default function GalleryPage() {
           </div>
 
           {/* Filters */}
-          <div className="bg-transparent">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-red-600" />
-                <span className="font-medium text-slate-700">
-                  Filter by Album:
-                </span>
-              </div>
+          <Collapsible
+            open={isFiltersOpen}
+            onOpenChange={setIsFiltersOpen}
+            className="bg-transparent"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-200 text-red-700 hover:bg-red-50"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                  {selectedAlbums.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 bg-red-100 text-red-700"
+                    >
+                      {selectedAlbums.length}
+                    </Badge>
+                  )}
+                  <ChevronDown
+                    className={`h-4 w-4 ml-2 transition-transform ${
+                      isFiltersOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </Button>
+              </CollapsibleTrigger>
 
               {(searchQuery || selectedAlbums.length > 0) && (
                 <Button
@@ -205,26 +292,35 @@ export default function GalleryPage() {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {allAlbums.map((album) => (
-                <Button
-                  key={album}
-                  variant={
-                    selectedAlbums.includes(album) ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() => toggleAlbum(album)}
-                  className={`${
-                    selectedAlbums.includes(album)
-                      ? "bg-red-600 text-white hover:bg-red-700"
-                      : "border-red-200 text-red-700 hover:bg-red-50"
-                  }`}
-                >
-                  {album}
-                </Button>
-              ))}
-            </div>
-          </div>
+            <CollapsibleContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-slate-700">
+                    Filter by Album:
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {allAlbums.map((album) => (
+                    <Button
+                      key={album}
+                      variant={
+                        selectedAlbums.includes(album) ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => toggleAlbum(album)}
+                      className={`${
+                        selectedAlbums.includes(album)
+                          ? "bg-red-600 text-white hover:bg-red-700"
+                          : "border-red-200 text-red-700 hover:bg-red-50"
+                      }`}
+                    >
+                      {album}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </section>
 
@@ -256,8 +352,9 @@ export default function GalleryPage() {
                           height={1200}
                           className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          priority={index < 4}
-                          loading={index < 4 ? "eager" : "lazy"}
+                          priority={index < 2}
+                          loading={index < 2 ? "eager" : "lazy"}
+                          quality={75}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.src = "/placeholder-image.jpg";
@@ -303,17 +400,13 @@ export default function GalleryPage() {
                 </div>
               )}
 
-              {/* Load More Button */}
+              {/* Loading indicator for infinite scroll */}
               {!isLoading && visibleItems < filteredImages.length && (
-                <div className="flex justify-center mt-8">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={loadMore}
-                    className="border-red-200 text-red-700 hover:bg-red-50"
-                  >
-                    Load More
-                  </Button>
+                <div
+                  ref={loadMoreRef}
+                  className="flex justify-center items-center py-8"
+                >
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
                 </div>
               )}
             </>

@@ -320,19 +320,21 @@ export default function Header() {
         </AnimatePresence>
       </nav>
 
-      {/* Scroll Progress Bar */}
-      <div className="absolute bottom-0 left-0 w-full h-0.5">
-        <motion.div
-          className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-700"
-          style={{
-            width: `${scrollProgress}%`,
-            boxShadow:
-              "0 0 10px rgba(239, 68, 68, 0.5), 0 0 20px rgba(239, 68, 68, 0.3)",
-          }}
-        >
-          <div className="absolute top-0 right-0 h-full w-24 bg-gradient-to-r from-transparent to-white/20 blur-sm" />
-        </motion.div>
-      </div>
+      {/* Scroll Progress Bar - Only show if not on gallery page */}
+      {pathname !== "/gallery" && (
+        <div className="absolute bottom-0 left-0 w-full h-0.5">
+          <motion.div
+            className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-700"
+            style={{
+              width: `${scrollProgress}%`,
+              boxShadow:
+                "0 0 10px rgba(239, 68, 68, 0.5), 0 0 20px rgba(239, 68, 68, 0.3)",
+            }}
+          >
+            <div className="absolute top-0 right-0 h-full w-24 bg-gradient-to-r from-transparent to-white/20 blur-sm" />
+          </motion.div>
+        </div>
+      )}
     </motion.header>
   );
 }

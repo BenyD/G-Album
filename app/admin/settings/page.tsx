@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -239,39 +239,55 @@ export default function SettingsPage() {
     }
   }, [role]);
 
-  // --- REWRITE GLOBAL LOG FETCHING ---
-  const fetchLogs = useCallback(
-    async (page: number, userFilter: string, actionFilter: string) => {
-      let query = supabase
-        .from("activity_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(LOGS_PER_PAGE)
-        .range((page - 1) * LOGS_PER_PAGE, page * LOGS_PER_PAGE - 1);
-      if (userFilter) query = query.eq("user_id", userFilter);
-      if (actionFilter) query = query.ilike("action", `%${actionFilter}%`);
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    []
-  );
-
   // Use new fetchLogs in effect
   useEffect(() => {
     if (role === "super_admin") {
+      const fetchLogs = async () => {
+        try {
+          let query = supabase
+            .from("activity_logs")
+            .select(
+              `
+              *,
+              admin_profiles!admin_profile_id (
+                full_name
+              )
+            `
+            )
+            .order("created_at", { ascending: false })
+            .range((logPage - 1) * LOGS_PER_PAGE, logPage * LOGS_PER_PAGE - 1);
+
+          if (logUserFilter) {
+            query = query.eq("admin_profile_id", logUserFilter);
+          }
+          if (logActionFilter) {
+            query = query.ilike("action", `%${logActionFilter}%`);
+          }
+
+          const { data, error } = await query;
+          if (error) {
+            console.error("Error in fetchLogs:", error);
+            throw error;
+          }
+
+          setGlobalLogs(data || []);
+        } catch (error) {
+          console.error("Error fetching logs:", error);
+          throw error;
+        }
+      };
+
       setIsLoadingLogs(true);
-      fetchLogs(logPage, logUserFilter, logActionFilter)
-        .then((logs) => {
-          setGlobalLogs(logs);
-          setIsLoadingLogs(false);
-        })
+      fetchLogs()
         .catch((err) => {
-          setIsLoadingLogs(false);
+          console.error("Failed to fetch logs:", err);
           toast.error("Failed to fetch activity logs: " + err.message);
+        })
+        .finally(() => {
+          setIsLoadingLogs(false);
         });
     }
-  }, [role, logUserFilter, logActionFilter, logPage, fetchLogs]);
+  }, [role, logUserFilter, logActionFilter, logPage]);
 
   if (isLoading) {
     return (

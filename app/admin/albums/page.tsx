@@ -13,7 +13,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus, Search, Star, Eye, Pencil, Trash } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Star,
+  Eye,
+  Pencil,
+  Trash,
+  Image as ImageIcon,
+} from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -148,6 +156,41 @@ export default function AlbumsPage() {
             Create New Album
           </span>
         </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-red-50/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <ImageIcon className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Albums</p>
+                <p className="text-2xl font-bold text-red-900">
+                  {albums.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-red-50/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <Star className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Featured Albums</p>
+                <p className="text-2xl font-bold text-red-900">
+                  {albums.filter((album) => album.featured).length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-red-100 overflow-hidden">

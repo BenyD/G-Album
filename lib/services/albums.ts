@@ -206,7 +206,19 @@ export async function deleteAlbum(id: string): Promise<void> {
   const supabase = createClient();
 
   try {
-    // First get all images for this album
+    // First get the album to get the cover image
+    const { data: album, error: albumError } = await supabase
+      .from("albums")
+      .select("cover_image_url")
+      .eq("id", id)
+      .single();
+
+    if (albumError) {
+      console.error("Error fetching album:", albumError);
+      throw albumError;
+    }
+
+    // Get all images for this album
     const { data: images, error: fetchError } = await supabase
       .from("album_images")
       .select("image_url")
@@ -217,11 +229,17 @@ export async function deleteAlbum(id: string): Promise<void> {
       throw fetchError;
     }
 
-    // Delete images from storage if we have any
-    if (images && images.length > 0) {
-      console.log("Found images to delete:", images.length);
+    // Collect all image URLs to delete (including cover image)
+    const imageUrls = [...(images || [])];
+    if (album?.cover_image_url) {
+      imageUrls.push({ image_url: album.cover_image_url });
+    }
 
-      const filePaths = images
+    // Delete images from storage if we have any
+    if (imageUrls.length > 0) {
+      console.log("Found images to delete:", imageUrls.length);
+
+      const filePaths = imageUrls
         .map((img) => {
           try {
             // Extract the path after the bucket name in the URL
@@ -275,10 +293,50 @@ export async function deleteAlbum(id: string): Promise<void> {
 
 export async function deleteImage(url: string): Promise<void> {
   const supabase = createClient();
-  // Extract the path from the URL
-  const path = url.split("/").slice(-2).join("/");
 
-  const { error } = await supabase.storage.from(STORAGE_BUCKET).remove([path]);
+  try {
+    // Extract the path from the URL
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split("/");
+    const bucketIndex = pathParts.indexOf("albums");
 
-  if (error) throw error;
+    if (bucketIndex === -1) {
+      throw new Error(`Invalid image URL format: ${url}`);
+    }
+
+    const path = pathParts.slice(bucketIndex + 1).join("/");
+
+    const { error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .remove([path]);
+
+    if (error) {
+      console.error("Error deleting image from storage:", error);
+      throw error;
+    }
+
+    console.log("Successfully deleted image from storage:", path);
+  } catch (error) {
+    console.error("Error in deleteImage:", error);
+    throw error;
+  }
+}
+
+export async function getAlbumsBucketSize(): Promise<number> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase.storage.from("albums").list();
+
+  if (error) {
+    console.error("Error getting bucket size:", error);
+    throw error;
+  }
+
+  // Calculate total size in bytes
+  const totalSize = data.reduce(
+    (acc, file) => acc + (file.metadata?.size || 0),
+    0
+  );
+
+  return totalSize;
 }

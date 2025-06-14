@@ -88,7 +88,7 @@ export default function AdminSidebar() {
     const fetchUnreadCount = async () => {
       try {
         const { count, error } = await supabase
-          .from("submissions")
+          .from("contact_submissions")
           .select("*", { count: "exact", head: true })
           .eq("status", "New");
 
@@ -113,7 +113,7 @@ export default function AdminSidebar() {
         {
           event: "*",
           schema: "public",
-          table: "submissions",
+          table: "contact_submissions",
         },
         () => {
           fetchUnreadCount();
