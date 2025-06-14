@@ -68,69 +68,8 @@ export default function AboutPage() {
   const hasLoaded = useHasLoaded();
   const [aboutRef, isAboutInView] = useInView();
 
-  // Sample team members
-  const teamMembers = [
-    {
-      name: "Kumaran A",
-      role: "Founder & Managing Director",
-      image: "/images/staff/kumaran.jpeg",
-      bio: "With over 15 years of experience in photography and album design, Rahul founded G Album with a vision to create affordable yet premium quality photo albums.",
-    },
-    {
-      name: "Jagadeesh",
-      role: "Manager",
-      image: "/images/staff/jagadeesh.jpeg",
-      bio: "Priya brings her artistic vision and attention to detail to every album design, ensuring each one tells a unique story.",
-    },
-    {
-      name: "Sumitra",
-      role: "Office Incharge",
-      image: "/images/staff/sumithra.jpeg",
-      bio: "Sumitra oversees our production process, ensuring that every album meets our high standards of quality and craftsmanship.",
-    },
-    {
-      name: "Jagendran",
-      role: "Front Desk Executive",
-      image: "/images/staff/jagendran.jpg",
-      bio: "Jagendran is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
-    },
-    {
-      name: "Amul",
-      role: "Designer",
-      image: "/images/staff/amul.jpeg",
-      bio: "Amul is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
-    },
-    {
-      name: "Kavitha",
-      role: "Incharge Assistant",
-      image: "/images/staff/kavitha.jpeg",
-      bio: "Kavitha is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
-    },
-    {
-      name: "Esaki",
-      role: "Manufacturing Executive",
-      image: "/images/staff/esaki.jpg",
-      bio: "Esaki is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
-    },
-    {
-      name: "Esakiraj",
-      role: "Manufacturing Assistant",
-      image: "/images/staff/esakiraja.jpeg",
-      bio: "Esakiraj is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
-    },
-    {
-      name: "Sylaja",
-      role: "Staff",
-      image: "/images/staff/sylaja.jpeg",
-      bio: "Sylaja is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
-    },
-    {
-      name: "Kishore",
-      role: "Staff",
-      image: "/images/staff/kishore.jpg",
-      bio: "Kishore is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
-    },
-  ];
+  // Use team members from config
+  const teamMembers = aboutConfig.team.members;
 
   return (
     <div className="flex flex-col min-h-screen pt-16">
@@ -436,7 +375,7 @@ export default function AboutPage() {
                   transition={{ duration: 0.2 }}
                 >
                   <Image
-                    src={member.image || "/placeholder.svg"}
+                    src={member.image}
                     alt={member.name}
                     className="mx-auto size-32 rounded-full object-cover border-2 border-red-100"
                     width={128}
