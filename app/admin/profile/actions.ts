@@ -10,7 +10,7 @@ export async function updateProfile(
     avatar_url?: string;
   }
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   try {
     const { error } = await supabase
@@ -29,13 +29,13 @@ export async function updateProfile(
 }
 
 export async function uploadProfilePicture(userId: string, file: File) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   try {
     // Upload the file to Supabase Storage
     const fileExt = file.name.split(".").pop();
     const fileName = `${userId}-${Date.now()}.${fileExt}`;
-    const { error: uploadError, data } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(fileName, file);
 

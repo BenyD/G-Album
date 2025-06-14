@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { logActivity } from "@/utils/supabase/client";
 import { createClient } from "@/utils/supabase/client";
+import Image from "next/image";
 
 const steps = [
   {
@@ -68,7 +69,7 @@ function ImagePreview({
     <div className="group relative aspect-square">
       {/* Main image container */}
       <div className="h-full w-full rounded-lg border border-gray-200 overflow-hidden">
-        <img src={src} alt="" className="h-full w-full object-cover" />
+        <Image src={src} alt="" fill className="object-cover" unoptimized />
       </div>
 
       {/* Overlay controls */}

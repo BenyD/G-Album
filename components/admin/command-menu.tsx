@@ -146,7 +146,7 @@ const commandMenuItems = [
 export default function AdminCommandMenu() {
   const router = useRouter();
   const { hasPermission } = useRole();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isMac, setIsMac] = useState(true);
 
@@ -279,9 +279,7 @@ export default function AdminCommandMenu() {
                   window.localStorage.clear();
                   window.sessionStorage.clear();
                 }
-                if (profile && profile.signOut) {
-                  profile.signOut();
-                }
+                signOut();
                 router.push("/admin/login");
                 setIsOpen(false);
               }}

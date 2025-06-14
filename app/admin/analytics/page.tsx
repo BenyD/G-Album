@@ -8,21 +8,8 @@ import { LineChart, BarChart, PieChart } from "@/components/charts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRole } from "@/components/admin/role-context";
 import { Loader2, TrendingUp, ShoppingCart, IndianRupee } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  BarChart3,
-  Calendar,
-  Download,
-  Info,
-  Lock,
-  Users,
-  Camera,
-  DollarSign,
-  Package,
-  Star,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { RoleBasedContent } from "@/components/admin/role-based-content";
+import { startOfDay, endOfDay, subDays, startOfYear } from "date-fns";
+
 import {
   Select,
   SelectContent,
@@ -30,29 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Bar,
-  Pie,
-  Cell,
-} from "recharts";
+
 import { useState } from "react";
 import { DatePicker } from "@/components/ui/date-picker";
-import {
-  addDays,
-  subDays,
-  startOfDay,
-  endOfDay,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-  endOfYear,
-} from "date-fns";
 
 export default function AnalyticsPage() {
   const { hasPermission } = useRole();
@@ -65,9 +32,9 @@ export default function AnalyticsPage() {
 
   const [dateFilter, setDateFilter] = useState("last_30_days");
   const [customRange, setCustomRange] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>({ start: null, end: null });
+    start: Date | undefined;
+    end: Date | undefined;
+  }>({ start: undefined, end: undefined });
 
   // Helper to get start/end dates based on filter
   const getDateRange = () => {
@@ -82,6 +49,12 @@ export default function AnalyticsPage() {
       case "last_year":
         return { start: startOfYear(today), end: endOfDay(today) };
       case "custom":
+        if (!customRange.start || !customRange.end) {
+          return {
+            start: startOfDay(subDays(today, 29)),
+            end: endOfDay(today),
+          };
+        }
         return { start: customRange.start, end: customRange.end };
       default:
         return { start: startOfDay(subDays(today, 29)), end: endOfDay(today) };
@@ -151,7 +124,7 @@ export default function AnalyticsPage() {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
         <p className="text-lg text-muted-foreground">
-          You don't have permission to view analytics.
+          You don&apos;t have permission to view analytics.
         </p>
       </div>
     );
@@ -291,9 +264,8 @@ export default function AnalyticsPage() {
               ) : (
                 <LineChart
                   data={monthlyData || []}
-                  xAxisKey="month"
-                  yAxisKey="total_revenue"
-                  valueFormatter={formatCurrency}
+                  xKey="month"
+                  yKey="total_revenue"
                   height={300}
                 />
               )}
@@ -317,7 +289,6 @@ export default function AnalyticsPage() {
                     data={revenueBreakdown || []}
                     nameKey="category"
                     valueKey="revenue"
-                    valueFormatter={formatCurrency}
                     height={300}
                   />
                 )}
@@ -338,8 +309,8 @@ export default function AnalyticsPage() {
                 ) : (
                   <BarChart
                     data={monthlyData || []}
-                    xAxisKey="month"
-                    yAxisKey="total_revenue"
+                    xKey="month"
+                    yKey="total_revenue"
                     valueFormatter={formatCurrency}
                     height={300}
                   />
@@ -373,8 +344,8 @@ export default function AnalyticsPage() {
                         return acc;
                       }, []) || []
                     }
-                    xAxisKey="month"
-                    yAxisKey="cumulative"
+                    xKey="month"
+                    yKey="cumulative"
                     valueFormatter={formatCurrency}
                     height={300}
                   />
@@ -395,8 +366,8 @@ export default function AnalyticsPage() {
                 ) : (
                   <BarChart
                     data={monthlyData || []}
-                    xAxisKey="month"
-                    yAxisKey="total_revenue"
+                    xKey="month"
+                    yKey="total_revenue"
                     secondaryYAxisKey="total_orders"
                     valueFormatter={formatCurrency}
                     height={300}
@@ -445,8 +416,8 @@ export default function AnalyticsPage() {
                 ) : (
                   <BarChart
                     data={processingMetrics || []}
-                    xAxisKey="category"
-                    yAxisKey="count"
+                    xKey="category"
+                    yKey="count"
                     height={300}
                   />
                 )}
@@ -467,8 +438,8 @@ export default function AnalyticsPage() {
                 ) : (
                   <LineChart
                     data={monthlyData || []}
-                    xAxisKey="month"
-                    yAxisKey="total_orders"
+                    xKey="month"
+                    yKey="total_orders"
                     height={300}
                   />
                 )}

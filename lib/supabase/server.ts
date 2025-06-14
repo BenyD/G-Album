@@ -1,6 +1,6 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieMethodsServer } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { Database } from "./database.types";
+import { Database } from "@/lib/database.types";
 
 export const createClient = async () => {
   const cookieStore = await cookies();
@@ -10,26 +10,18 @@ export const createClient = async () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll().map((cookie) => ({
+            name: cookie.name,
+            value: cookie.value,
+          }));
         },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set(name, value, options);
-          } catch (error) {
-            // Handle cookie setting error
-            console.error("Error setting cookie:", error);
-          }
+        setAll(cookies) {
+          cookies.forEach((cookie) => {
+            cookieStore.set({ name: cookie.name, value: cookie.value });
+          });
         },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set(name, "", { ...options, maxAge: 0 });
-          } catch (error) {
-            // Handle cookie removal error
-            console.error("Error removing cookie:", error);
-          }
-        },
-      },
+      } satisfies CookieMethodsServer,
     }
   );
 };

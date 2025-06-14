@@ -1,22 +1,11 @@
 "use client";
 
-import { useRole } from "@/components/admin/role-context";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   ArrowUpDown,
   Check,
-  Info,
-  MoreHorizontal,
   Search,
   Trash,
   Calendar,
@@ -25,20 +14,11 @@ import {
   User,
   MessageSquare,
   Filter,
-  X,
-  RefreshCw,
+  AlertTriangle,
   CheckCircle2,
   Clock,
-  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -55,11 +35,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { RoleBasedContent } from "@/components/admin/role-based-content";
 import { useState, useMemo, useEffect } from "react";
 import { createClient, logActivity } from "@/utils/supabase/client";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import {
   Sheet,
@@ -77,7 +55,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronDown } from "lucide-react";
 
 interface Submission {
   id: string;
@@ -90,23 +67,7 @@ interface Submission {
   updated_at: string;
 }
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
-
 export default function SubmissionsPage() {
-  const { role } = useRole();
   const [selectedSubmission, setSelectedSubmission] =
     useState<Submission | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -116,7 +77,6 @@ export default function SubmissionsPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [submissionToDelete, setSubmissionToDelete] =
     useState<Submission | null>(null);
@@ -124,7 +84,6 @@ export default function SubmissionsPage() {
   // Fetch submissions
   const fetchSubmissions = async () => {
     try {
-      setIsLoading(true);
       const supabase = createClient();
 
       const { data, error } = await supabase
@@ -139,13 +98,7 @@ export default function SubmissionsPage() {
       setSubmissions(data || []);
     } catch (error) {
       console.error("Error fetching submissions:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load submissions",
-      });
-    } finally {
-      setIsLoading(false);
+      toast.error("Failed to load submissions");
     }
   };
 
@@ -246,18 +199,6 @@ export default function SubmissionsPage() {
     }
   };
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  };
-
   // Filter and sort submissions
   const filteredAndSortedSubmissions = useMemo(() => {
     const filtered = submissions.filter((submission) => {
@@ -298,34 +239,7 @@ export default function SubmissionsPage() {
     return filtered;
   }, [submissions, searchQuery, sortBy, sortOrder, statusFilter]);
 
-  // Get status badge color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "New":
-        return "bg-blue-100 text-blue-800";
-      case "Replied":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
-  };
-
-  // Get submissions by status
-  const getSubmissionsByStatus = (status: string) => {
-    if (status === "all") return filteredAndSortedSubmissions;
-    return filteredAndSortedSubmissions.filter(
-      (sub) => sub.status.toLowerCase() === status.toLowerCase()
-    );
-  };
-
-  // Check if filters are active
-  const hasActiveFilters =
-    searchQuery !== "" ||
-    statusFilter !== "all" ||
-    sortBy !== "created_at" ||
-    sortOrder !== "desc";
-
-  const handleDeleteClick = (submission) => {
+  const handleDeleteClick = (submission: Submission) => {
     setSubmissionToDelete(submission);
     setDeleteDialogOpen(true);
   };
@@ -428,7 +342,12 @@ export default function SubmissionsPage() {
                   <SelectItem value="replied">Replied</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
+              <Select
+                value={sortBy}
+                onValueChange={(value) =>
+                  setSortBy(value as "created_at" | "name" | "status")
+                }
+              >
                 <SelectTrigger className="w-full sm:w-[140px] border-red-100">
                   <ArrowUpDown className="w-4 h-4 mr-2 text-red-600" />
                   <SelectValue placeholder="Sort by" />

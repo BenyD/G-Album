@@ -1,18 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useRole } from "@/components/admin/role-context";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { RoleBasedContent } from "@/components/admin/role-based-content";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -32,29 +25,19 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  Download,
   Mail,
   Plus,
   Search,
   Send,
-  Trash,
   Users,
-  Edit,
-  Info,
-  Lock,
-  BarChart3,
   MoreHorizontal,
   UserX,
   Trash2,
   Loader2,
-  ArrowUpDown,
-  Filter,
-  FileText,
-  IndianRupee,
+  Edit,
   Clock,
+  Eye,
 } from "lucide-react";
-import { RoleBasedContent } from "@/components/admin/role-based-content";
-import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { logActivity } from "@/utils/supabase/client";
 import {
@@ -94,6 +77,11 @@ interface Subscriber {
   status: "active" | "inactive" | "unsubscribed" | "deleted";
   created_at: string;
   updated_at: string;
+  metadata: {
+    source?: string;
+    added_at?: string;
+    updated_at?: string;
+  };
 }
 
 const statusBadgeVariants: Record<
@@ -114,7 +102,6 @@ const statusBadgeClasses = {
 };
 
 export default function NewsletterPage() {
-  const { role, hasPermission } = useRole();
   const supabase = createClient();
 
   // State management
@@ -132,14 +119,19 @@ export default function NewsletterPage() {
   const [deleteType, setDeleteType] = useState<
     "newsletter" | "subscriber" | null
   >(null);
-  const [deleteItem, setDeleteItem] = useState<any>(null);
+  const [deleteItem, setDeleteItem] = useState<Newsletter | Subscriber | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
+  // Used in loadNewsletters and handleConfirmDelete to manage newsletter data
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  // Used in loadSubscribers to store fetched subscribers
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [newNewsletter, setNewNewsletter] = useState({
     subject: "",
     content: "",
   });
+  // Used in handleAddSubscriber to store new subscriber data
   const [newSubscriber, setNewSubscriber] = useState({
     email: "",
     name: "",
@@ -153,13 +145,33 @@ export default function NewsletterPage() {
   const [sending, setSending] = useState(false);
 
   // Load data
-  useEffect(() => {
-    loadNewsletters();
-  }, []);
+  const loadSubscribers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/newsletter/subscribers?status=${statusFilter}&search=${debouncedSearchTerm}`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch subscribers");
+      }
+
+      setSubscribers(data);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to load subscribers";
+      toast.error(errorMessage);
+      console.error("Error loading subscribers:", error);
+      setSubscribers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [statusFilter, debouncedSearchTerm]);
 
   useEffect(() => {
     loadSubscribers();
-  }, [statusFilter, debouncedSearchTerm]);
+  }, [statusFilter, debouncedSearchTerm, loadSubscribers]);
 
   // Debounce search
   useEffect(() => {
@@ -184,33 +196,6 @@ export default function NewsletterPage() {
       toast.error("Failed to load newsletters");
     }
   };
-
-  const loadSubscribers = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        `/api/admin/newsletter/subscribers?status=${statusFilter}&search=${debouncedSearchTerm}`
-      );
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch subscribers");
-      }
-
-      setSubscribers(data);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to load subscribers";
-      toast.error(errorMessage);
-      console.error("Error loading subscribers:", error);
-      setSubscribers([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const canSendNewsletters = hasPermission("send_newsletters");
-  const canManageSubscribers = hasPermission("manage_subscribers");
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -403,9 +388,12 @@ export default function NewsletterPage() {
           activityAction = "unsubscribe_newsletter_subscriber";
           break;
         case "delete":
-          setDeleteItem(subscribers.find((s) => s.id === id));
-          setDeleteType("subscriber");
-          setDeleteConfirmOpen(true);
+          const subscriberToDelete = subscribers.find((s) => s.id === id);
+          if (subscriberToDelete) {
+            setDeleteItem(subscriberToDelete);
+            setDeleteType("subscriber");
+            setDeleteConfirmOpen(true);
+          }
           return;
         default:
           return;
@@ -439,8 +427,10 @@ export default function NewsletterPage() {
       // Log the activity before deletion
       await logActivity("delete_newsletter_subscriber", {
         subscriber_id: deleteItem.id,
-        email: deleteItem.email,
-        name: deleteItem.name,
+        ...(deleteType === "subscriber" && {
+          email: (deleteItem as Subscriber).email,
+          name: (deleteItem as Subscriber).name,
+        }),
       });
 
       // Delete the subscriber completely
@@ -491,7 +481,9 @@ export default function NewsletterPage() {
 
         await logActivity("delete_newsletter", {
           newsletter_id: deleteItem.id,
-          subject: deleteItem.subject,
+          ...(deleteType === "newsletter" && {
+            subject: (deleteItem as Newsletter).subject,
+          }),
         });
 
         toast.success("Newsletter deleted successfully");
@@ -624,7 +616,9 @@ export default function NewsletterPage() {
         </div>
         <Select
           value={statusFilter}
-          onValueChange={(value: any) => setStatusFilter(value)}
+          onValueChange={(value: "all" | Subscriber["status"]) =>
+            setStatusFilter(value)
+          }
         >
           <SelectTrigger className="w-[180px] border-red-100">
             <SelectValue placeholder="Filter by status" />
@@ -637,7 +631,12 @@ export default function NewsletterPage() {
             <SelectItem value="deleted">Deleted</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+        <Select
+          value={sortBy}
+          onValueChange={(
+            value: "newest" | "oldest" | "name-asc" | "name-desc"
+          ) => setSortBy(value)}
+        >
           <SelectTrigger className="w-[180px] border-red-100">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
@@ -761,6 +760,86 @@ export default function NewsletterPage() {
                   className="text-center py-8 text-muted-foreground"
                 >
                   No subscribers found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Newsletters Table */}
+      <Card className="border-red-100 mt-8">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-red-50/50">
+              <TableHead>Subject</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Sent At</TableHead>
+              <TableHead>Recipients</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {newsletters.map((newsletter) => (
+              <TableRow key={newsletter.id} className="hover:bg-red-50/50">
+                <TableCell className="font-medium">
+                  {newsletter.subject}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      newsletter.status === "sent"
+                        ? "default"
+                        : newsletter.status === "draft"
+                          ? "secondary"
+                          : "destructive"
+                    }
+                  >
+                    {newsletter.status.charAt(0).toUpperCase() +
+                      newsletter.status.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {format(new Date(newsletter.sent_at), "PPp")}
+                </TableCell>
+                <TableCell>{newsletter.metadata.recipient_count}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="h-8 w-8 p-0 hover:bg-red-50"
+                      >
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => handleViewNewsletter(newsletter)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteNewsletter(newsletter)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+            {newsletters.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="text-center py-8 text-muted-foreground"
+                >
+                  No newsletters found
                 </TableCell>
               </TableRow>
             )}
@@ -926,9 +1005,14 @@ export default function NewsletterPage() {
             <Button
               onClick={handleCreateNewsletter}
               className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={sending}
             >
-              <Send className="w-4 h-4 mr-2" />
-              Send Newsletter
+              {sending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              {sending ? "Sending..." : "Send Newsletter"}
             </Button>
           </DialogFooter>
         </DialogContent>

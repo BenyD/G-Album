@@ -1,33 +1,5 @@
-import { Suspense, memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const StatCard = memo(function StatCard() {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <Skeleton className="h-4 w-[100px]" />
-        <Skeleton className="h-4 w-4" />
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-7 w-[80px]" />
-        <Skeleton className="h-4 w-[120px] mt-2" />
-      </CardContent>
-    </Card>
-  );
-});
-
-const TableRow = memo(function TableRow() {
-  return (
-    <div className="py-4 border-b last:border-0">
-      <div className="grid grid-cols-7 w-full gap-4">
-        {Array.from({ length: 7 }).map((_, j) => (
-          <Skeleton key={j} className="h-5 w-full" />
-        ))}
-      </div>
-    </div>
-  );
-});
 
 export default function CustomersLoading() {
   return (

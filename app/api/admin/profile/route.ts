@@ -10,7 +10,7 @@ export async function GET(request: Request) {
       return new NextResponse("Missing userId parameter", { status: 400 });
     }
 
-    const serviceClient = createClient();
+    const serviceClient = await createClient();
 
     const { data: profileData, error: profileError } = await serviceClient
       .from("admin_profiles")

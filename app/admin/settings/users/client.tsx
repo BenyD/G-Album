@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRole } from "@/components/admin/role-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,22 +12,17 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Lock,
   MoreHorizontal,
   RefreshCw,
   Search,
   Shield,
   User,
-  UserPlus,
-  Check,
   Ban,
-  Pencil,
   Users,
   UserCheck,
   UserX,
-  ArrowUpDown,
-  Filter,
-  Loader2,
+  Pencil,
+  Check,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,7 +40,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { RoleBasedContent } from "@/components/admin/role-based-content";
 import {
   assignRole,
   updateUserStatus,
@@ -72,12 +66,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { motion } from "framer-motion";
+
 import { format } from "date-fns";
 import { Label } from "@/components/ui/label";
 
+interface Role {
+  id: string;
+  name: string;
+  description: string;
+}
+
 export function UserManagementClient() {
-  const { role, hasPermission } = useRole();
+  const { hasPermission } = useRole();
   const [users, setUsers] = useState<UserWithProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -145,106 +145,11 @@ export function UserManagementClient() {
     }
   });
 
-  // Get pending users
-  const pendingUsers = sortedUsers.filter((user) => !user.profile?.role_id);
-
-  // Get active users
-  const activeUsers = sortedUsers.filter((user) => user.profile?.role_id);
-
-  // Get suspended users
-  const suspendedUsers = sortedUsers.filter(
-    (user) => user.profile?.status === "suspended"
-  );
-
-  // Handle user update
-  const handleUserUpdate = async (user: UserWithProfile) => {
-    try {
-      const { error } = await supabase
-        .from("admin_profiles")
-        .update({
-          full_name: user.profile?.full_name,
-          role_id: user.profile?.role_id,
-          status: user.profile?.status,
-        })
-        .eq("id", user.id);
-
-      if (error) throw error;
-
-      // Get current admin user
-      const {
-        data: { user: admin },
-        error: adminError,
-      } = await supabase.auth.getUser();
-      if (adminError || !admin) throw new Error("Could not get current user");
-
-      // Log the activity
-      await logActivity("user_profile_updated", {
-        user_id: user.id,
-        email: user.email,
-        updated_by: admin.id,
-        full_name: user.profile?.full_name,
-        role_id: user.profile?.role_id,
-        status: user.profile?.status,
-      });
-
-      setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, ...user } : u))
-      );
-      setEditingUser(null);
-      toast.success("User updated successfully");
-    } catch (error) {
-      console.error("Error updating user:", error);
-      toast.error("Failed to update user. Please try again.");
-    }
-  };
-
-  // Handle role assignment
-  const handleRoleAssign = async (userId: string, roleId: string) => {
-    try {
-      const { error } = await supabase
-        .from("admin_profiles")
-        .update({ role_id: roleId })
-        .eq("id", userId);
-
-      if (error) throw error;
-
-      // Get current admin user
-      const {
-        data: { user: admin },
-        error: adminError,
-      } = await supabase.auth.getUser();
-      if (adminError || !admin) throw new Error("Could not get current user");
-
-      // Log the activity
-      await logActivity("user_role_assigned", {
-        user_id: userId,
-        role_id: roleId,
-        assigned_by: admin.id,
-      });
-
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                profile: {
-                  ...user.profile,
-                  role_id: roleId,
-                  role: roles.find((r) => r.id === roleId) || null,
-                },
-              }
-            : user
-        )
-      );
-      toast.success("Role assigned successfully");
-    } catch (error) {
-      console.error("Error assigning role:", error);
-      toast.error("Failed to assign role. Please try again.");
-    }
-  };
-
   // Handle status update
-  const handleStatusUpdate = async (userId: string, status: string) => {
+  const handleStatusUpdate = async (
+    userId: string,
+    status: "pending" | "approved" | "suspended"
+  ) => {
     try {
       const { error } = await supabase
         .from("admin_profiles")
@@ -270,7 +175,15 @@ export function UserManagementClient() {
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId
-            ? { ...user, profile: { ...user.profile, status } }
+            ? {
+                ...user,
+                profile: user.profile
+                  ? {
+                      ...user.profile,
+                      status,
+                    }
+                  : null,
+              }
             : user
         )
       );
@@ -303,44 +216,6 @@ export function UserManagementClient() {
   // Format status for display
   const formatStatus = (status: string) => {
     return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-  };
-
-  // Handle quick approval
-  const handleQuickApproval = async (userId: string, roleId: string) => {
-    try {
-      await assignRole(userId, roleId);
-
-      // Find the selected role
-      const selectedRole = roles.find((r) => r.id === roleId);
-      if (!selectedRole) {
-        throw new Error("Selected role not found");
-      }
-
-      toast.success("User approved successfully");
-
-      // Update the users list with the correct role information
-      const updatedUsers = users.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              profile: {
-                ...user.profile,
-                role_id: roleId,
-                role: {
-                  id: roleId,
-                  name: selectedRole.name,
-                  description: selectedRole.description,
-                },
-                status: "approved",
-              },
-            }
-          : user
-      );
-      setUsers(updatedUsers);
-    } catch (error) {
-      console.error("Error approving user:", error);
-      toast.error("Failed to approve user");
-    }
   };
 
   // Handle edit save
@@ -379,8 +254,19 @@ export function UserManagementClient() {
 
       // Update local state
       const updatedUsers = users.map((user) =>
-        user.id === editingUser.id ? editingUser : user
-      );
+        user.id === editingUser.id
+          ? {
+              ...editingUser,
+              profile: editingUser.profile
+                ? {
+                    ...editingUser.profile,
+                    id: user.profile?.id || editingUser.id,
+                    status: editingUser.profile.status,
+                  }
+                : null,
+            }
+          : user
+      ) as UserWithProfile[];
       setUsers(updatedUsers);
 
       setEditingUser(null);
@@ -661,8 +547,8 @@ export function UserManagementClient() {
                         user.profile?.status === "suspended"
                           ? "bg-red-100 text-red-800 border-red-200"
                           : user.profile?.status === "approved"
-                          ? "bg-green-100 text-green-800 border-green-200"
-                          : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                            ? "bg-green-100 text-green-800 border-green-200"
+                            : "bg-yellow-100 text-yellow-800 border-yellow-200"
                       }
                     >
                       {formatStatus(user.profile?.status || "pending")}
@@ -755,10 +641,13 @@ export function UserManagementClient() {
                   onChange={(e) =>
                     setEditingUser({
                       ...editingUser,
-                      profile: {
-                        ...editingUser.profile,
-                        full_name: e.target.value,
-                      },
+                      profile: editingUser.profile
+                        ? {
+                            ...editingUser.profile,
+                            id: editingUser.profile.id,
+                            full_name: e.target.value,
+                          }
+                        : null,
                     })
                   }
                   className="border-red-100 focus:border-red-200 focus:ring-red-100"
@@ -773,10 +662,13 @@ export function UserManagementClient() {
                   onValueChange={(value) =>
                     setEditingUser({
                       ...editingUser,
-                      profile: {
-                        ...editingUser.profile,
-                        role_id: value,
-                      },
+                      profile: editingUser.profile
+                        ? {
+                            ...editingUser.profile,
+                            id: editingUser.profile.id,
+                            role_id: value,
+                          }
+                        : null,
                     })
                   }
                 >
@@ -801,10 +693,13 @@ export function UserManagementClient() {
                   onValueChange={(value) =>
                     setEditingUser({
                       ...editingUser,
-                      profile: {
-                        ...editingUser.profile,
-                        status: value as "approved" | "suspended",
-                      },
+                      profile: editingUser.profile
+                        ? {
+                            ...editingUser.profile,
+                            id: editingUser.profile.id,
+                            status: value as "approved" | "suspended",
+                          }
+                        : null,
                     })
                   }
                 >

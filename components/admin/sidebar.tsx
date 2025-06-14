@@ -25,8 +25,6 @@ import {
   Users,
   LogOut,
   Settings,
-  Home,
-  Search,
   UserCheck,
   ShoppingCart,
   ExternalLink,
@@ -34,7 +32,6 @@ import {
 import { useRole } from "@/components/admin/role-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/admin/auth-context";
 import { createClient } from "@/utils/supabase/client";
 

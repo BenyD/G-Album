@@ -44,7 +44,7 @@ export function AddCustomerDialog({
   const [isCreating, setIsCreating] = useState(false);
 
   const addCustomerMutation = useMutation({
-    mutationFn: async (input) => {
+    mutationFn: async (input: Partial<Customer>) => {
       const { data, error } = await supabase
         .from("customers")
         .insert([input])
@@ -170,7 +170,7 @@ export function AddCustomerDialog({
                 </Label>
                 <Input
                   id="reference_phone"
-                  value={form.reference_phone}
+                  value={form.reference_phone ?? ""}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, reference_phone: e.target.value }))
                   }
@@ -184,7 +184,7 @@ export function AddCustomerDialog({
                 </Label>
                 <Input
                   id="reference_name"
-                  value={form.reference_name}
+                  value={form.reference_name ?? ""}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, reference_name: e.target.value }))
                   }

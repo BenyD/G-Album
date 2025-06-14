@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus,
@@ -10,12 +10,9 @@ import {
   MoreHorizontal,
   User,
   FileText,
-  Edit,
   Trash,
-  ShoppingCart,
   UserCheck,
   Users,
-  X,
   Mail,
   Phone,
   MapPin,
@@ -39,8 +36,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -50,7 +45,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -71,7 +65,6 @@ import type {
   Customer,
   CustomerFlag,
   CreateCustomerInput,
-  UpdateCustomerInput,
   CreateCustomerFlagInput,
 } from "@/lib/types/customer";
 import type { OrderSummary, OrderStatus } from "@/lib/types/order";
@@ -80,7 +73,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -94,28 +86,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { AddCustomerDialog } from "@/components/admin/customers/AddCustomerDialog";
 
 const supabase = createClient();
-
-// Add debounce utility function
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
 
 // Add default form state
 const defaultFormState: Omit<
@@ -148,19 +122,17 @@ const orderStatusBadgeVariants: Record<
 export default function CustomersPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+  const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
+  const [isDeleteCustomerOpen, setIsDeleteCustomerOpen] = useState(false);
   const [isFlagCustomerOpen, setIsFlagCustomerOpen] = useState(false);
   const [isResolveFlagOpen, setIsResolveFlagOpen] = useState(false);
-  const [resolveNote, setResolveNote] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState<CreateCustomerInput>({
     studio_name: "",
     email: "",
@@ -170,10 +142,8 @@ export default function CustomersPage() {
     reference_name: "",
   });
   const [flagReason, setFlagReason] = useState("");
-  const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
-    null
-  );
+  const [resolveNote, setResolveNote] = useState("");
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editForm, setEditForm] = useState(defaultFormState);
   const searchParams = useSearchParams();
@@ -199,21 +169,6 @@ export default function CustomersPage() {
         url.pathname + url.search
       );
     }
-  };
-
-  // Set up debounced search
-  const debouncedSearch = useCallback(
-    debounce((value: string) => {
-      setDebouncedSearchTerm(value);
-    }, 300),
-    []
-  );
-
-  // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    debouncedSearch(value);
   };
 
   // Fetch customers
@@ -293,45 +248,6 @@ export default function CustomersPage() {
     return stats;
   }, [allCustomerOrders]);
 
-  // Add customer mutation
-  const addCustomerMutation = useMutation({
-    mutationFn: async (newCustomer: CreateCustomerInput) => {
-      const { data, error } = await supabase
-        .from("customers")
-        .insert([newCustomer])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Log customer creation
-      await logActivity("customer_created", {
-        customer_id: data.id,
-        studio_name: data.studio_name,
-        email: data.email,
-        phone: data.phone,
-      });
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
-      setIsAddCustomerOpen(false);
-      setNewCustomer({
-        studio_name: "",
-        email: "",
-        phone: "",
-        address: "",
-        reference_phone: "",
-        reference_name: "",
-      });
-      toast.success("Customer added successfully");
-    },
-    onError: (error) => {
-      toast.error("Failed to add customer: " + error.message);
-    },
-  });
-
   // Delete customer mutation
   const deleteCustomerMutation = useMutation({
     mutationFn: async (customerId: string) => {
@@ -367,12 +283,12 @@ export default function CustomersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast.success("Customer deleted successfully");
-      setCustomerToDelete(null);
+      setIsDeleteCustomerOpen(false);
     },
     onError: (error: Error) => {
       console.error("Delete mutation error:", error);
       toast.error("Failed to delete customer: " + error.message);
-      setCustomerToDelete(null);
+      setIsDeleteCustomerOpen(false);
     },
   });
 
@@ -395,8 +311,8 @@ export default function CustomersPage() {
           email: customer.email,
           phone: customer.phone,
           address: customer.address,
-          reference_name: customer.reference_name,
-          reference_phone: customer.reference_phone,
+          reference_phone: customer.reference_phone ?? null,
+          reference_name: customer.reference_name ?? null,
           is_active: customer.is_active,
         })
         .eq("id", customer.id);
@@ -534,11 +450,6 @@ export default function CustomersPage() {
     },
   });
 
-  const handleAddCustomer = (e: React.FormEvent) => {
-    e.preventDefault();
-    addCustomerMutation.mutate(newCustomer);
-  };
-
   const handleStatusChange = (customer: Customer) => {
     updateCustomerMutation.mutate({
       ...customer,
@@ -571,9 +482,13 @@ export default function CustomersPage() {
     });
   };
 
-  const isCustomerFlagged = (customerId: string) => {
-    return activeFlags?.some((flag) => flag.customer_id === customerId);
-  };
+  // Check if a customer is flagged
+  const isCustomerFlagged = useCallback(
+    (customerId: string) => {
+      return activeFlags?.some((flag) => flag.customer_id === customerId);
+    },
+    [activeFlags]
+  );
 
   const handleRowClick = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -586,27 +501,16 @@ export default function CustomersPage() {
 
     let filtered = [...customersData];
 
-    // Apply search filter
-    if (debouncedSearchTerm) {
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (customer) =>
-          customer.studio_name.toLowerCase().includes(searchLower) ||
-          customer.email.toLowerCase().includes(searchLower) ||
-          customer.phone.toLowerCase().includes(searchLower) ||
-          customer.address.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Apply customer filter
-    if (customerFilter === "active") {
-      filtered = filtered.filter((customer) => customer.is_active);
-    } else if (customerFilter === "inactive") {
-      filtered = filtered.filter((customer) => !customer.is_active);
-    } else if (customerFilter === "flagged") {
-      filtered = filtered.filter((customer) => isCustomerFlagged(customer.id));
-    } else if (customerFilter === "unflagged") {
-      filtered = filtered.filter((customer) => !isCustomerFlagged(customer.id));
+    // Apply status filter
+    if (customerFilter !== "all") {
+      filtered = filtered.filter((customer) => {
+        if (customerFilter === "active") return customer.is_active;
+        if (customerFilter === "inactive") return !customer.is_active;
+        if (customerFilter === "flagged") return isCustomerFlagged(customer.id);
+        if (customerFilter === "unflagged")
+          return !isCustomerFlagged(customer.id);
+        return true;
+      });
     }
 
     // Apply sorting
@@ -620,18 +524,6 @@ export default function CustomersPage() {
           return a.studio_name.localeCompare(b.studio_name);
         case "name-desc":
           return b.studio_name.localeCompare(a.studio_name);
-        case "most-orders":
-          return b.total_orders - a.total_orders;
-        case "balance-high":
-          return (
-            (customerStats.get(b.id)?.pendingAmount ?? 0) -
-            (customerStats.get(a.id)?.pendingAmount ?? 0)
-          );
-        case "balance-low":
-          return (
-            (customerStats.get(a.id)?.pendingAmount ?? 0) -
-            (customerStats.get(b.id)?.pendingAmount ?? 0)
-          );
         default: // newest
           return (
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -640,15 +532,15 @@ export default function CustomersPage() {
     });
 
     return filtered;
-  }, [customersData, debouncedSearchTerm, customerFilter, sortBy]);
+  }, [customersData, customerFilter, sortBy, isCustomerFlagged]);
 
   const handleDeleteCustomer = () => {
-    if (!customerToDelete?.id) {
+    if (!selectedCustomer?.id) {
       console.error("No customer selected for deletion");
       return;
     }
     try {
-      deleteCustomerMutation.mutate(customerToDelete.id);
+      deleteCustomerMutation.mutate(selectedCustomer.id);
     } catch (error) {
       console.error("Error in handleDeleteCustomer:", error);
     }
@@ -741,7 +633,7 @@ export default function CustomersPage() {
               {isLoadingCustomers ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                customersData?.length ?? 0
+                (customersData?.length ?? 0)
               )}
             </div>
           </CardContent>
@@ -758,8 +650,8 @@ export default function CustomersPage() {
               {isLoadingCustomers ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                customersData?.filter((customer) => customer.is_active)
-                  .length ?? 0
+                (customersData?.filter((customer) => customer.is_active)
+                  .length ?? 0)
               )}
             </div>
           </CardContent>
@@ -774,10 +666,10 @@ export default function CustomersPage() {
               {isLoadingCustomers ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                customersData?.reduce(
+                (customersData?.reduce(
                   (acc, customer) => acc + (customer.total_orders ?? 0),
                   0
-                ) ?? 0
+                ) ?? 0)
               )}
             </div>
           </CardContent>
@@ -817,7 +709,7 @@ export default function CustomersPage() {
                 placeholder="Search customers..."
                 className="pl-10 border-red-100 focus:border-red-200 focus:ring-red-100"
                 value={searchTerm}
-                onChange={handleSearchChange}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -1072,8 +964,8 @@ export default function CustomersPage() {
                               email: customer.email,
                               phone: customer.phone,
                               address: customer.address,
-                              reference_name: customer.reference_name,
-                              reference_phone: customer.reference_phone,
+                              reference_phone: customer.reference_phone ?? null,
+                              reference_name: customer.reference_name ?? null,
                             });
                             setIsEditCustomerOpen(true);
                           }}
@@ -1124,7 +1016,7 @@ export default function CustomersPage() {
                                 "Setting customer to delete:",
                                 customer
                               );
-                              setCustomerToDelete(customer);
+                              setIsDeleteCustomerOpen(true);
                             }
                           }}
                           className="text-red-600"
@@ -1453,8 +1345,8 @@ export default function CustomersPage() {
               email: editingCustomer.email,
               phone: editingCustomer.phone,
               address: editingCustomer.address,
-              reference_name: editingCustomer.reference_name,
-              reference_phone: editingCustomer.reference_phone,
+              reference_phone: editingCustomer.reference_phone ?? null,
+              reference_name: editingCustomer.reference_name ?? null,
             });
           } else {
             setEditForm(defaultFormState);
@@ -1626,10 +1518,10 @@ export default function CustomersPage() {
 
       {/* Delete Customer Confirmation */}
       <AlertDialog
-        open={!!customerToDelete}
+        open={isDeleteCustomerOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setCustomerToDelete(null);
+            setIsDeleteCustomerOpen(false);
           }
         }}
       >
@@ -1637,14 +1529,14 @@ export default function CustomersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {customerToDelete?.studio_name}?
+              Are you sure you want to delete {selectedCustomer?.studio_name}?
               This action cannot be undone. All associated data will be
               permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
-              onClick={() => setCustomerToDelete(null)}
+              onClick={() => setIsDeleteCustomerOpen(false)}
               className="border-red-100 hover:bg-red-50"
             >
               Cancel
@@ -1672,8 +1564,8 @@ export default function CustomersPage() {
             email: customer.email,
             phone: customer.phone,
             address: customer.address,
-            reference_phone: customer.reference_phone,
-            reference_name: customer.reference_name,
+            reference_phone: customer.reference_phone ?? "",
+            reference_name: customer.reference_name ?? "",
           });
           setIsAddCustomerOpen(false);
           toast.success("Customer added successfully");

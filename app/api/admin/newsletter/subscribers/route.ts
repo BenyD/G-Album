@@ -3,20 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 
 const VALID_STATUSES = ["active", "inactive", "unsubscribed", "deleted", "all"];
 
-type RolePermission = {
-  permissions: {
-    id: string;
-    name: string;
-  };
-};
-
-type Role = {
+type Permission = {
   id: string;
   name: string;
-  permissions: {
-    id: string;
-    name: string;
-  }[];
+};
+
+type RolePermission = {
+  permissions: Permission[];
 };
 
 type UpdateData = {
@@ -95,8 +88,9 @@ export async function GET(request: Request) {
     console.log("User profile found:", profile.id);
 
     // Check if user has the required permission
-    const hasPermission = profile.roles.role_permissions.some(
-      (rp: RolePermission) => rp.permissions.name === "manage_subscribers"
+    const hasPermission = profile.roles[0].role_permissions.some(
+      (rp: RolePermission) =>
+        rp.permissions.some((p) => p.name === "manage_subscribers")
     );
 
     if (!hasPermission) {
@@ -181,12 +175,14 @@ export async function PATCH(request: Request) {
       .select(
         `
         id,
-        roles (
+        roles!inner (
           id,
           name,
-          permissions (
-            id,
-            name
+          role_permissions!inner (
+            permissions!inner (
+              id,
+              name
+            )
           )
         )
       `
@@ -210,8 +206,9 @@ export async function PATCH(request: Request) {
     }
 
     // Check if user has the required permission
-    const hasPermission = profile.roles.some((role: Role) =>
-      role.permissions.some((p) => p.name === "manage_subscribers")
+    const hasPermission = profile.roles[0].role_permissions.some(
+      (rp: RolePermission) =>
+        rp.permissions.some((p: Permission) => p.name === "manage_subscribers")
     );
 
     if (!hasPermission) {

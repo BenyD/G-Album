@@ -185,7 +185,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     recentOrders: (recentOrders || []).map((order) => ({
       id: order.id,
       order_number: order.order_number,
-      customer_name: order.customers?.studio_name || "Unknown",
+      customer_name: order.customers?.[0]?.studio_name || "Unknown",
       total_amount: order.total_amount,
       status: order.status,
       created_at: order.created_at,

@@ -88,25 +88,16 @@ import type {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useRole } from "@/components/admin/role-context";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  Dialog as Modal,
-  DialogContent as ModalContent,
-  DialogHeader as ModalHeader,
-  DialogFooter as ModalFooter,
-  DialogTitle as ModalTitle,
-} from "@/components/ui/dialog";
 import { AddCustomerDialog } from "@/components/admin/customers/AddCustomerDialog";
 
 const supabase = createClient();
@@ -181,8 +172,6 @@ export default function OrdersPage() {
     notes: "",
   });
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedOrderDetails, setSelectedOrderDetails] =
-    useState<OrderSummary | null>(null);
   const [isUpdateStatusOpen, setIsUpdateStatusOpen] = useState(false);
   const [isFlaggedCustomerWarningOpen, setIsFlaggedCustomerWarningOpen] =
     useState(false);
@@ -196,15 +185,6 @@ export default function OrdersPage() {
   const customerFilter = searchParams.get("customer");
   const [ordersTab, setOrdersTab] = useState("active");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
-  const [newCustomerForm, setNewCustomerForm] = useState({
-    studio_name: "",
-    email: "",
-    phone: "",
-    address: "",
-    reference_name: "",
-    reference_phone: "",
-  });
-  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const customerSelectRef = useRef<HTMLDivElement>(null);
 
   // Handle action query parameter
@@ -273,9 +253,10 @@ export default function OrdersPage() {
 
   // Handle search debounce
   const debouncedSearch = useCallback(
-    debounce((value: string) => {
-      setDebouncedSearchTerm(value);
-    }, 500),
+    (value: string) =>
+      debounce((searchTerm: string) => {
+        setDebouncedSearchTerm(searchTerm);
+      }, 500)(value),
     []
   );
 
@@ -610,7 +591,7 @@ export default function OrdersPage() {
 
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({
         queryKey: ["orderLogs", selectedOrder?.id],
@@ -631,7 +612,7 @@ export default function OrdersPage() {
   });
 
   // Fetch payments for selected order
-  const { data: orderPayments } = useQuery({
+  useQuery({
     queryKey: ["order-payments", selectedOrder?.id],
     queryFn: async () => {
       if (!selectedOrder?.id) return [];
@@ -753,7 +734,6 @@ export default function OrdersPage() {
   // Update the table row click handler
   const handleRowClick = (order: OrderSummary) => {
     setSelectedOrder(order);
-    setSelectedOrderDetails(order);
     setIsDetailsOpen(true);
   };
 
@@ -798,38 +778,6 @@ export default function OrdersPage() {
     (order) =>
       order.status === "delivered" && order.amount_paid >= order.total_amount
   );
-
-  // Add customer mutation for inline creation
-  const addCustomerInlineMutation = useMutation({
-    mutationFn: async (input: typeof newCustomerForm) => {
-      const { data, error } = await supabase
-        .from("customers")
-        .insert([input])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (customer) => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
-      setIsAddCustomerOpen(false);
-      setNewCustomerForm({
-        studio_name: "",
-        email: "",
-        phone: "",
-        address: "",
-        reference_name: "",
-        reference_phone: "",
-      });
-      setNewOrder((prev) => ({ ...prev, customer_id: customer.id }));
-      setSelectedCustomerName(customer.studio_name);
-      setCustomerSearchTerm("");
-      toast.success("Customer created and selected!");
-    },
-    onError: (error) => {
-      toast.error("Failed to create customer: " + error.message);
-    },
-  });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -1165,12 +1113,12 @@ export default function OrdersPage() {
                                       order.status === "pending"
                                         ? "in_progress"
                                         : order.status === "in_progress"
-                                        ? "completed"
-                                        : order.status === "completed" &&
-                                          order.total_amount <=
-                                            order.amount_paid
-                                        ? "delivered"
-                                        : order.status,
+                                          ? "completed"
+                                          : order.status === "completed" &&
+                                              order.total_amount <=
+                                                order.amount_paid
+                                            ? "delivered"
+                                            : order.status,
                                   },
                                 });
                               }}
@@ -1185,10 +1133,10 @@ export default function OrdersPage() {
                               {order.status === "pending"
                                 ? "Mark In Progress"
                                 : order.status === "in_progress"
-                                ? "Mark Completed"
-                                : order.status === "completed"
-                                ? "Mark Delivered"
-                                : "Status"}
+                                  ? "Mark Completed"
+                                  : order.status === "completed"
+                                    ? "Mark Delivered"
+                                    : "Status"}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -1325,12 +1273,12 @@ export default function OrdersPage() {
                                       order.status === "pending"
                                         ? "in_progress"
                                         : order.status === "in_progress"
-                                        ? "completed"
-                                        : order.status === "completed" &&
-                                          order.total_amount <=
-                                            order.amount_paid
-                                        ? "delivered"
-                                        : order.status,
+                                          ? "completed"
+                                          : order.status === "completed" &&
+                                              order.total_amount <=
+                                                order.amount_paid
+                                            ? "delivered"
+                                            : order.status,
                                   },
                                 });
                               }}
@@ -1345,10 +1293,10 @@ export default function OrdersPage() {
                               {order.status === "pending"
                                 ? "Mark In Progress"
                                 : order.status === "in_progress"
-                                ? "Mark Completed"
-                                : order.status === "completed"
-                                ? "Mark Delivered"
-                                : "Status"}
+                                  ? "Mark Completed"
+                                  : order.status === "completed"
+                                    ? "Mark Delivered"
+                                    : "Status"}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -2027,8 +1975,8 @@ export default function OrdersPage() {
                             {log.action === "status_update"
                               ? "Status Updated"
                               : log.action === "payment_added"
-                              ? "Payment Added"
-                              : "Order Created"}
+                                ? "Payment Added"
+                                : "Order Created"}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {log.details}

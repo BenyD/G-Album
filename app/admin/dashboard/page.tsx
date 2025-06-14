@@ -1,9 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
 import { getDashboardStats } from "@/lib/services/dashboard";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,7 +12,6 @@ import {
   Mail,
   FileText,
   Command,
-  Search,
   Settings,
   Loader2,
 } from "lucide-react";
@@ -28,7 +25,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -43,9 +39,62 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 
+interface DashboardStats {
+  totalAlbums: number;
+  totalGalleryImages: number;
+  totalNewsletterSubscribers: number;
+  totalFormSubmissions: number;
+  totalOrders: number;
+  storageUsage: {
+    used: number;
+    total: number;
+    percentage: number;
+  };
+  databaseUsage: {
+    used: number;
+    total: number;
+    percentage: number;
+  };
+  userStats: {
+    total: number;
+    active: number;
+    newThisMonth: number;
+  };
+  storageBreakdown: {
+    category: string;
+    size: number;
+    percentage: number;
+  }[];
+  recentOrders: Array<{
+    id: string;
+    order_number: string;
+    customer_name: string;
+    total_amount: number;
+    status: string;
+    created_at: string;
+  }>;
+  recentCustomers: Array<{
+    id: string;
+    studio_name: string;
+    contact_name: string;
+    email: string;
+    status: string;
+    created_at: string;
+  }>;
+  recentFormSubmissions: Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    message: string;
+    status: string;
+    created_at: string;
+  }>;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -163,6 +212,9 @@ export default function DashboardPage() {
     return <Alert variant="destructive">{error}</Alert>;
   }
 
+  // At this point, stats is guaranteed to be non-null
+  const dashboardStats = stats!;
+
   return (
     <div className="space-y-6">
       <div>
@@ -199,10 +251,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-900">
-              {stats.userStats.total}
+              {dashboardStats.userStats.total}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.userStats.active} active customers
+              {dashboardStats.userStats.active} active customers
             </p>
           </CardContent>
         </Card>
@@ -213,10 +265,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-900">
-              {stats.totalOrders}
+              {dashboardStats.totalOrders}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.recentOrders.length} recent orders
+              {dashboardStats.recentOrders.length} recent orders
             </p>
           </CardContent>
         </Card>
@@ -229,10 +281,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-900">
-              {stats.totalNewsletterSubscribers}
+              {dashboardStats.totalNewsletterSubscribers}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.newSubscribersThisMonth} new this month
+              {dashboardStats.userStats.newThisMonth} new this month
             </p>
           </CardContent>
         </Card>
@@ -245,10 +297,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-900">
-              {stats.totalFormSubmissions}
+              {dashboardStats.totalFormSubmissions}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.recentFormSubmissions.length} new this month
+              {dashboardStats.recentFormSubmissions.length} new this month
             </p>
           </CardContent>
         </Card>
@@ -270,7 +322,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stats.recentOrders.map((order: any) => (
+                {dashboardStats.recentOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell>{order.order_number}</TableCell>
                     <TableCell>{order.customer_name}</TableCell>
@@ -279,9 +331,9 @@ export default function DashboardPage() {
                       <Badge
                         variant={
                           order.status === "completed"
-                            ? "success"
+                            ? "default"
                             : order.status === "pending"
-                              ? "warning"
+                              ? "secondary"
                               : "destructive"
                         }
                       >
@@ -309,7 +361,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stats.recentCustomers.map((customer: any) => (
+                {dashboardStats.recentCustomers.map((customer) => (
                   <TableRow key={customer.id}>
                     <TableCell>{customer.studio_name}</TableCell>
                     <TableCell>{customer.contact_name}</TableCell>
@@ -317,7 +369,7 @@ export default function DashboardPage() {
                       <Badge
                         variant={
                           customer.status === "active"
-                            ? "success"
+                            ? "default"
                             : "destructive"
                         }
                       >
@@ -349,7 +401,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stats.recentFormSubmissions.map((submission: any) => (
+                {dashboardStats.recentFormSubmissions.map((submission) => (
                   <TableRow key={submission.id}>
                     <TableCell>{submission.name}</TableCell>
                     <TableCell>{submission.email}</TableCell>
@@ -358,7 +410,7 @@ export default function DashboardPage() {
                       <Badge
                         variant={
                           submission.status === "Replied"
-                            ? "success"
+                            ? "default"
                             : "secondary"
                         }
                       >

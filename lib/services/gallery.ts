@@ -48,9 +48,9 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
       id: item.id,
       image_url: item.image_url,
       album_id: item.album_id,
-      album_name: item.albums.title,
-      alt: `Image from ${item.albums.title}${
-        item.albums.description ? ": " + item.albums.description : ""
+      album_name: item.albums[0].title,
+      alt: `Image from ${item.albums[0].title}${
+        item.albums[0].description ? ": " + item.albums[0].description : ""
       }`,
       upload_date: new Date(item.created_at).toLocaleDateString(),
       order_index: item.order_index,
@@ -60,22 +60,4 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
 
 export async function getVisibleGalleryImages(): Promise<GalleryImage[]> {
   return getAllGalleryImages();
-}
-
-export async function toggleImageVisibility(
-  imageId: string,
-  isVisible: boolean
-): Promise<void> {
-  console.warn(
-    "toggleImageVisibility is deprecated as visibility is not supported in the current schema"
-  );
-}
-
-export async function bulkToggleImageVisibility(
-  imageIds: string[],
-  isVisible: boolean
-): Promise<void> {
-  console.warn(
-    "bulkToggleImageVisibility is deprecated as visibility is not supported in the current schema"
-  );
 }

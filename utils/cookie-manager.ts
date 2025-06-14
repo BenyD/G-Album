@@ -1,4 +1,8 @@
-import { CookieOptions } from "@supabase/ssr";
+declare global {
+  interface Window {
+    [key: string]: unknown;
+  }
+}
 
 export interface CookiePreferences {
   necessary: boolean;
@@ -112,7 +116,7 @@ export class CookieManager {
       this.deleteCookie("_gat");
 
       // Disable analytics data collection
-      window["ga-disable-" + process.env.NEXT_PUBLIC_GA_ID] = true;
+      window[`ga-disable-${process.env.NEXT_PUBLIC_GA_ID}`] = true;
     }
   }
 

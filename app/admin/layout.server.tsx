@@ -1,9 +1,23 @@
-import { createClient } from "@/utils/supabase/server";
 import { createClient as createServiceClient } from "@/utils/supabase/service-role";
-import { cookies } from "next/headers";
+import { Database } from "@/lib/database.types";
+
+type AdminProfile = Database["public"]["Tables"]["admin_profiles"]["Row"] & {
+  role?: {
+    id: string;
+    name: string;
+    description: string | null;
+    role_permissions: {
+      permission: {
+        id: string;
+        name: string;
+        description: string | null;
+      };
+    }[];
+  };
+};
 
 export async function loadUserProfile(userId: string) {
-  const serviceClient = createServiceClient();
+  const serviceClient = await createServiceClient();
 
   try {
     const { data: profileData, error: profileError } = await serviceClient
@@ -25,7 +39,7 @@ export async function loadUserProfile(userId: string) {
         )
       `
       )
-      .eq("id", userId)
+      .eq("id", userId as AdminProfile["id"])
       .single();
 
     if (profileError) {
@@ -33,7 +47,7 @@ export async function loadUserProfile(userId: string) {
       return null;
     }
 
-    return profileData;
+    return profileData as AdminProfile;
   } catch (error) {
     console.error("Error in loadUserProfile:", error);
     return null;

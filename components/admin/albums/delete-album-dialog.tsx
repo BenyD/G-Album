@@ -8,8 +8,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Trash } from "lucide-react";
 
 interface DeleteAlbumDialogProps {
   open: boolean;

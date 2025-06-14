@@ -2,7 +2,6 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createServiceClient } from "@/utils/supabase/service-role";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 export type UserWithProfile = {
@@ -23,8 +22,7 @@ export type UserWithProfile = {
 };
 
 export async function getUsers() {
-  const supabase = await createClient();
-  const serviceClient = createServiceClient();
+  const serviceClient = await createServiceClient();
 
   try {
     // Get all users from auth.users using service role client
@@ -82,7 +80,7 @@ export async function getRoles() {
 }
 
 export async function assignRole(userId: string, roleId: string) {
-  const serviceClient = createServiceClient();
+  const serviceClient = await createServiceClient();
 
   try {
     // Check if profile exists
@@ -128,7 +126,7 @@ export async function updateUserStatus(
   userId: string,
   status: "approved" | "suspended"
 ) {
-  const serviceClient = createServiceClient();
+  const serviceClient = await createServiceClient();
 
   try {
     const { error } = await serviceClient
@@ -151,7 +149,7 @@ export async function updateUserStatus(
     } else {
       // If approving, ensure the user is not banned
       await serviceClient.auth.admin.updateUserById(userId, {
-        ban_duration: null,
+        ban_duration: undefined,
       });
     }
 
@@ -167,7 +165,7 @@ export async function updateUserProfile(
   userId: string,
   data: { full_name?: string }
 ) {
-  const serviceClient = createServiceClient();
+  const serviceClient = await createServiceClient();
 
   try {
     const { error } = await serviceClient

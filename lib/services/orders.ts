@@ -44,7 +44,7 @@ export async function getRecentOrders(limit: number = 5): Promise<Order[]> {
 
   return orders.map((order) => ({
     ...order,
-    customer_name: order.customers?.studio_name || "Unknown Customer",
+    customer_name: order.customers[0]?.studio_name || "Unknown Customer",
   }));
 }
 

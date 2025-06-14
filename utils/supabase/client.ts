@@ -9,7 +9,7 @@ export function createClient() {
 
 export async function logActivity(
   action: string,
-  details?: Record<string, any> | string
+  details?: Record<string, unknown> | string
 ) {
   const supabase = createClient();
   const { error } = await supabase.rpc("log_activity", {

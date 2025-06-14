@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus, Search, Info, Star, Eye, Pencil, Trash } from "lucide-react";
+import { Plus, Search, Star, Eye, Pencil, Trash } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,6 @@ export default function AlbumsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
-  const [view, setView] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"recent" | "title" | "images">("recent");
 
   const loadAlbums = useCallback(async () => {
@@ -364,9 +363,10 @@ export default function AlbumsPage() {
       </div>
 
       <DeleteAlbumDialog
-        album={albumToDelete}
-        onClose={() => setAlbumToDelete(null)}
+        open={!!albumToDelete}
+        onOpenChange={(open) => !open && setAlbumToDelete(null)}
         onConfirm={() => albumToDelete && handleDelete(albumToDelete)}
+        albumTitle={albumToDelete?.title || ""}
       />
     </div>
   );

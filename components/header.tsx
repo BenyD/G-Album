@@ -6,7 +6,6 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Star, Eye, Calendar } from "lucide-react";
 
 const navigation = [
   { name: "Home", href: "/" },

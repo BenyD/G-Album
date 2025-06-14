@@ -68,7 +68,6 @@ export async function getStorageStats(): Promise<StorageStats> {
 
 export async function updateStorageBreakdown() {
   const stats = await getStorageStats();
-  const totalSize = stats.totalSize;
 
   // Update storage breakdown in the database
   for (const [category, data] of Object.entries(stats.breakdown)) {

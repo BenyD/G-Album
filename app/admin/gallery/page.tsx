@@ -12,7 +12,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Search,
-  Info,
   Filter,
   Eye,
   Calendar,
@@ -34,11 +33,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import type { GalleryImage } from "@/lib/services/gallery";
 import { getAllGalleryImages } from "@/lib/services/gallery";
-import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 
 const container = {
   hidden: { opacity: 0 },
@@ -56,7 +53,6 @@ const item = {
 };
 
 export default function GalleryPage() {
-  const router = useRouter();
   const { hasPermission } = useRole();
   const { toast } = useToast();
 

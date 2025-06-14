@@ -254,7 +254,7 @@ export default function SettingsPage() {
       if (error) throw error;
       return data || [];
     },
-    [supabase]
+    []
   );
 
   // Use new fetchLogs in effect
@@ -341,7 +341,7 @@ export default function SettingsPage() {
                   ? editedSettings.order_number_prefix
                   : settings?.order_number_prefix}
                 {(isEditing
-                  ? editedSettings.last_order_number ?? 0
+                  ? (editedSettings.last_order_number ?? 0)
                   : settings?.last_order_number || 0) + 1}
               </p>
             </div>

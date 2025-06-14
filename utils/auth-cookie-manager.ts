@@ -47,7 +47,7 @@ export class AuthCookieManager {
 
   static async validateSessionState(state: string): Promise<boolean> {
     try {
-      const [version, timestamp, hash] = state.split(":");
+      const [version, timestamp] = state.split(":");
 
       // Validate version
       if (version !== this.COOKIE_VERSION) {
@@ -85,5 +85,53 @@ export class AuthCookieManager {
       ...this.getDefaultOptions(),
       maxAge: 0,
     };
+  }
+
+  static setAuthCookies(
+    accessToken: string,
+    refreshToken: string,
+    remember: boolean
+  ) {
+    const options = {
+      ...this.getDefaultOptions(),
+      maxAge: remember ? 30 * 24 * 60 * 60 : undefined, // 30 days if remember is true
+    };
+
+    document.cookie = `${this.getCookieName("sb-access-token")}=${accessToken}; ${this.serializeOptions(options)}`;
+    document.cookie = `${this.getCookieName("sb-refresh-token")}=${refreshToken}; ${this.serializeOptions(options)}`;
+  }
+
+  static clearAuthCookies() {
+    const options = this.getDeleteOptions();
+    document.cookie = `${this.getCookieName("sb-access-token")}=; ${this.serializeOptions(options)}`;
+    document.cookie = `${this.getCookieName("sb-refresh-token")}=; ${this.serializeOptions(options)}`;
+  }
+
+  static rotateTokens(accessToken: string, refreshToken: string) {
+    this.setAuthCookies(accessToken, refreshToken, true);
+  }
+
+  static getAuthCookies() {
+    return {
+      accessToken: this.getCookie(this.getCookieName("sb-access-token")),
+      refreshToken: this.getCookie(this.getCookieName("sb-refresh-token")),
+      sessionState: this.getCookie(this.SESSION_STATE_KEY),
+    };
+  }
+
+  private static getCookie(name: string): string | null {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop()?.split(";").shift() || null;
+    }
+    return null;
+  }
+
+  private static serializeOptions(options: AuthCookieOptions): string {
+    return Object.entries(options)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => `${key}=${value}`)
+      .join("; ");
   }
 }

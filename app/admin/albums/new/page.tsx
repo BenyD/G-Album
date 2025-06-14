@@ -28,6 +28,7 @@ import { createAlbum, uploadImage } from "@/lib/services/albums";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { createClient, logActivity } from "@/utils/supabase/client";
+import Image from "next/image";
 
 const steps = [
   {
@@ -63,10 +64,12 @@ function ImagePreview({
     <div className="group relative aspect-square">
       {/* Main image container */}
       <div className="h-full w-full rounded-lg border border-red-100 overflow-hidden shadow-sm transition-all duration-300 group-hover:shadow-md">
-        <img
+        <Image
           src={src}
           alt=""
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          fill
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          unoptimized
         />
       </div>
 
@@ -211,39 +214,6 @@ export default function NewAlbumPage() {
       }
     },
     [uploadedImages.length, coverImageId, toast]
-  );
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(false);
-      handleImageUpload(e.dataTransfer.files);
-    },
-    [handleImageUpload]
-  );
-
-  const removeImage = useCallback(
-    (imageId: string) => {
-      setUploadedImages((prev) => prev.filter((img) => img.id !== imageId));
-      if (coverImageId === imageId) {
-        const remaining = uploadedImages.filter((img) => img.id !== imageId);
-        setCoverImageId(remaining.length > 0 ? remaining[0].id : "");
-      }
-    },
-    [uploadedImages, coverImageId]
   );
 
   if (!hasPermission("manage_albums")) {

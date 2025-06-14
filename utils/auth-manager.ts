@@ -30,7 +30,10 @@ export class AuthManager {
         password,
       });
 
-      if (error) throw this.handleAuthError(error);
+      if (error)
+        throw this.handleAuthError(
+          error as { message: string; status: number; code: string }
+        );
       if (!user || !session)
         throw new Error("No user or session returned from authentication");
 
@@ -122,7 +125,7 @@ export class AuthManager {
       }
 
       // Refresh if token is close to expiration
-      if (this.isTokenExpiringSoon(session.expires_at)) {
+      if (session.expires_at && this.isTokenExpiringSoon(session.expires_at)) {
         const {
           data: { session: newSession },
           error: refreshError,
@@ -140,7 +143,7 @@ export class AuthManager {
     } catch (error) {
       console.error("Session refresh error:", error);
       // Only clear session on specific errors
-      if (this.shouldClearSessionOnError(error)) {
+      if (this.shouldClearSessionOnError(error as { code: string })) {
         AuthCookieManager.clearAuthCookies();
         this.clearSession();
       }
@@ -152,14 +155,18 @@ export class AuthManager {
     return expiresAt - Date.now() / 1000 < this.TOKEN_REFRESH_THRESHOLD;
   }
 
-  private static handleAuthError(error: any): AuthError {
+  private static handleAuthError(error: {
+    message: string;
+    status: number;
+    code: string;
+  }): AuthError {
     const authError = new Error(error.message) as AuthError;
     authError.status = error.status;
     authError.code = error.code;
     return authError;
   }
 
-  private static shouldClearSessionOnError(error: any): boolean {
+  private static shouldClearSessionOnError(error: { code: string }): boolean {
     const clearSessionErrors = [
       "invalid_token",
       "token_expired",
@@ -181,7 +188,7 @@ export class AuthManager {
         await this.refreshSession();
       } catch (error) {
         console.error("Session monitoring error:", error);
-        if (this.shouldClearSessionOnError(error)) {
+        if (this.shouldClearSessionOnError(error as { code: string })) {
           this.stopSessionMonitoring();
           toast.error("Your session has expired. Please sign in again.");
         }

@@ -2,10 +2,7 @@
 
 import { Suspense } from "react";
 import { UserManagementClient } from "./client";
-import { createClient } from "@/utils/supabase/client";
 import { Loader2 } from "lucide-react";
-
-const supabase = createClient();
 
 export default function UserManagementPage() {
   return (

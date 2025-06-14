@@ -1,4 +1,4 @@
-import { Suspense, memo } from "react";
+import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft } from "lucide-react";

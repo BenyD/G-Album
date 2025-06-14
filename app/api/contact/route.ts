@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     // Create Supabase client
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Insert submission into database
     const { data, error } = await supabase
