@@ -60,7 +60,7 @@ export const metadata: Metadata = {
       "Crafting memories into beautiful albums since 2018. Professional photo album creation and printing services.",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/api/og-image?title=G Album&subtitle=Dream To Reality",
         width: 1200,
         height: 630,
         alt: "G Album - Dream To Reality",
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "G Album - Dream To Reality",
     description: "Crafting memories into beautiful albums since 2018",
-    images: ["/twitter-image.jpg"],
+    images: ["/api/og-image?title=G Album&subtitle=Dream To Reality"],
   },
   manifest: "/site.webmanifest",
 };

@@ -1,10 +1,6 @@
 import { createClient } from "@/utils/supabase/client";
-import { Database } from "@/lib/database.types";
 
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createClient();
 
 const STORAGE_LIMIT = 1024 * 1024 * 1024; // 1GB in bytes
 
@@ -20,8 +16,7 @@ interface StorageStats {
 }
 
 // Constants for storage limits
-const STORAGE_TOTAL = 1073741824; // 1GB in bytes
-const DEFAULT_STORAGE_USED = 0;
+
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 // Cache for storage stats with a promise to prevent multiple simultaneous fetches

@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { Database } from "@/lib/database.types";
-import { getStorageStats } from "./storage";
+
 
 const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -158,7 +158,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     const STORAGE_TOTAL = 1073741824; // 1GB in bytes
     const DEFAULT_STORAGE_USED = 0;
 
-    return {
+  return {
       totalAlbums: totalAlbums || 0,
       totalGalleryImages: totalGalleryImages || 0,
       totalNewsletterSubscribers: totalNewsletterSubscribers || 0,
@@ -166,45 +166,45 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       totalOrders: totalOrders || 0,
       totalCustomers: totalCustomers || 0,
       totalAdmins: totalAdmins || 0,
-      storageUsage: {
+    storageUsage: {
         used: DEFAULT_STORAGE_USED,
         total: STORAGE_TOTAL,
-      },
+    },
       albumStats: {
         totalAlbums: totalAlbums || 0,
         totalImages: totalAlbumImages + (totalGalleryImages || 0),
         averageImagesPerAlbum,
-      },
+    },
       recentOrders:
         recentOrders?.map((order) => ({
-          id: order.id,
-          order_number: order.order_number,
-          customer_name: order.customers?.studio_name || "Unknown",
+      id: order.id,
+      order_number: order.order_number,
+          customer_name: order.customers?.[0]?.studio_name || "Unknown",
           status: order.status,
-          total_amount: order.total_amount,
-          created_at: order.created_at,
+      total_amount: order.total_amount,
+      created_at: order.created_at,
         })) || [],
       recentCustomers:
         recentCustomers?.map((customer) => ({
-          id: customer.id,
-          studio_name: customer.studio_name,
-          email: customer.email,
+      id: customer.id,
+      studio_name: customer.studio_name,
+      email: customer.email,
           phone: customer.phone,
           total_orders: customer.total_orders,
           total_spent: customer.total_spent,
-          created_at: customer.created_at,
+      created_at: customer.created_at,
         })) || [],
       recentSubmissions:
         recentSubmissions?.map((submission) => ({
-          id: submission.id,
-          name: submission.name,
+      id: submission.id,
+      name: submission.name,
           email: submission.email || "",
-          phone: submission.phone,
-          message: submission.message,
-          status: submission.status,
-          created_at: submission.created_at,
+      phone: submission.phone,
+      message: submission.message,
+      status: submission.status,
+      created_at: submission.created_at,
         })) || [],
-    };
+  };
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     throw error;

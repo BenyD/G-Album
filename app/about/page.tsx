@@ -7,6 +7,7 @@ import PageHero from "@/components/page-hero";
 import { useState, useEffect } from "react";
 import { aboutConfig } from "@/config/about";
 
+
 // Optimized animation variants with reduced motion support
 const fadeInUp = {
   initial: { opacity: 0, y: 10 },
@@ -63,6 +64,8 @@ const useInView = () => {
 
   return [setRef, isInView] as const;
 };
+
+
 
 export default function AboutPage() {
   const hasLoaded = useHasLoaded();

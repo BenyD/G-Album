@@ -10,7 +10,7 @@ const fadeInUp = {
   transition: { duration: 0.6, ease: "easeOut" },
 };
 
-export default function PrivacyPolicyPage() {
+export default function PrivacyPage() {
   return (
     <div className="flex flex-col min-h-screen pt-16">
       <PageHero

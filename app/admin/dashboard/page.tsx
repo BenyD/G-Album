@@ -155,7 +155,7 @@ export default function DashboardPage() {
       } catch (error) {
         console.error("Error loading dashboard data:", error);
         if (mounted) {
-          setError("Failed to load dashboard data");
+        setError("Failed to load dashboard data");
           setIsLoading(false);
         }
       }

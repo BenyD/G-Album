@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { contactConfig } from "@/config/contact";
 
+
 // Optimized animation variants
 const fadeInUp = {
   initial: { opacity: 0, y: 10 },
@@ -49,6 +50,7 @@ const useHasLoaded = () => {
 
   return hasLoaded;
 };
+
 
 export default function ContactPage() {
   const hasLoaded = useHasLoaded();
