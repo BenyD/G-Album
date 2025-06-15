@@ -383,7 +383,7 @@ export default function AboutPage() {
                     priority
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = "/placeholder-image.jpg";
+                      target.src = "/G Album Logo (RED).png";
                     }}
                   />
                 </motion.div>
