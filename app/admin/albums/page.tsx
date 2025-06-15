@@ -268,6 +268,7 @@ export default function AlbumsPage() {
                 width={48}
                 height={48}
                 className="opacity-50"
+                unoptimized
               />
             </div>
             <h3 className="text-xl font-semibold text-red-900 mb-2">
@@ -322,6 +323,7 @@ export default function AlbumsPage() {
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      unoptimized
                     />
                     {album.featured && (
                       <div className="absolute top-3 right-3">

@@ -373,6 +373,7 @@ export default function Home() {
                         height={600}
                         className="w-full h-auto"
                         priority
+                        unoptimized
                       />
                       {/* Gradient overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-red-900/20 to-transparent" />
@@ -593,6 +594,7 @@ export default function Home() {
                         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
                         priority={index < 2}
+                        unoptimized
                       />
                       {/* Enhanced gradient overlay - visible by default */}
                       <div className="absolute inset-0 bg-gradient-to-t from-red-950/90 via-red-900/50 to-transparent opacity-70 group-hover:opacity-100 transition-opacity duration-500" />

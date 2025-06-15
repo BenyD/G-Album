@@ -130,6 +130,7 @@ export default function AboutPage() {
                   className="w-full object-cover"
                   loading="eager"
                   sizes="(max-width: 768px) 100vw, 50vw"
+                  unoptimized
                 />
               </motion.div>
               {hasLoaded && isAboutInView && (
@@ -213,6 +214,7 @@ export default function AboutPage() {
                     width={800}
                     height={320}
                     priority={index < 2}
+                    unoptimized
                   />
                   <div className="p-10 pt-4">
                     <h3 className="text-sm/4 font-semibold text-red-600">
@@ -381,6 +383,7 @@ export default function AboutPage() {
                     width={128}
                     height={128}
                     priority
+                    unoptimized
                   />
                 </motion.div>
                 <h3 className="mt-6 text-base/7 font-semibold tracking-tight text-red-900">

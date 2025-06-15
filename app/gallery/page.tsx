@@ -360,6 +360,7 @@ export default function GalleryPage() {
                             const target = e.target as HTMLImageElement;
                             target.src = "/placeholder-image.jpg";
                           }}
+                          unoptimized
                         />
                         <div className="absolute inset-0 flex items-end justify-start p-4 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <h3 className="text-white text-lg font-medium tracking-wide">
@@ -390,6 +391,7 @@ export default function GalleryPage() {
                           const target = e.target as HTMLImageElement;
                           target.src = "/placeholder-image.jpg";
                         }}
+                        unoptimized
                       />
                       <div className="absolute inset-0 flex items-end justify-start p-6 bg-gradient-to-t from-black/50 via-black/20 to-transparent">
                         <h3 className="text-white text-xl font-medium tracking-wide">
@@ -442,6 +444,7 @@ export default function GalleryPage() {
                 className="object-contain"
                 sizes="(max-width: 1024px) 100vw, 1024px"
                 priority
+                unoptimized
               />
             </div>
           )}
