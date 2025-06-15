@@ -134,6 +134,12 @@ export const aboutConfig = {
         image: "/images/staff/SHYLAJA.jpg",
         bio: "Sylaja is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
       },
+      {
+        name: "Kishore",
+        role: "Staff",
+        image: "/images/staff/Kishore.jpeg",
+        bio: "Kishore is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
+      },
     ],
   },
 } as const;
