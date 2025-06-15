@@ -137,7 +137,7 @@ export const aboutConfig = {
       {
         name: "Kishore",
         role: "Staff",
-        image: "/images/staff/Kishore.jpg",
+        image: "/images/staff/KISHORE.jpg",
         bio: "Kishore is dedicated to providing exceptional customer service, guiding clients through the entire album creation process.",
       },
     ],

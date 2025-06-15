@@ -380,7 +380,8 @@ export default function AboutPage() {
                     className="mx-auto size-32 rounded-full object-cover border-2 border-red-100"
                     width={128}
                     height={128}
-                    priority
+                    loading="lazy"
+                    unoptimized
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = "/G Album Logo (RED).png";
