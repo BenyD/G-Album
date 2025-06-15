@@ -14,6 +14,10 @@ import {
   Command,
   Settings,
   Loader2,
+  // Image,
+  Album,
+  User,
+  ImageIcon,
 } from "lucide-react";
 import {
   Table,
@@ -25,7 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   CommandDialog,
@@ -37,7 +41,8 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { formatDistanceToNow } from "date-fns";
-import { Separator } from "@/components/ui/separator";
+// import { Separator } from "@/components/ui/separator";
+import { getStorageStats } from "@/lib/services/storage";
 
 interface DashboardStats {
   totalAlbums: number;
@@ -45,26 +50,17 @@ interface DashboardStats {
   totalNewsletterSubscribers: number;
   totalFormSubmissions: number;
   totalOrders: number;
+  totalCustomers: number;
+  totalAdmins: number;
   storageUsage: {
     used: number;
     total: number;
-    percentage: number;
   };
-  databaseUsage: {
-    used: number;
-    total: number;
-    percentage: number;
+  albumStats: {
+    totalAlbums: number;
+    totalImages: number;
+    averageImagesPerAlbum: number;
   };
-  userStats: {
-    total: number;
-    active: number;
-    newThisMonth: number;
-  };
-  storageBreakdown: {
-    category: string;
-    size: number;
-    percentage: number;
-  }[];
   recentOrders: Array<{
     id: string;
     order_number: string;
@@ -76,12 +72,13 @@ interface DashboardStats {
   recentCustomers: Array<{
     id: string;
     studio_name: string;
-    contact_name: string;
     email: string;
-    status: string;
+    phone: string;
+    total_orders: number;
+    total_spent: number;
     created_at: string;
   }>;
-  recentFormSubmissions: Array<{
+  recentSubmissions: Array<{
     id: string;
     name: string;
     email: string;
@@ -98,9 +95,23 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [storageStats, setStorageStats] = useState<{
+    totalSize: number;
+    fileCount: number;
+    breakdown: {
+      [key: string]: {
+        size: number;
+        count: number;
+      };
+    };
+  } | null>(null);
+  const [isStorageLoading, setIsStorageLoading] = useState(true);
+  const storageStatsFetched = useRef(false);
 
   useEffect(() => {
     const supabase = createClient();
+    let mounted = true;
 
     async function checkUserRole() {
       const {
@@ -125,18 +136,47 @@ export default function DashboardPage() {
         return;
       }
 
-      loadDashboardData();
+      // Check if the user is a super admin
+      setIsSuperAdmin(profile.roles?.[0]?.name === "super_admin");
     }
 
     async function loadDashboardData() {
       try {
-        const data = await getDashboardStats();
-        setStats(data);
+        const dashboardStats = await getDashboardStats();
+        if (mounted) {
+          setStats(dashboardStats);
+          setIsLoading(false);
+
+          // Load storage stats only if we haven't fetched them yet
+          if (!storageStatsFetched.current) {
+            loadStorageStats();
+          }
+        }
       } catch (error) {
         console.error("Error loading dashboard data:", error);
-        setError("Failed to load dashboard data");
+        if (mounted) {
+          setError("Failed to load dashboard data");
+          setIsLoading(false);
+        }
+      }
+    }
+
+    async function loadStorageStats() {
+      if (storageStatsFetched.current) return;
+
+      try {
+        setIsStorageLoading(true);
+        const data = await getStorageStats();
+        if (mounted) {
+          setStorageStats(data);
+          storageStatsFetched.current = true;
+        }
+      } catch (error) {
+        console.error("Error loading storage stats:", error);
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsStorageLoading(false);
+        }
       }
     }
 
@@ -186,8 +226,10 @@ export default function DashboardPage() {
       .subscribe();
 
     checkUserRole();
+    loadDashboardData();
 
     return () => {
+      mounted = false;
       ordersSubscription.unsubscribe();
       customersSubscription.unsubscribe();
       newsletterSubscription.unsubscribe();
@@ -216,28 +258,30 @@ export default function DashboardPage() {
   const dashboardStats = stats!;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-red-900">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Overview of your business performance and recent activity
-        </p>
-      </div>
-      <Separator className="my-4" />
-
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <div className="flex gap-2">
+        <h1 className="text-3xl font-bold text-red-900">Dashboard</h1>
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="gap-2 border-red-100 hover:bg-red-50"
+            size="sm"
             onClick={() => setOpen(true)}
+            className="text-red-600"
           >
-            <Command className="h-4 w-4" />
+            <Command className="mr-2 h-4 w-4" />
             Quick Actions
-            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              <span className="text-xs">⌘</span>K
-            </kbd>
           </Button>
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/admin/settings")}
+              className="text-red-600"
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+          )}
         </div>
       </div>
 
@@ -251,10 +295,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-900">
-              {dashboardStats.userStats.total}
+              {dashboardStats.totalCustomers}
             </div>
             <p className="text-xs text-muted-foreground">
-              {dashboardStats.userStats.active} active customers
+              {dashboardStats.recentCustomers.length} recent customers
             </p>
           </CardContent>
         </Card>
@@ -283,9 +327,7 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold text-red-900">
               {dashboardStats.totalNewsletterSubscribers}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardStats.userStats.newThisMonth} new this month
-            </p>
+            <p className="text-xs text-muted-foreground">Active subscribers</p>
           </CardContent>
         </Card>
         <Card className="border-red-100">
@@ -300,8 +342,132 @@ export default function DashboardPage() {
               {dashboardStats.totalFormSubmissions}
             </div>
             <p className="text-xs text-muted-foreground">
-              {dashboardStats.recentFormSubmissions.length} new this month
+              {dashboardStats.recentSubmissions.length} recent submissions
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-red-100">
+          <CardHeader>
+            <CardTitle className="text-red-900">Storage Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isStorageLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">
+                      Total Storage Used
+                    </span>
+                    <span className="text-sm font-medium">
+                      {(
+                        (storageStats?.totalSize || 0) /
+                        (1024 * 1024 * 1024)
+                      ).toFixed(2)}{" "}
+                      GB /{" "}
+                      {(
+                        dashboardStats.storageUsage.total /
+                        (1024 * 1024 * 1024)
+                      ).toFixed(2)}{" "}
+                      GB
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-red-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-red-600 transition-all duration-500"
+                      style={{
+                        width: `${Math.min(
+                          ((storageStats?.totalSize || 0) /
+                            dashboardStats.storageUsage.total) *
+                            100,
+                          100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {storageStats?.breakdown &&
+                    Object.entries(storageStats.breakdown).map(
+                      ([category, data]) => (
+                        <div
+                          key={category}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            {category === "Album Images" ? (
+                              <Album className="h-4 w-4 text-red-600" />
+                            ) : (
+                              <User className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className="text-sm text-muted-foreground">
+                              {category}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm text-muted-foreground">
+                              {data.count} files
+                            </span>
+                            <span className="text-sm font-medium">
+                              {(data.size / (1024 * 1024 * 1024)).toFixed(2)} GB
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-100">
+          <CardHeader>
+            <CardTitle className="text-red-900">Album Statistics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">
+                      Total Albums
+                    </span>
+                    <Album className="h-4 w-4 text-red-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-red-900">
+                    {dashboardStats.albumStats.totalAlbums}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">
+                      Total Images
+                    </span>
+                    <ImageIcon className="h-4 w-4 text-red-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-red-900">
+                    {dashboardStats.albumStats.totalImages}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">
+                    Average Images per Album
+                  </span>
+                </div>
+                <div className="text-2xl font-bold text-red-900">
+                  {dashboardStats.albumStats.averageImagesPerAlbum}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -356,25 +522,19 @@ export default function DashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Studio</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Orders</TableHead>
+                  <TableHead>Spent</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {dashboardStats.recentCustomers.map((customer) => (
                   <TableRow key={customer.id}>
                     <TableCell>{customer.studio_name}</TableCell>
-                    <TableCell>{customer.contact_name}</TableCell>
+                    <TableCell>{customer.email}</TableCell>
+                    <TableCell>{customer.total_orders}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          customer.status === "active"
-                            ? "default"
-                            : "destructive"
-                        }
-                      >
-                        {customer.status}
-                      </Badge>
+                      {formatCurrency(customer.total_spent)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -385,33 +545,31 @@ export default function DashboardPage() {
 
         <Card className="col-span-1 border-red-100">
           <CardHeader>
-            <CardTitle className="text-red-900">
-              Recent Form Submissions
-            </CardTitle>
+            <CardTitle className="text-red-900">Recent Submissions</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
+                  <TableHead>Contact</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Time</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dashboardStats.recentFormSubmissions.map((submission) => (
+                {dashboardStats.recentSubmissions.map((submission) => (
                   <TableRow key={submission.id}>
                     <TableCell>{submission.name}</TableCell>
-                    <TableCell>{submission.email}</TableCell>
-                    <TableCell>{submission.phone}</TableCell>
+                    <TableCell>
+                      {submission.email || submission.phone}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={
-                          submission.status === "Replied"
-                            ? "default"
-                            : "secondary"
+                          submission.status === "New"
+                            ? "destructive"
+                            : "default"
                         }
                       >
                         {submission.status}
@@ -437,43 +595,25 @@ export default function DashboardPage() {
           <CommandGroup heading="Quick Actions">
             <CommandItem
               onSelect={() => {
-                router.push("/admin/customers/new");
-                setOpen(false);
-              }}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              New Customer
-            </CommandItem>
-            <CommandItem
-              onSelect={() => {
                 router.push("/admin/orders/new");
                 setOpen(false);
               }}
             >
-              <Package className="mr-2 h-4 w-4" />
-              New Order
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create New Order
             </CommandItem>
             <CommandItem
               onSelect={() => {
-                router.push("/admin/settings");
-                setOpen(false);
-              }}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </CommandItem>
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Navigation">
-            <CommandItem
-              onSelect={() => {
-                router.push("/admin/customers");
+                router.push("/admin/customers/new");
                 setOpen(false);
               }}
             >
               <Users className="mr-2 h-4 w-4" />
-              Customers
+              Add New Customer
             </CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Navigation">
             <CommandItem
               onSelect={() => {
                 router.push("/admin/orders");
@@ -485,7 +625,25 @@ export default function DashboardPage() {
             </CommandItem>
             <CommandItem
               onSelect={() => {
-                router.push("/admin/forms");
+                router.push("/admin/customers");
+                setOpen(false);
+              }}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Customers
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                router.push("/admin/newsletter");
+                setOpen(false);
+              }}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Newsletter
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                router.push("/admin/submissions");
                 setOpen(false);
               }}
             >

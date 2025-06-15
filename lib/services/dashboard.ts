@@ -13,43 +13,35 @@ export interface DashboardStats {
   totalNewsletterSubscribers: number;
   totalFormSubmissions: number;
   totalOrders: number;
+  totalCustomers: number;
+  totalAdmins: number;
   storageUsage: {
     used: number;
     total: number;
-    percentage: number;
   };
-  databaseUsage: {
-    used: number;
-    total: number;
-    percentage: number;
+  albumStats: {
+    totalAlbums: number;
+    totalImages: number;
+    averageImagesPerAlbum: number;
   };
-  userStats: {
-    total: number;
-    active: number;
-    newThisMonth: number;
-  };
-  storageBreakdown: {
-    category: string;
-    size: number;
-    percentage: number;
-  }[];
   recentOrders: {
     id: string;
     order_number: string;
     customer_name: string;
-    total_amount: number;
     status: string;
+    total_amount: number;
     created_at: string;
   }[];
   recentCustomers: {
     id: string;
     studio_name: string;
-    contact_name: string;
     email: string;
-    status: string;
+    phone: string;
+    total_orders: number;
+    total_spent: number;
     created_at: string;
   }[];
-  recentFormSubmissions: {
+  recentSubmissions: {
     id: string;
     name: string;
     email: string;
@@ -74,39 +66,56 @@ export interface StorageBreakdown {
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const [
-    { count: albumsCount },
-    { count: galleryImagesCount },
-    { count: newsletterCount },
-    { count: formSubmissionsCount },
-    { count: ordersCount },
-    storageStats,
-    { data: userStats },
-    { data: dbStats },
-    { data: recentOrders },
-    { data: recentCustomers },
-    { data: recentFormSubmissions },
-  ] = await Promise.all([
-    supabase.from("albums").select("*", { count: "exact", head: true }),
-    supabase.from("gallery_images").select("*", { count: "exact", head: true }),
-    supabase
+  try {
+    // Get total albums
+    const { count: totalAlbums } = await supabase
+      .from("albums")
+      .select("*", { count: "exact", head: true });
+
+    // Get total gallery images
+    const { count: totalGalleryImages } = await supabase
+      .from("gallery_images")
+      .select("*", { count: "exact", head: true });
+
+    // Get total active newsletter subscribers
+    const { count: totalNewsletterSubscribers } = await supabase
       .from("newsletter_subscribers")
-      .select("*", { count: "exact", head: true }),
-    supabase
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active");
+
+    // Get total new form submissions
+    const { count: totalFormSubmissions } = await supabase
       .from("contact_submissions")
-      .select("*", { count: "exact", head: true }),
-    supabase.from("orders").select("*", { count: "exact", head: true }),
-    getStorageStats(),
-    supabase.from("admin_profiles").select("*"),
-    supabase.rpc("get_database_stats"),
-    supabase
+      .select("*", { count: "exact", head: true })
+      .eq("status", "New");
+
+    // Get total active orders (non-delivered)
+    const { count: totalOrders } = await supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .neq("status", "delivered");
+
+    // Get total active customers
+    const { count: totalCustomers } = await supabase
+      .from("customers")
+      .select("*", { count: "exact", head: true })
+      .eq("is_active", true);
+
+    // Get total approved admins
+    const { count: totalAdmins } = await supabase
+      .from("admin_profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "approved");
+
+    // Get recent orders with customer details
+    const { data: recentOrders } = await supabase
       .from("orders")
       .select(
         `
         id,
         order_number,
-        total_amount,
         status,
+        total_amount,
         created_at,
         customers (
           studio_name
@@ -114,100 +123,92 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       `
       )
       .order("created_at", { ascending: false })
-      .limit(5),
-    supabase
+      .limit(5);
+
+    // Get recent active customers
+    const { data: recentCustomers } = await supabase
       .from("customers")
       .select("*")
+      .eq("is_active", true)
       .order("created_at", { ascending: false })
-      .limit(5),
-    supabase
+      .limit(5);
+
+    // Get recent form submissions
+    const { data: recentSubmissions } = await supabase
       .from("contact_submissions")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(5),
-  ]);
+      .limit(5);
 
-  // Calculate storage usage
-  const storageUsed = storageStats.totalSize;
-  const storageTotal = 1024 * 1024 * 1024; // 1GB in bytes
-  const storagePercentage = (storageUsed / storageTotal) * 100;
+    // Get album statistics
+    const { data: albumImages } = await supabase
+      .from("albums")
+      .select("id, images:album_images(count)");
 
-  // Calculate storage breakdown
-  const storageBreakdown = Object.entries(storageStats.breakdown).map(
-    ([category, stats]) => ({
-      category,
-      size: stats.size / (1024 * 1024 * 1024), // Convert to GB
-      percentage: (stats.size / storageTotal) * 100,
-    })
-  );
+    const totalAlbumImages =
+      albumImages?.reduce(
+        (sum, album) => sum + (album.images?.[0]?.count || 0),
+        0
+      ) || 0;
+    const averageImagesPerAlbum = totalAlbums
+      ? Math.round((totalAlbumImages / totalAlbums) * 10) / 10
+      : 0;
 
-  // Calculate database usage
-  const dbUsed = dbStats?.total_size || 0;
-  const dbTotal = 500 * 1024 * 1024; // 500MB in bytes
-  const dbPercentage = (dbUsed / dbTotal) * 100;
+    // Default storage values
+    const STORAGE_TOTAL = 1073741824; // 1GB in bytes
+    const DEFAULT_STORAGE_USED = 0;
 
-  // Calculate user stats
-  const totalUsers = userStats?.length || 0;
-  const activeUsers =
-    userStats?.filter((user) => user.status === "approved").length || 0;
-  const newUsersThisMonth =
-    userStats?.filter((user) => {
-      const createdAt = new Date(user.created_at);
-      const now = new Date();
-      return (
-        createdAt.getMonth() === now.getMonth() &&
-        createdAt.getFullYear() === now.getFullYear()
-      );
-    }).length || 0;
-
-  return {
-    totalAlbums: albumsCount || 0,
-    totalGalleryImages: galleryImagesCount || 0,
-    totalNewsletterSubscribers: newsletterCount || 0,
-    totalFormSubmissions: formSubmissionsCount || 0,
-    totalOrders: ordersCount || 0,
-    storageUsage: {
-      used: storageUsed / (1024 * 1024 * 1024), // Convert to GB
-      total: 1, // 1GB
-      percentage: storagePercentage,
-    },
-    databaseUsage: {
-      used: dbUsed / (1024 * 1024), // Convert to MB
-      total: 500, // 500MB
-      percentage: dbPercentage,
-    },
-    userStats: {
-      total: totalUsers,
-      active: activeUsers,
-      newThisMonth: newUsersThisMonth,
-    },
-    storageBreakdown,
-    recentOrders: (recentOrders || []).map((order) => ({
-      id: order.id,
-      order_number: order.order_number,
-      customer_name: order.customers?.[0]?.studio_name || "Unknown",
-      total_amount: order.total_amount,
-      status: order.status,
-      created_at: order.created_at,
-    })),
-    recentCustomers: (recentCustomers || []).map((customer) => ({
-      id: customer.id,
-      studio_name: customer.studio_name,
-      contact_name: customer.reference_name || "N/A",
-      email: customer.email,
-      status: customer.is_active ? "active" : "inactive",
-      created_at: customer.created_at,
-    })),
-    recentFormSubmissions: (recentFormSubmissions || []).map((submission) => ({
-      id: submission.id,
-      name: submission.name,
-      email: submission.email,
-      phone: submission.phone,
-      message: submission.message,
-      status: submission.status,
-      created_at: submission.created_at,
-    })),
-  };
+    return {
+      totalAlbums: totalAlbums || 0,
+      totalGalleryImages: totalGalleryImages || 0,
+      totalNewsletterSubscribers: totalNewsletterSubscribers || 0,
+      totalFormSubmissions: totalFormSubmissions || 0,
+      totalOrders: totalOrders || 0,
+      totalCustomers: totalCustomers || 0,
+      totalAdmins: totalAdmins || 0,
+      storageUsage: {
+        used: DEFAULT_STORAGE_USED,
+        total: STORAGE_TOTAL,
+      },
+      albumStats: {
+        totalAlbums: totalAlbums || 0,
+        totalImages: totalAlbumImages + (totalGalleryImages || 0),
+        averageImagesPerAlbum,
+      },
+      recentOrders:
+        recentOrders?.map((order) => ({
+          id: order.id,
+          order_number: order.order_number,
+          customer_name: order.customers?.studio_name || "Unknown",
+          status: order.status,
+          total_amount: order.total_amount,
+          created_at: order.created_at,
+        })) || [],
+      recentCustomers:
+        recentCustomers?.map((customer) => ({
+          id: customer.id,
+          studio_name: customer.studio_name,
+          email: customer.email,
+          phone: customer.phone,
+          total_orders: customer.total_orders,
+          total_spent: customer.total_spent,
+          created_at: customer.created_at,
+        })) || [],
+      recentSubmissions:
+        recentSubmissions?.map((submission) => ({
+          id: submission.id,
+          name: submission.name,
+          email: submission.email || "",
+          phone: submission.phone,
+          message: submission.message,
+          status: submission.status,
+          created_at: submission.created_at,
+        })) || [],
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    throw error;
+  }
 }
 
 export async function getUsageHistory(): Promise<UsageHistory[]> {
