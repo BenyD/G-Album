@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/utils/supabase/client";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -18,38 +17,13 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  OrderSummary,
-  UpdateOrderInput,
-  PaymentMethod,
-} from "@/lib/types/order";
-import {
-  Loader2,
-  IndianRupee,
-  MessageSquare,
-  CreditCard,
-  Hash,
-} from "lucide-react";
+import { OrderSummary, UpdateOrderInput } from "@/lib/types/order";
+import { Loader2, IndianRupee, MessageSquare } from "lucide-react";
 
 const supabase = createClient();
 
-const paymentMethods: PaymentMethod[] = [
-  "Cash",
-  "UPI",
-  "Bank Transfer",
-  "Card",
-  "Other",
-];
-
 interface EditOrderDialogProps {
-  order: OrderSummary | null;
+  order: OrderSummary;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -60,35 +34,17 @@ export function EditOrderDialog({
   onOpenChange,
 }: EditOrderDialogProps) {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<UpdateOrderInput>({
-    order_number: order?.order_number || "",
+  const initialFormData: UpdateOrderInput = {
     total_amount: order?.total_amount || 0,
     estimated_delivery_date: order?.estimated_delivery_date || undefined,
     notes: order?.notes || "",
-  });
+  };
+  const [formData, setFormData] = useState<UpdateOrderInput>(initialFormData);
 
   // Update order mutation
   const { mutate: updateOrder, isPending } = useMutation({
     mutationFn: async (input: UpdateOrderInput) => {
       if (!order) throw new Error("No order selected");
-
-      // Check if order number is unique if it was changed
-      if (input.order_number && input.order_number !== order.order_number) {
-        const { data: existingOrder, error: checkError } = await supabase
-          .from("orders")
-          .select("id")
-          .eq("order_number", input.order_number)
-          .neq("id", order.id)
-          .single();
-
-        if (checkError && checkError.code !== "PGRST116") {
-          throw checkError;
-        }
-
-        if (existingOrder) {
-          throw new Error("Order number already exists");
-        }
-      }
 
       const { error } = await supabase
         .from("orders")
@@ -148,26 +104,6 @@ export function EditOrderDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="order_number" className="text-red-900">
-                Order Number
-              </Label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="order_number"
-                  value={formData.order_number}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      order_number: e.target.value,
-                    })
-                  }
-                  className="pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
               <Label htmlFor="total_amount" className="text-red-900">
                 Total Amount (₹)
               </Label>
@@ -196,12 +132,12 @@ export function EditOrderDialog({
                 Estimated Delivery Date
               </Label>
               <DatePicker
-                value={
+                date={
                   formData.estimated_delivery_date
                     ? new Date(formData.estimated_delivery_date)
                     : undefined
                 }
-                onChange={(date) => {
+                onSelect={(date: Date | undefined) => {
                   if (date && date <= new Date()) {
                     toast.error("Delivery date must be in the future");
                     return;
@@ -225,10 +161,12 @@ export function EditOrderDialog({
                   id="notes"
                   value={formData.notes || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
+                    setFormData({
+                      ...formData,
+                      notes: e.target.value,
+                    })
                   }
-                  rows={3}
-                  className="pl-9 min-h-[120px] border-red-100 focus:border-red-200 focus:ring-red-100"
+                  className="min-h-[100px] pl-9 border-red-100 focus:border-red-200 focus:ring-red-100"
                   placeholder="Add any additional notes about the order..."
                 />
               </div>
@@ -240,13 +178,12 @@ export function EditOrderDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-red-100 hover:bg-red-50"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 text-white hover:bg-red-700"
               disabled={isPending}
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

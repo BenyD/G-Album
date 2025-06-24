@@ -2256,7 +2256,7 @@ export default function OrdersPage() {
 
       {/* Add EditOrderDialog */}
       <EditOrderDialog
-        order={selectedOrder}
+        order={selectedOrder || ({} as OrderSummary)}
         open={isEditOrderOpen}
         onOpenChange={setIsEditOrderOpen}
       />
