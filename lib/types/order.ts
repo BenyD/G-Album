@@ -57,6 +57,8 @@ export interface CreateOrderInput {
 export interface UpdateOrderInput {
   status?: OrderStatus;
   total_amount?: number;
+  amount_paid?: number;
+  payment_method?: PaymentMethod;
   estimated_delivery_date?: string;
   notes?: string;
 }
@@ -72,4 +74,3 @@ export interface UpdateOrderSettingsInput {
   prefix?: string;
   last_sequence_number?: number;
 }
- 
