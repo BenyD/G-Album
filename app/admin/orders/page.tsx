@@ -25,6 +25,7 @@ import {
   Phone,
   MessageSquare,
   Eye,
+  Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +100,7 @@ import { useRole } from "@/components/admin/role-context";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AddCustomerDialog } from "@/components/admin/customers/AddCustomerDialog";
+import { EditOrderDialog } from "@/components/admin/orders/edit-order-dialog";
 
 const supabase = createClient();
 
@@ -186,6 +188,7 @@ export default function OrdersPage() {
   const [ordersTab, setOrdersTab] = useState("active");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const customerSelectRef = useRef<HTMLDivElement>(null);
+  const [isEditOrderOpen, setIsEditOrderOpen] = useState(false);
 
   // Handle action query parameter
   useEffect(() => {
@@ -1140,6 +1143,16 @@ export default function OrdersPage() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedOrder(order);
+                                    setIsEditOrderOpen(true);
+                                  }}
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Order
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedOrder(order);
                                     setIsUpdateStatusOpen(true);
                                   }}
                                 >
@@ -1284,6 +1297,16 @@ export default function OrdersPage() {
                             </DropdownMenuItem>
                             {canManageOrders && (
                               <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedOrder(order);
+                                    setIsEditOrderOpen(true);
+                                  }}
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Order
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -2229,6 +2252,13 @@ export default function OrdersPage() {
           }, 100);
         }}
         initialValues={undefined}
+      />
+
+      {/* Add EditOrderDialog */}
+      <EditOrderDialog
+        order={selectedOrder}
+        open={isEditOrderOpen}
+        onOpenChange={setIsEditOrderOpen}
       />
     </div>
   );
