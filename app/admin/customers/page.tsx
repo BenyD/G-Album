@@ -88,6 +88,7 @@ import {
 
 import { AddCustomerDialog } from "@/components/admin/customers/AddCustomerDialog";
 import { useRole } from "@/components/admin/role-context";
+import { CustomerBalanceSection } from "@/components/admin/customers/CustomerBalanceSection";
 
 const supabase = createClient();
 
@@ -1174,6 +1175,11 @@ export default function CustomersPage() {
                     </div>
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* Add Customer Balance Section */}
+                <CustomerBalanceSection customer={selectedCustomer} />
 
                 {(selectedCustomer.reference_name ||
                   selectedCustomer.reference_phone) && (
