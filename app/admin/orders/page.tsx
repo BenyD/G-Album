@@ -1100,15 +1100,15 @@ export default function OrdersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        ₹{order.total_amount.toLocaleString()}
+                        ₹{(order.total_amount || 0).toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        ₹{order.amount_paid.toLocaleString()}
+                        ₹{(order.amount_paid || 0).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         ₹
                         {(
-                          order.total_amount - order.amount_paid
+                          (order.total_amount || 0) - (order.amount_paid || 0)
                         ).toLocaleString()}
                       </TableCell>
                       <TableCell>
@@ -1258,15 +1258,15 @@ export default function OrdersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        ₹{order.total_amount.toLocaleString()}
+                        ₹{(order.total_amount || 0).toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        ₹{order.amount_paid.toLocaleString()}
+                        ₹{(order.amount_paid || 0).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         ₹
                         {(
-                          order.total_amount - order.amount_paid
+                          (order.total_amount || 0) - (order.amount_paid || 0)
                         ).toLocaleString()}
                       </TableCell>
                       <TableCell>

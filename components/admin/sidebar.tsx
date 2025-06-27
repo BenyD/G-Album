@@ -136,6 +136,9 @@ export default function AdminSidebar() {
       .join(" ");
   };
 
+  // Check if user is super admin
+  const isSuperAdmin = profile?.role?.name === "super_admin";
+
   // Define navigation items with required permissions
   const navItems = [
     {
@@ -201,8 +204,8 @@ export default function AdminSidebar() {
     },
   ];
 
-  // Settings submenu items
-  const settingsItems = [
+  // Admin management items (for Super Admin only)
+  const adminItems = [
     {
       title: "User Management",
       href: "/admin/settings/users",
@@ -215,6 +218,21 @@ export default function AdminSidebar() {
       icon: History,
       permission: "view_activity_logs",
     },
+  ];
+
+  // Filter items based on permissions or super admin status
+  const filteredNavItems = navItems.filter(
+    (item) => isSuperAdmin || hasPermission(item.permission)
+  );
+  const filteredBusinessItems = businessItems.filter(
+    (item) => isSuperAdmin || hasPermission(item.permission)
+  );
+  const filteredAdminItems = adminItems.filter(
+    (item) => isSuperAdmin || hasPermission(item.permission)
+  );
+
+  // Settings submenu items
+  const settingsItems = [
     {
       title: "General Settings",
       href: "/admin/settings",
@@ -320,10 +338,7 @@ export default function AdminSidebar() {
             Main
           </h4>
           <SidebarMenu>
-            {navItems.map((item) => {
-              // Only show items the user has permission to see
-              if (!hasPermission(item.permission)) return null;
-
+            {filteredNavItems.map((item) => {
               const isActive = pathname === item.href;
 
               return (
@@ -361,18 +376,15 @@ export default function AdminSidebar() {
 
         <SidebarSeparator className="my-2" />
 
-        {/* Business Management (Accounts role and above) */}
-        {businessItems.some((item) => hasPermission(item.permission)) && (
+        {/* Business Management */}
+        {(isSuperAdmin || filteredBusinessItems.length > 0) && (
           <>
             <div className="px-3 py-2">
               <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
                 Business
               </h4>
               <SidebarMenu>
-                {businessItems.map((item) => {
-                  // Only show items the user has permission to see
-                  if (!hasPermission(item.permission)) return null;
-
+                {filteredBusinessItems.map((item) => {
                   const isActive = pathname === item.href;
 
                   return (
@@ -407,6 +419,42 @@ export default function AdminSidebar() {
           </>
         )}
 
+        {/* Admin Management */}
+        {isSuperAdmin && (
+          <>
+            <div className="px-3 py-2">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
+                Admin
+              </h4>
+              <SidebarMenu>
+                {filteredAdminItems.map((item) => {
+                  const isActive = pathname === item.href;
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={item.title}
+                      >
+                        <Link
+                          href={item.href}
+                          className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          <span className="flex-1 truncate">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </div>
+
+            <SidebarSeparator className="my-2" />
+          </>
+        )}
+
         {/* Settings Navigation */}
         <div className="px-3 py-2">
           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
@@ -414,9 +462,6 @@ export default function AdminSidebar() {
           </h4>
           <SidebarMenu>
             {settingsItems.map((item) => {
-              // Only show items the user has permission to see
-              if (!hasPermission(item.permission)) return null;
-
               const isActive = pathname === item.href;
 
               return (

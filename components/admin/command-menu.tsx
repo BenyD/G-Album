@@ -176,6 +176,9 @@ export default function AdminCommandMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMac, setIsMac] = useState(true);
 
+  // Check if user is super admin
+  const isSuperAdmin = profile?.role?.name === "super_admin";
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const platform = window.navigator.platform.toLowerCase();
@@ -200,9 +203,9 @@ export default function AdminCommandMenu() {
     () =>
       commandMenuItems.filter((item) => {
         if (!item.permission) return true;
-        return hasPermission(item.permission);
+        return isSuperAdmin || hasPermission(item.permission);
       }),
-    [hasPermission]
+    [hasPermission, isSuperAdmin]
   );
 
   const handleItemSelect = (item: (typeof commandMenuItems)[0]) => {

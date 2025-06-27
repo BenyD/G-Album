@@ -49,6 +49,8 @@ export function RoleProvider({ children }: RoleProviderProps) {
     () =>
       (permission: string): boolean => {
         if (!role || !permissions || isLoading) return false;
+        // Super admin has all permissions
+        if (role.name === "super_admin") return true;
         return permissions.some((p) => p.name === permission);
       },
     [role, permissions, isLoading]

@@ -1,56 +1,43 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert } from "@/components/ui/alert";
-import { getDashboardStats } from "@/lib/services/dashboard";
-import { createClient } from "@/utils/supabase/client";
-import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
-  PlusCircle,
+  Clock,
+  Receipt,
+  ShoppingBag,
+  HardDrive,
+  BarChart3,
+  TrendingUp,
   Users,
-  Package,
-  Mail,
-  FileText,
-  Command,
-  Settings,
-  Loader2,
-  // Image,
-  Album,
-  User,
-  ImageIcon,
+  Image as ImageIcon,
+  Activity,
+  ArrowRight,
 } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import {
+  getDashboardStats,
+  subscribeToUpdates,
+} from "@/lib/services/dashboard";
 import { formatCurrency } from "@/lib/utils";
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { formatDistanceToNow } from "date-fns";
-// import { Separator } from "@/components/ui/separator";
-import { getStorageStats } from "@/lib/services/storage";
+import { useQueryClient } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
 interface DashboardStats {
-  totalAlbums: number;
-  totalGalleryImages: number;
-  totalNewsletterSubscribers: number;
-  totalFormSubmissions: number;
   totalOrders: number;
   totalCustomers: number;
+  totalRevenue: number;
+  totalPending: number;
   totalAdmins: number;
   storageUsage: {
     used: number;
@@ -59,600 +46,466 @@ interface DashboardStats {
   albumStats: {
     totalAlbums: number;
     totalImages: number;
-    averageImagesPerAlbum: number;
   };
-  recentOrders: Array<{
-    id: string;
-    order_number: string;
-    customer_name: string;
-    total_amount: number;
-    status: string;
-    created_at: string;
-  }>;
-  recentCustomers: Array<{
-    id: string;
-    studio_name: string;
-    email: string;
-    phone: string;
-    total_orders: number;
-    total_spent: number;
-    created_at: string;
-  }>;
-  recentSubmissions: Array<{
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    message: string;
-    status: string;
-    created_at: string;
-  }>;
+  recentActivity: {
+    orders: Array<{
+      id: string;
+      order_number: string;
+      customer_name: string;
+      customer_email: string;
+      status: string;
+      total_amount: number;
+      amount_paid: number;
+      balance_amount: number;
+      created_at: string;
+    }>;
+    customers: Array<{
+      id: string;
+      studio_name: string;
+      email: string;
+      phone: string;
+      created_at: string;
+      total_orders: number;
+      total_spent: number;
+    }>;
+    submissions: Array<{
+      id: string;
+      name: string;
+      email: string;
+      phone: string;
+      message: string;
+      status: string;
+      created_at: string;
+    }>;
+    albumImages: Array<{
+      id: string;
+      images: Array<{ count: number }>;
+    }>;
+  };
+  revenueGrowth?: {
+    percentage: number;
+    previousRevenue: number;
+  };
+}
+
+const STATUS_COLORS = {
+  delivered: "#059669", // green-600
+  processing: "#3B82F6", // blue-500
+  pending: "#F59E0B", // amber-500
+  shipped: "#10B981", // emerald-500
+  cancelled: "#EF4444", // red-500
+  default: "#6B7280", // gray-500
+} as const;
+
+function StorageUsageCard({
+  storageUsage,
+  isLoading,
+}: {
+  storageUsage: { used: number; total: number };
+  isLoading: boolean;
+}) {
+  const usedGB =
+    Math.round(((storageUsage?.used || 0) / (1024 * 1024 * 1024)) * 100) / 100;
+  const totalGB =
+    Math.round(((storageUsage?.total || 0) / (1024 * 1024 * 1024)) * 100) / 100;
+  const usagePercentage = Math.round((usedGB / totalGB) * 100) || 0;
+  const isNearLimit = usagePercentage >= 80;
+  const isCritical = usagePercentage >= 90;
+
+  const getProgressColor = () => {
+    if (isCritical) return "bg-red-100 [&>[role=progressbar]]:bg-red-600";
+    if (isNearLimit)
+      return "bg-yellow-100 [&>[role=progressbar]]:bg-yellow-600";
+    return "bg-emerald-100 [&>[role=progressbar]]:bg-emerald-600";
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Storage Usage</CardTitle>
+        <HardDrive className="h-4 w-4 text-red-600" />
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <>
+            <Skeleton className="h-8 w-24 mb-2" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-32 mt-2" />
+          </>
+        ) : (
+          <>
+            <div className="text-2xl font-bold">{usedGB.toFixed(2)} GB</div>
+            <div className="space-y-2">
+              <Progress
+                value={usagePercentage}
+                className={`h-2 ${getProgressColor()}`}
+              />
+              <p className="text-sm text-muted-foreground">
+                {usagePercentage}% of {totalGB.toFixed(2)} GB used
+                {isCritical && (
+                  <span className="ml-2 text-red-600">(Critical)</span>
+                )}
+                {isNearLimit && !isCritical && (
+                  <span className="ml-2 text-yellow-600">(Near limit)</span>
+                )}
+              </p>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function OrderStatusDistribution({
+  statusDistribution,
+  isLoading,
+}: {
+  statusDistribution: Array<{ status: string; count: number; color: string }>;
+  isLoading: boolean;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold">
+            Order Status Distribution
+          </CardTitle>
+          <BarChart3 className="h-4 w-4 text-red-600" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-[100px]" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {statusDistribution?.map((status) => {
+              const percentage = Math.round(
+                (status.count /
+                  statusDistribution.reduce(
+                    (acc, curr) => acc + curr.count,
+                    0
+                  )) *
+                  100
+              );
+              return (
+                <div key={status.status} className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium capitalize">
+                      {status.status.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {status.count} ({percentage}%)
+                    </span>
+                  </div>
+                  <Progress
+                    value={percentage}
+                    className="h-2"
+                    style={
+                      {
+                        backgroundColor: `${status.color}20`,
+                        "--progress-foreground": status.color,
+                      } as React.CSSProperties
+                    }
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [storageStats, setStorageStats] = useState<{
-    totalSize: number;
-    fileCount: number;
-    breakdown: {
-      [key: string]: {
-        size: number;
-        count: number;
-      };
-    };
-  } | null>(null);
-  const [isStorageLoading, setIsStorageLoading] = useState(true);
-  const storageStatsFetched = useRef(false);
+  const queryClient = useQueryClient();
+
+  const {
+    data: stats,
+    isLoading,
+    error,
+    isError,
+  } = useQuery({
+    queryKey: ["dashboardStats"],
+    queryFn: () => getDashboardStats() as Promise<DashboardStats>,
+    refetchInterval: 300000, // Refetch every 5 minutes
+    retry: 3,
+  });
 
   useEffect(() => {
-    const supabase = createClient();
-    let mounted = true;
-
-    async function checkUserRole() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setError("You must be logged in to access this page");
-        setIsLoading(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("admin_profiles")
-        .select("role_id, status, roles(name)")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile || profile.status !== "approved") {
-        setError("You do not have permission to access this page");
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if the user is a super admin
-      setIsSuperAdmin(profile.roles?.[0]?.name === "super_admin");
-    }
-
-    async function loadDashboardData() {
-      try {
-        const dashboardStats = await getDashboardStats();
-        if (mounted) {
-          setStats(dashboardStats);
-          setIsLoading(false);
-
-          // Load storage stats only if we haven't fetched them yet
-          if (!storageStatsFetched.current) {
-            loadStorageStats();
-          }
-        }
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-        if (mounted) {
-        setError("Failed to load dashboard data");
-          setIsLoading(false);
-        }
-      }
-    }
-
-    async function loadStorageStats() {
-      if (storageStatsFetched.current) return;
-
-      try {
-        setIsStorageLoading(true);
-        const data = await getStorageStats();
-        if (mounted) {
-          setStorageStats(data);
-          storageStatsFetched.current = true;
-        }
-      } catch (error) {
-        console.error("Error loading storage stats:", error);
-      } finally {
-        if (mounted) {
-          setIsStorageLoading(false);
-        }
-      }
-    }
-
-    // Set up real-time subscriptions
-    const ordersSubscription = supabase
-      .channel("orders_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        () => {
-          loadDashboardData();
-        }
-      )
-      .subscribe();
-
-    const customersSubscription = supabase
-      .channel("customers_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "customers" },
-        () => {
-          loadDashboardData();
-        }
-      )
-      .subscribe();
-
-    const newsletterSubscription = supabase
-      .channel("newsletter_subscribers_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "newsletter_subscribers" },
-        () => {
-          loadDashboardData();
-        }
-      )
-      .subscribe();
-
-    const formSubmissionsSubscription = supabase
-      .channel("contact_submissions_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "contact_submissions" },
-        () => {
-          loadDashboardData();
-        }
-      )
-      .subscribe();
-
-    checkUserRole();
-    loadDashboardData();
+    // Subscribe to real-time updates
+    const unsubscribe = subscribeToUpdates((newStats) => {
+      queryClient.setQueryData(
+        ["dashboardStats"],
+        (oldStats: DashboardStats | undefined) => ({
+          ...oldStats,
+          ...newStats,
+        })
+      );
+    });
 
     return () => {
-      mounted = false;
-      ordersSubscription.unsubscribe();
-      customersSubscription.unsubscribe();
-      newsletterSubscription.unsubscribe();
-      formSubmissionsSubscription.unsubscribe();
+      unsubscribe();
     };
-  }, []);
+  }, [queryClient]);
 
-  if (isLoading) {
+  if (isError) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-red-600" />
-          <p className="text-sm text-muted-foreground">
-            Loading dashboard data...
-          </p>
-        </div>
-      </div>
+      <Alert
+        variant="destructive"
+        className="bg-red-50 text-red-900 border-red-200"
+      >
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {error instanceof Error
+            ? error.message
+            : "An error occurred while fetching dashboard data. Please try again later."}
+        </AlertDescription>
+      </Alert>
     );
   }
 
-  if (error) {
-    return <Alert variant="destructive">{error}</Alert>;
-  }
-
-  // At this point, stats is guaranteed to be non-null
-  const dashboardStats = stats!;
-
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-red-900">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOpen(true)}
-            className="text-red-600"
-          >
-            <Command className="mr-2 h-4 w-4" />
-            Quick Actions
-          </Button>
-          {isSuperAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/admin/settings")}
-              className="text-red-600"
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
-          )}
+    <div className="container mx-auto space-y-8 py-6">
+      {/* Header */}
+      <div className="flex flex-col gap-2 relative">
+        <h1 className="text-2xl font-bold text-red-900">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Overview of your business performance and key metrics
+        </p>
+        <div className="absolute -bottom-1 left-0 w-12 h-1 bg-red-600 rounded-full" />
+      </div>
+
+      <div className="space-y-8">
+        {/* Key Metrics */}
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Total Orders"
+            value={stats?.totalOrders}
+            subValue={`${stats?.recentActivity.orders.length || 0} recent orders`}
+            icon={<ShoppingBag className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+
+          <MetricCard
+            title="Monthly Revenue"
+            value={formatCurrency(stats?.totalRevenue || 0)}
+            subValue={`Avg. ${formatCurrency((stats?.totalRevenue || 0) / (stats?.totalOrders || 1))} per order`}
+            icon={<Receipt className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+
+          <MetricCard
+            title="Active Orders"
+            value={
+              stats?.recentActivity.orders.filter(
+                (o) => !["delivered", "cancelled"].includes(o.status)
+              ).length || 0
+            }
+            subValue="Orders in progress"
+            icon={<Clock className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+
+          <StorageUsageCard
+            storageUsage={stats?.storageUsage || { used: 0, total: 0 }}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Additional Metrics */}
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Revenue Growth"
+            value={
+              stats?.revenueGrowth
+                ? `${stats.revenueGrowth.percentage > 0 ? "+" : ""}${stats.revenueGrowth.percentage.toFixed(1)}%`
+                : "0%"
+            }
+            subValue={`vs. last month (${formatCurrency(stats?.revenueGrowth?.previousRevenue || 0)})`}
+            icon={<TrendingUp className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+
+          <MetricCard
+            title="Active Customers"
+            value={stats?.totalCustomers}
+            subValue={`${stats?.totalAdmins} admins`}
+            icon={<Users className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+
+          <MetricCard
+            title="Album Statistics"
+            value={stats?.albumStats.totalAlbums}
+            subValue={`${stats?.albumStats.totalImages} total images`}
+            icon={<ImageIcon className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+
+          <MetricCard
+            title="System Activity"
+            value={stats?.recentActivity.submissions.length}
+            subValue="Recent submissions"
+            icon={<Activity className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Order Status and Recent Activity */}
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+          <OrderStatusDistribution
+            statusDistribution={
+              stats?.recentActivity.orders.reduce(
+                (acc, order) => {
+                  const existingStatus = acc.find(
+                    (s) => s.status === order.status
+                  );
+                  if (existingStatus) {
+                    existingStatus.count++;
+                  } else {
+                    acc.push({
+                      status: order.status,
+                      count: 1,
+                      color:
+                        STATUS_COLORS[
+                          order.status as keyof typeof STATUS_COLORS
+                        ] || STATUS_COLORS.default,
+                    });
+                  }
+                  return acc;
+                },
+                [] as Array<{ status: string; count: number; color: string }>
+              ) || []
+            }
+            isLoading={isLoading}
+          />
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold">
+                  Recent Orders
+                </CardTitle>
+                <Receipt className="h-4 w-4 text-red-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-[120px]" />
+                        <Skeleton className="h-4 w-[180px]" />
+                      </div>
+                      <div className="text-right space-y-2">
+                        <Skeleton className="h-4 w-[100px]" />
+                        <Skeleton className="h-4 w-[80px]" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {stats?.recentActivity.orders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-medium">{order.order_number}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {order.customer_name} • {formatDate(order.created_at)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">
+                          {formatCurrency(order.total_amount)}
+                        </p>
+                        <p
+                          className={`text-sm ${
+                            order.status === "delivered"
+                              ? "text-green-600"
+                              : order.status === "cancelled"
+                                ? "text-red-600"
+                                : "text-muted-foreground"
+                          }`}
+                        >
+                          {order.status.replace(/_/g, " ")}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter>
+              <Link href="/admin/orders" className="w-full">
+                <Button variant="outline" className="w-full">
+                  <span>View All Orders</span>
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
         </div>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-red-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Customers
-            </CardTitle>
-            <Users className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">
-              {dashboardStats.totalCustomers}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardStats.recentCustomers.length} recent customers
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-red-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Package className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">
-              {dashboardStats.totalOrders}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardStats.recentOrders.length} recent orders
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-red-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Newsletter Subscribers
-            </CardTitle>
-            <Mail className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">
-              {dashboardStats.totalNewsletterSubscribers}
-            </div>
-            <p className="text-xs text-muted-foreground">Active subscribers</p>
-          </CardContent>
-        </Card>
-        <Card className="border-red-100">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Form Submissions
-            </CardTitle>
-            <FileText className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">
-              {dashboardStats.totalFormSubmissions}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardStats.recentSubmissions.length} recent submissions
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-red-100">
-          <CardHeader>
-            <CardTitle className="text-red-900">Storage Usage</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isStorageLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-red-600" />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">
-                      Total Storage Used
-                    </span>
-                    <span className="text-sm font-medium">
-                      {(
-                        (storageStats?.totalSize || 0) /
-                        (1024 * 1024 * 1024)
-                      ).toFixed(2)}{" "}
-                      GB /{" "}
-                      {(
-                        dashboardStats.storageUsage.total /
-                        (1024 * 1024 * 1024)
-                      ).toFixed(2)}{" "}
-                      GB
-                    </span>
-                  </div>
-                  <div className="h-2 w-full bg-red-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-red-600 transition-all duration-500"
-                      style={{
-                        width: `${Math.min(
-                          ((storageStats?.totalSize || 0) /
-                            dashboardStats.storageUsage.total) *
-                            100,
-                          100
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {storageStats?.breakdown &&
-                    Object.entries(storageStats.breakdown).map(
-                      ([category, data]) => (
-                        <div
-                          key={category}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-2">
-                            {category === "Album Images" ? (
-                              <Album className="h-4 w-4 text-red-600" />
-                            ) : (
-                              <User className="h-4 w-4 text-red-600" />
-                            )}
-                            <span className="text-sm text-muted-foreground">
-                              {category}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-sm text-muted-foreground">
-                              {data.count} files
-                            </span>
-                            <span className="text-sm font-medium">
-                              {(data.size / (1024 * 1024 * 1024)).toFixed(2)} GB
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    )}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-red-100">
-          <CardHeader>
-            <CardTitle className="text-red-900">Album Statistics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">
-                      Total Albums
-                    </span>
-                    <Album className="h-4 w-4 text-red-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-red-900">
-                    {dashboardStats.albumStats.totalAlbums}
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">
-                      Total Images
-                    </span>
-                    <ImageIcon className="h-4 w-4 text-red-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-red-900">
-                    {dashboardStats.albumStats.totalImages}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">
-                    Average Images per Album
-                  </span>
-                </div>
-                <div className="text-2xl font-bold text-red-900">
-                  {dashboardStats.albumStats.averageImagesPerAlbum}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-1 border-red-100">
-          <CardHeader>
-            <CardTitle className="text-red-900">Recent Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dashboardStats.recentOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>{order.order_number}</TableCell>
-                    <TableCell>{order.customer_name}</TableCell>
-                    <TableCell>{formatCurrency(order.total_amount)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          order.status === "completed"
-                            ? "default"
-                            : order.status === "pending"
-                              ? "secondary"
-                              : "destructive"
-                        }
-                      >
-                        {order.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-1 border-red-100">
-          <CardHeader>
-            <CardTitle className="text-red-900">Recent Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Studio</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Orders</TableHead>
-                  <TableHead>Spent</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dashboardStats.recentCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>{customer.studio_name}</TableCell>
-                    <TableCell>{customer.email}</TableCell>
-                    <TableCell>{customer.total_orders}</TableCell>
-                    <TableCell>
-                      {formatCurrency(customer.total_spent)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-1 border-red-100">
-          <CardHeader>
-            <CardTitle className="text-red-900">Recent Submissions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dashboardStats.recentSubmissions.map((submission) => (
-                  <TableRow key={submission.id}>
-                    <TableCell>{submission.name}</TableCell>
-                    <TableCell>
-                      {submission.email || submission.phone}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          submission.status === "New"
-                            ? "destructive"
-                            : "default"
-                        }
-                      >
-                        {submission.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {formatDistanceToNow(new Date(submission.created_at), {
-                        addSuffix: true,
-                      })}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Quick Actions">
-            <CommandItem
-              onSelect={() => {
-                router.push("/admin/orders/new");
-                setOpen(false);
-              }}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create New Order
-            </CommandItem>
-            <CommandItem
-              onSelect={() => {
-                router.push("/admin/customers/new");
-                setOpen(false);
-              }}
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Add New Customer
-            </CommandItem>
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Navigation">
-            <CommandItem
-              onSelect={() => {
-                router.push("/admin/orders");
-                setOpen(false);
-              }}
-            >
-              <Package className="mr-2 h-4 w-4" />
-              Orders
-            </CommandItem>
-            <CommandItem
-              onSelect={() => {
-                router.push("/admin/customers");
-                setOpen(false);
-              }}
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Customers
-            </CommandItem>
-            <CommandItem
-              onSelect={() => {
-                router.push("/admin/newsletter");
-                setOpen(false);
-              }}
-            >
-              <Mail className="mr-2 h-4 w-4" />
-              Newsletter
-            </CommandItem>
-            <CommandItem
-              onSelect={() => {
-                router.push("/admin/submissions");
-                setOpen(false);
-              }}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Form Submissions
-            </CommandItem>
-          </CommandGroup>
-        </CommandList>
-      </CommandDialog>
     </div>
   );
+}
+
+interface MetricCardProps {
+  title: string;
+  value: string | number | undefined;
+  subValue: string;
+  icon: React.ReactNode;
+  isLoading: boolean;
+}
+
+function MetricCard({
+  title,
+  value,
+  subValue,
+  icon,
+  isLoading,
+}: MetricCardProps) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <>
+            <Skeleton className="h-8 w-24 mb-2" />
+            <Skeleton className="h-4 w-32" />
+          </>
+        ) : (
+          <>
+            <div className="text-2xl font-bold">{value}</div>
+            <p className="text-sm text-muted-foreground">{subValue}</p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  });
 }

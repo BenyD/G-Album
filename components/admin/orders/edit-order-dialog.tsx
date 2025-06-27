@@ -122,20 +122,8 @@ export function EditOrderDialog({
     });
   }, [order]);
 
-  // Handle amount paid change
-  const handleAmountPaidChange = (value: string) => {
-    const numValue = value === "" ? undefined : parseFloat(value);
-    setFormData({
-      ...formData,
-      amount_paid: numValue,
-      // Reset payment method if amount is cleared or 0
-      payment_method:
-        numValue && numValue > 0 ? formData.payment_method : undefined,
-    });
-  };
-
   // Fetch payments for the order
-  const { data: payments } = useQuery({
+  const { data: payments = [] } = useQuery({
     queryKey: ["order-payments", order?.id],
     queryFn: async () => {
       if (!order?.id) return [];
@@ -149,11 +137,11 @@ export function EditOrderDialog({
       if (error) throw error;
       return data as OrderPayment[];
     },
-    enabled: !!order?.id,
+    enabled: Boolean(order?.id && open),
   });
 
   // Fetch order logs
-  const { data: orderLogs } = useQuery({
+  const { data: orderLogs = [] } = useQuery({
     queryKey: ["orderLogs", order?.id],
     queryFn: async () => {
       if (!order?.id) return [];
@@ -167,7 +155,7 @@ export function EditOrderDialog({
       if (error) throw error;
       return data as OrderLog[];
     },
-    enabled: !!order?.id,
+    enabled: Boolean(order?.id && open),
   });
 
   // Update order mutation
@@ -201,34 +189,32 @@ export function EditOrderDialog({
 
         if (paymentError) throw paymentError;
       }
-
-      // Log the update action
-      const { error: logError } = await supabase.from("order_logs").insert([
-        {
-          order_id: order.id,
-          action: "order_updated",
-          details: `Order details updated: ${Object.keys(input)
-            .filter((key) => input[key as keyof UpdateOrderInput] !== undefined)
-            .join(", ")}`,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-        },
-      ]);
-
-      if (logError) throw logError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({
-        queryKey: ["orderLogs", order?.id],
-      });
+      queryClient.invalidateQueries({ queryKey: ["order-payments", order.id] });
+      queryClient.invalidateQueries({ queryKey: ["orderLogs", order.id] });
       onOpenChange(false);
       toast.success("Order updated successfully");
     },
     onError: (error) => {
-      console.error("Error updating order:", error);
       toast.error("Failed to update order: " + error.message);
     },
   });
+
+  // Handle amount paid change
+  const handleAmountPaidChange = (value: string) => {
+    const numValue = value === "" ? undefined : parseFloat(value);
+    setFormData({
+      ...formData,
+      amount_paid: numValue,
+      // Reset payment method if amount is cleared or 0
+      payment_method:
+        numValue && numValue > 0 ? formData.payment_method : undefined,
+    });
+  };
+
+  if (!open) return null;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
