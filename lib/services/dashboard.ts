@@ -25,10 +25,6 @@ interface DashboardStats {
   totalRevenue: number;
   totalPending: number;
   totalAdmins: number;
-  revenueGrowth: {
-    percentage: number;
-    previousRevenue: number;
-  };
   storageUsage: {
     used: number;
     total: number;
@@ -36,6 +32,12 @@ interface DashboardStats {
   albumStats: {
     totalAlbums: number;
     totalImages: number;
+    recentAlbums: Array<{
+      id: string;
+      title: string;
+      created_at: string;
+      image_count: number;
+    }>;
   };
   recentActivity: {
     orders: OrderSummary[];
@@ -70,68 +72,6 @@ export interface StorageBreakdown {
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   try {
-    // Get current month's revenue
-    const currentDate = new Date();
-    const firstDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      1
-    );
-    const lastDayOfMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    );
-
-    const { data: currentMonthOrders, error: currentMonthError } =
-      await supabase
-        .from("order_summary")
-        .select("total_amount, amount_paid, created_at")
-        .gte("created_at", firstDayOfMonth.toISOString())
-        .lte("created_at", lastDayOfMonth.toISOString());
-
-    if (currentMonthError) throw currentMonthError;
-
-    // Get previous month's revenue
-    const firstDayOfPrevMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() - 1,
-      1
-    );
-    const lastDayOfPrevMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      0
-    );
-
-    const { data: prevMonthOrders, error: prevMonthError } = await supabase
-      .from("order_summary")
-      .select("total_amount, amount_paid")
-      .gte("created_at", firstDayOfPrevMonth.toISOString())
-      .lte("created_at", lastDayOfPrevMonth.toISOString());
-
-    if (prevMonthError) throw prevMonthError;
-
-    const currentMonthRevenue =
-      currentMonthOrders?.reduce(
-        (sum, order) => sum + (order.amount_paid || 0),
-        0
-      ) || 0;
-
-    const prevMonthRevenue =
-      prevMonthOrders?.reduce(
-        (sum, order) => sum + (order.amount_paid || 0),
-        0
-      ) || 0;
-
-    const revenueGrowth = {
-      percentage:
-        prevMonthRevenue === 0
-          ? 100
-          : ((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100,
-      previousRevenue: prevMonthRevenue,
-    };
-
     // Get total orders and revenue
     const { data: orderStats, error: orderError } = await supabase
       .from("order_summary")
@@ -235,13 +175,31 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       throw albumError;
     }
 
+    // Get recent albums with image count
+    const { data: recentAlbums, error: recentAlbumsError } = await supabase
+      .from("albums")
+      .select(
+        `
+        id,
+        title,
+        created_at,
+        image_count:album_images(count)
+      `
+      )
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (recentAlbumsError) {
+      console.error("Error fetching recent albums:", recentAlbumsError);
+      throw recentAlbumsError;
+    }
+
     return {
       totalOrders: totalOrders || 0,
       totalCustomers: totalCustomers || 0,
       totalRevenue: totalRevenue || 0,
       totalPending: totalPending || 0,
       totalAdmins: totalAdmins || 0,
-      revenueGrowth,
       storageUsage: {
         used: storageData.used ?? 0,
         total: storageData.total ?? 1 * 1024 * 1024 * 1024, // 1GB default for free tier
@@ -253,6 +211,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
             (sum, album) => sum + (album.images?.[0]?.count || 0),
             0
           ) || 0,
+        recentAlbums:
+          recentAlbums?.map((album) => ({
+            id: album.id,
+            title: album.title,
+            created_at: album.created_at,
+            image_count: album.image_count?.[0]?.count || 0,
+          })) || [],
       },
       recentActivity: {
         orders: (recentOrders || []) as OrderSummary[],

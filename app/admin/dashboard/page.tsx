@@ -8,22 +8,15 @@ import {
   ShoppingBag,
   HardDrive,
   BarChart3,
-  TrendingUp,
-  Users,
-  Image as ImageIcon,
-  Activity,
   ArrowRight,
+  Camera,
+  Calendar,
+  MessageSquare,
 } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getDashboardStats,
   subscribeToUpdates,
@@ -59,15 +52,6 @@ interface DashboardStats {
       balance_amount: number;
       created_at: string;
     }>;
-    customers: Array<{
-      id: string;
-      studio_name: string;
-      email: string;
-      phone: string;
-      created_at: string;
-      total_orders: number;
-      total_spent: number;
-    }>;
     submissions: Array<{
       id: string;
       name: string;
@@ -81,10 +65,6 @@ interface DashboardStats {
       id: string;
       images: Array<{ count: number }>;
     }>;
-  };
-  revenueGrowth?: {
-    percentage: number;
-    previousRevenue: number;
   };
 }
 
@@ -321,41 +301,41 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Additional Metrics */}
+        {/* Album Stats */}
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard
-            title="Revenue Growth"
+            title="Total Albums"
+            value={stats?.albumStats.totalAlbums || 0}
+            subValue="Active albums"
+            icon={<Camera className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+
+          <MetricCard
+            title="Total Images"
+            value={stats?.albumStats.totalImages || 0}
+            subValue="Across all albums"
+            icon={<Camera className="h-4 w-4 text-red-600" />}
+            isLoading={isLoading}
+          />
+
+          <MetricCard
+            title="Upcoming Deliveries"
             value={
-              stats?.revenueGrowth
-                ? `${stats.revenueGrowth.percentage > 0 ? "+" : ""}${stats.revenueGrowth.percentage.toFixed(1)}%`
-                : "0%"
+              stats?.recentActivity.orders.filter(
+                (o) => o.status === "processing" || o.status === "shipped"
+              ).length || 0
             }
-            subValue={`vs. last month (${formatCurrency(stats?.revenueGrowth?.previousRevenue || 0)})`}
-            icon={<TrendingUp className="h-4 w-4 text-red-600" />}
+            subValue="Due this week"
+            icon={<Calendar className="h-4 w-4 text-red-600" />}
             isLoading={isLoading}
           />
 
           <MetricCard
-            title="Active Customers"
-            value={stats?.totalCustomers}
-            subValue={`${stats?.totalAdmins} admins`}
-            icon={<Users className="h-4 w-4 text-red-600" />}
-            isLoading={isLoading}
-          />
-
-          <MetricCard
-            title="Album Statistics"
-            value={stats?.albumStats.totalAlbums}
-            subValue={`${stats?.albumStats.totalImages} total images`}
-            icon={<ImageIcon className="h-4 w-4 text-red-600" />}
-            isLoading={isLoading}
-          />
-
-          <MetricCard
-            title="System Activity"
-            value={stats?.recentActivity.submissions.length}
-            subValue="Recent submissions"
-            icon={<Activity className="h-4 w-4 text-red-600" />}
+            title="Contact Submissions"
+            value={stats?.recentActivity.submissions.length || 0}
+            subValue="New inquiries"
+            icon={<MessageSquare className="h-4 w-4 text-red-600" />}
             isLoading={isLoading}
           />
         </div>
@@ -415,47 +395,53 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {stats?.recentActivity.orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-medium">{order.order_number}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {order.customer_name} • {formatDate(order.created_at)}
-                        </p>
+                <>
+                  <div className="space-y-4">
+                    {stats?.recentActivity.orders.map((order) => (
+                      <div
+                        key={order.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-medium">{order.order_number}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {order.customer_name} •{" "}
+                            {formatDate(order.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {formatCurrency(order.total_amount)}
+                          </p>
+                          <p
+                            className={`text-sm ${
+                              order.status === "delivered"
+                                ? "text-green-600"
+                                : order.status === "cancelled"
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                            }`}
+                          >
+                            {order.status.replace(/_/g, " ")}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">
-                          {formatCurrency(order.total_amount)}
-                        </p>
-                        <p
-                          className={`text-sm ${
-                            order.status === "delivered"
-                              ? "text-green-600"
-                              : order.status === "cancelled"
-                                ? "text-red-600"
-                                : "text-muted-foreground"
-                          }`}
-                        >
-                          {order.status.replace(/_/g, " ")}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 text-right">
+                    <Link href="/admin/orders">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                      >
+                        View All Orders <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </>
               )}
             </CardContent>
-            <CardFooter>
-              <Link href="/admin/orders" className="w-full">
-                <Button variant="outline" className="w-full">
-                  <span>View All Orders</span>
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </CardFooter>
           </Card>
         </div>
       </div>
