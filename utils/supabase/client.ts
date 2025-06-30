@@ -9,12 +9,17 @@ export function createClient() {
 
 export async function logActivity(
   action: string,
-  details?: Record<string, unknown> | string
+  details?: Record<string, unknown> | string | null
 ) {
   const supabase = createClient();
+
+  // Ensure details is never an empty object
+  const processedDetails =
+    details && Object.keys(details).length === 0 ? null : details;
+
   const { error } = await supabase.rpc("log_activity", {
     action,
-    details: details ?? null,
+    details: processedDetails,
   });
   if (error) {
     console.error("Failed to log global activity:", error);

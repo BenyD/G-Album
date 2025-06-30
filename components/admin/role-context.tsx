@@ -49,9 +49,27 @@ export function RoleProvider({ children }: RoleProviderProps) {
     () =>
       (permission: string): boolean => {
         if (!role || !permissions || isLoading) return false;
+
         // Super admin has all permissions
         if (role.name === "super_admin") return true;
-        return permissions.some((p) => p.name === permission);
+
+        // All roles should have access to their own profile
+        if (permission === "view_profile") return true;
+
+        // Check if the user has the specific permission
+        const hasSpecificPermission = permissions.some(
+          (p) => p.name === permission
+        );
+
+        // For visitors, only allow specific permissions
+        if (role.name === "visitor") {
+          return (
+            ["view_dashboard", "view_analytics"].includes(permission) ||
+            hasSpecificPermission
+          );
+        }
+
+        return hasSpecificPermission;
       },
     [role, permissions, isLoading]
   );

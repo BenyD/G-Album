@@ -8,7 +8,8 @@ AND p.name IN (
     'view_customers',
     'manage_customers',
     'view_orders',
-    'manage_orders'
+    'manage_orders',
+    'view_profile'
 )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
@@ -27,19 +28,19 @@ CREATE POLICY "Customers are viewable by editors and above"
             INNER JOIN roles r ON ap.role_id = r.id
             WHERE ap.id = auth.uid()
             AND ap.status = 'approved'
-            AND r.name IN ('editor', 'admin', 'super_admin')
+            AND r.name IN ('super_admin', 'admin', 'editor')
         )
     );
 
 CREATE POLICY "Customers are manageable by editors and above"
-    ON customers FOR ALL
+    ON customers FOR INSERT UPDATE DELETE
     USING (
         EXISTS (
             SELECT 1 FROM admin_profiles ap
             INNER JOIN roles r ON ap.role_id = r.id
             WHERE ap.id = auth.uid()
             AND ap.status = 'approved'
-            AND r.name IN ('editor', 'admin', 'super_admin')
+            AND r.name IN ('super_admin', 'admin', 'editor')
         )
     );
 
@@ -51,18 +52,30 @@ CREATE POLICY "Orders are viewable by editors and above"
             INNER JOIN roles r ON ap.role_id = r.id
             WHERE ap.id = auth.uid()
             AND ap.status = 'approved'
-            AND r.name IN ('editor', 'admin', 'super_admin')
+            AND r.name IN ('super_admin', 'admin', 'editor')
         )
     );
 
 CREATE POLICY "Orders are manageable by editors and above"
-    ON orders FOR ALL
+    ON orders FOR INSERT UPDATE DELETE
     USING (
         EXISTS (
             SELECT 1 FROM admin_profiles ap
             INNER JOIN roles r ON ap.role_id = r.id
             WHERE ap.id = auth.uid()
             AND ap.status = 'approved'
-            AND r.name IN ('editor', 'admin', 'super_admin')
+            AND r.name IN ('super_admin', 'admin', 'editor')
         )
-    ); 
+    );
+
+-- Add RLS policy for admin_profiles to allow editors to view and update their own profile
+DROP POLICY IF EXISTS "Users can view their own profile" ON admin_profiles;
+CREATE POLICY "Users can view their own profile"
+    ON admin_profiles FOR SELECT
+    USING (id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can update their own profile" ON admin_profiles;
+CREATE POLICY "Users can update their own profile"
+    ON admin_profiles FOR UPDATE
+    USING (id = auth.uid())
+    WITH CHECK (id = auth.uid()); 

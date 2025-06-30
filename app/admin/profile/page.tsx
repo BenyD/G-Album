@@ -62,14 +62,14 @@ const roleBadgeColors = {
   super_admin: "bg-red-600",
   admin: "bg-orange-600",
   editor: "bg-blue-600",
-  viewer: "bg-gray-600",
+  visitor: "bg-gray-600",
 };
 
 const roleIcons = {
   super_admin: Shield,
   admin: Shield,
   editor: User,
-  viewer: User,
+  visitor: User,
 };
 
 const formatRoleName = (role: string | undefined | null) => {
@@ -356,7 +356,7 @@ export default function ProfilePage() {
   }
 
   const RoleIcon =
-    roleIcons[(profile.role?.name || "viewer") as keyof typeof roleIcons] ||
+    roleIcons[(profile.role?.name || "visitor") as keyof typeof roleIcons] ||
     User;
 
   return (
@@ -475,12 +475,12 @@ export default function ProfilePage() {
                     "text-white",
                     roleBadgeColors[
                       (profile.role?.name ||
-                        "viewer") as keyof typeof roleBadgeColors
+                        "visitor") as keyof typeof roleBadgeColors
                     ]
                   )}
                 >
                   <RoleIcon className="w-3.5 h-3.5 mr-1" />
-                  {formatRoleName(profile.role?.name || "viewer")}
+                  {formatRoleName(profile.role?.name || "visitor")}
                 </Badge>
               </div>
             </div>
@@ -806,14 +806,14 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      {profile.role?.name === "viewer" && (
+      {profile.role?.name === "visitor" && (
         <Card className="border-red-100">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-red-600" />
-              Viewer Features
+              Visitor Features
             </CardTitle>
-            <CardDescription>Features available to viewers</CardDescription>
+            <CardDescription>Features available to visitors</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

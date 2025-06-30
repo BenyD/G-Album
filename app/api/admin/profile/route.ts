@@ -28,37 +28,49 @@ export async function GET(request: Request) {
       return new NextResponse("Profile not found", { status: 404 });
     }
 
-    // Then get the permissions separately
-    const { data: permissionsData, error: permissionsError } =
-      await serviceClient
-        .from("role_permissions")
-        .select(
-          `
-        permission:permissions (
-          id,
-          name,
-          description
-        )
-      `
-        )
-        .eq("role_id", profileData.role_id);
+    // Only fetch permissions if there's a role_id
+    if (profileData.role_id) {
+      // Then get the permissions separately
+      const { data: permissionsData, error: permissionsError } =
+        await serviceClient
+          .from("role_permissions")
+          .select(
+            `
+          permission:permissions (
+            id,
+            name,
+            description
+          )
+        `
+          )
+          .eq("role_id", profileData.role_id);
 
-    if (permissionsError) {
-      console.error("Error loading permissions:", permissionsError);
-      return new NextResponse(permissionsError.message, { status: 500 });
+      if (permissionsError) {
+        console.error("Error loading permissions:", permissionsError);
+        return new NextResponse(permissionsError.message, { status: 500 });
+      }
+
+      // Combine the data
+      const responseData = {
+        ...profileData,
+        role: {
+          ...profileData.role,
+          role_permissions:
+            permissionsData?.map((p) => ({ permission: p.permission })) || [],
+        },
+      };
+
+      return NextResponse.json(responseData);
     }
 
-    // Combine the data
-    const responseData = {
+    // If no role_id, return profile without permissions
+    return NextResponse.json({
       ...profileData,
       role: {
         ...profileData.role,
-        role_permissions:
-          permissionsData?.map((p) => ({ permission: p.permission })) || [],
+        role_permissions: [],
       },
-    };
-
-    return NextResponse.json(responseData);
+    });
   } catch (error) {
     console.error("Error in profile API route:", error);
     return new NextResponse("Internal Server Error", { status: 500 });

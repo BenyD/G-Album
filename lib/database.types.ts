@@ -50,21 +50,21 @@ export type Database = {
       roles: {
         Row: {
           id: string;
-          name: "super_admin" | "admin" | "editor" | "viewer";
+          name: "super_admin" | "admin" | "editor" | "visitor";
           description: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          name: "super_admin" | "admin" | "editor" | "viewer";
+          name: "super_admin" | "admin" | "editor" | "visitor";
           description?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          name?: "super_admin" | "admin" | "editor" | "viewer";
+          name?: "super_admin" | "admin" | "editor" | "visitor";
           description?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -124,7 +124,7 @@ export type Database = {
     };
     Enums: {
       user_status: "pending" | "approved" | "suspended";
-      role_type: "super_admin" | "admin" | "editor" | "viewer";
+      role_type: "super_admin" | "admin" | "editor" | "visitor";
     };
   };
 };

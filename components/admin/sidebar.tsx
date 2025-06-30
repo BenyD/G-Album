@@ -147,6 +147,15 @@ export default function AdminSidebar() {
       icon: LayoutDashboard,
       permission: "view_dashboard",
       shortcut: "⌘D",
+      showForVisitor: true,
+    },
+    {
+      title: "Analytics",
+      href: "/admin/analytics",
+      icon: BarChart,
+      permission: "view_analytics",
+      shortcut: "⌘V",
+      showForVisitor: true,
     },
     {
       title: "Albums",
@@ -154,6 +163,7 @@ export default function AdminSidebar() {
       icon: FileText,
       permission: "manage_albums",
       shortcut: "⌘A",
+      hideForVisitor: true,
     },
     {
       title: "Gallery",
@@ -161,6 +171,7 @@ export default function AdminSidebar() {
       icon: ImageIcon,
       permission: "manage_gallery",
       shortcut: "⌘G",
+      hideForVisitor: true,
     },
     {
       title: "Form Submissions",
@@ -169,6 +180,7 @@ export default function AdminSidebar() {
       permission: "manage_submissions",
       shortcut: "⌘M",
       badge: unreadCount > 0 ? unreadCount : null,
+      hideForVisitor: true,
     },
     {
       title: "Newsletter",
@@ -176,13 +188,7 @@ export default function AdminSidebar() {
       icon: Mail,
       permission: "manage_newsletter",
       shortcut: "⌘N",
-    },
-    {
-      title: "Analytics",
-      href: "/admin/analytics",
-      icon: BarChart,
-      permission: "view_analytics",
-      shortcut: "⌘V",
+      hideForVisitor: true,
     },
   ];
 
@@ -194,6 +200,7 @@ export default function AdminSidebar() {
       icon: UserCheck,
       permission: "view_customers",
       shortcut: "⌘C",
+      hideForVisitor: true,
     },
     {
       title: "Orders",
@@ -201,6 +208,7 @@ export default function AdminSidebar() {
       icon: ShoppingCart,
       permission: "view_orders",
       shortcut: "⌘O",
+      hideForVisitor: true,
     },
   ];
 
@@ -220,17 +228,6 @@ export default function AdminSidebar() {
     },
   ];
 
-  // Filter items based on permissions or super admin status
-  const filteredNavItems = navItems.filter(
-    (item) => isSuperAdmin || hasPermission(item.permission)
-  );
-  const filteredBusinessItems = businessItems.filter(
-    (item) => isSuperAdmin || hasPermission(item.permission)
-  );
-  const filteredAdminItems = adminItems.filter(
-    (item) => isSuperAdmin || hasPermission(item.permission)
-  );
-
   // Settings submenu items
   const settingsItems = [
     ...(isSuperAdmin
@@ -240,6 +237,7 @@ export default function AdminSidebar() {
             href: "/admin/settings",
             icon: Settings,
             permission: "manage_general_settings",
+            hideForVisitor: true,
           },
         ]
       : []),
@@ -247,9 +245,31 @@ export default function AdminSidebar() {
       title: "Profile",
       href: "/admin/profile",
       icon: User,
-      permission: "view_dashboard",
+      permission: "view_profile",
     },
   ];
+
+  // Filter items based on permissions and role
+  const filteredNavItems = navItems.filter((item) => {
+    if (role?.name === "visitor" && !item.showForVisitor) return false;
+    if (item.hideForVisitor && role?.name === "visitor") return false;
+    return hasPermission(item.permission);
+  });
+
+  const filteredBusinessItems = businessItems.filter((item) => {
+    if (role?.name === "visitor") return false;
+    return hasPermission(item.permission);
+  });
+
+  const filteredAdminItems = adminItems.filter(
+    (item) => isSuperAdmin || hasPermission(item.permission)
+  );
+
+  const filteredSettingsItems = settingsItems.filter((item) => {
+    if (role?.name === "visitor") return false;
+    if (item.superAdminOnly && !isSuperAdmin) return false;
+    return hasPermission(item.permission);
+  });
 
   // If loading, show a simplified sidebar
   if (isLoading) {
@@ -465,7 +485,7 @@ export default function AdminSidebar() {
             Settings
           </h4>
           <SidebarMenu>
-            {settingsItems.map((item) => {
+            {filteredSettingsItems.map((item) => {
               const isActive = pathname === item.href;
 
               return (

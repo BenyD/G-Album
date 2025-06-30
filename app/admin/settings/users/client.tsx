@@ -169,9 +169,9 @@ export function UserManagementClient() {
   const getRoleBadgeColor = (roleName: string) => {
     const colors: Record<string, string> = {
       super_admin: "bg-red-100 text-red-800 border-red-200",
-      admin: "bg-red-100 text-red-800 border-red-200",
-      editor: "bg-red-100 text-red-800 border-red-200",
-      viewer: "bg-red-100 text-red-800 border-red-200",
+      admin: "bg-orange-100 text-orange-800 border-orange-200",
+      editor: "bg-blue-100 text-blue-800 border-blue-200",
+      visitor: "bg-red-100 text-red-800 border-red-200",
     };
     return colors[roleName] || "bg-gray-100 text-gray-800 border-gray-200";
   };
@@ -232,27 +232,7 @@ export function UserManagementClient() {
 
   // Update handleApproveUser to include name
   const handleApproveUser = async (userId: string, roleId: string) => {
-    if (!newUserName.trim()) {
-      toast.error("Please enter the user's name");
-      return;
-    }
-
     try {
-      const { error } = await supabase
-        .from("admin_profiles")
-        .update({
-          status: "approved",
-          role_id: roleId,
-          full_name: newUserName.trim(),
-          approved_at: new Date().toISOString(),
-        })
-        .eq("id", userId);
-
-      if (error) {
-        console.error("Error approving user:", error);
-        throw error;
-      }
-
       // Get current admin user
       const {
         data: { user: admin },
@@ -260,19 +240,29 @@ export function UserManagementClient() {
       } = await supabase.auth.getUser();
       if (adminError || !admin) throw new Error("Could not get current user");
 
-      // Log the activity
+      // Update user status and role
+      const { error: updateError } = await supabase
+        .from("admin_profiles")
+        .update({
+          status: "approved",
+          role_id: roleId,
+          approved_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+
+      if (updateError) throw updateError;
+
+      // Log the activity with proper details
       await logActivity("user_approved", {
         user_id: userId,
         role_id: roleId,
-        updated_by: admin.id,
+        approved_by: admin.id,
+        approved_at: new Date().toISOString(),
       });
-
-      // Reset states
-      setApprovingUser(null);
-      setNewUserName("");
 
       // Refresh the users list
       await refreshUsers();
+      setApprovingUser(null);
       toast.success("User approved successfully");
     } catch (error) {
       console.error("Error approving user:", error);
