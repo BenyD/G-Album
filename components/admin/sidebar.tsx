@@ -186,7 +186,7 @@ export default function AdminSidebar() {
     },
   ];
 
-  // Business management items (for Accounts role and above)
+  // Business management items (for Editor role and above)
   const businessItems = [
     {
       title: "Customers",
@@ -233,12 +233,16 @@ export default function AdminSidebar() {
 
   // Settings submenu items
   const settingsItems = [
-    {
-      title: "General Settings",
-      href: "/admin/settings",
-      icon: Settings,
-      permission: "manage_general_settings",
-    },
+    ...(isSuperAdmin
+      ? [
+          {
+            title: "General Settings",
+            href: "/admin/settings",
+            icon: Settings,
+            permission: "manage_general_settings",
+          },
+        ]
+      : []),
     {
       title: "Profile",
       href: "/admin/profile",
