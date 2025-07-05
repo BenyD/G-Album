@@ -36,11 +36,23 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/admin/auth-context";
 import { createClient } from "@/utils/supabase/client";
 
+interface SidebarItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  permission: string;
+  shortcut?: string;
+  badge?: number | null;
+  showForVisitor?: boolean;
+  hideForVisitor?: boolean;
+  superAdminOnly?: boolean;
+}
+
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { role, hasPermission, isLoading } = useRole();
-  const { profile, signOut } = useAuth();
+  const { hasPermission, isLoading } = useRole();
+  const { role, profile, signOut } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMac, setIsMac] = useState(true);
   const supabase = createClient();
@@ -128,7 +140,7 @@ export default function AdminSidebar() {
   }, [supabase]);
 
   // Format role name for display (e.g., "super_admin" -> "Super Admin")
-  const formatRoleName = (roleName: string | undefined) => {
+  const formatRoleName = (roleName: string | undefined | null) => {
     if (!roleName) return "";
     return roleName
       .split("_")
@@ -137,10 +149,10 @@ export default function AdminSidebar() {
   };
 
   // Check if user is super admin
-  const isSuperAdmin = profile?.role?.name === "super_admin";
+  const isSuperAdmin = role?.name === "super_admin";
 
   // Define navigation items with required permissions
-  const navItems = [
+  const navItems: SidebarItem[] = [
     {
       title: "Dashboard",
       href: "/admin/dashboard",
@@ -193,7 +205,7 @@ export default function AdminSidebar() {
   ];
 
   // Business management items (for Editor role and above)
-  const businessItems = [
+  const businessItems: SidebarItem[] = [
     {
       title: "Customers",
       href: "/admin/customers",
@@ -213,7 +225,7 @@ export default function AdminSidebar() {
   ];
 
   // Admin management items (for Super Admin only)
-  const adminItems = [
+  const adminItems: SidebarItem[] = [
     {
       title: "User Management",
       href: "/admin/settings/users",
@@ -229,7 +241,7 @@ export default function AdminSidebar() {
   ];
 
   // Settings submenu items
-  const settingsItems = [
+  const settingsItems: SidebarItem[] = [
     ...(isSuperAdmin
       ? [
           {
@@ -237,6 +249,7 @@ export default function AdminSidebar() {
             href: "/admin/settings",
             icon: Settings,
             permission: "manage_general_settings",
+            superAdminOnly: true,
             hideForVisitor: true,
           },
         ]
@@ -301,8 +314,8 @@ export default function AdminSidebar() {
     );
   }
 
-  // If guest or no role, show minimal sidebar
-  if (role === "guest") {
+  // If no role, show minimal sidebar
+  if (!role) {
     return (
       <Sidebar className="border-r border-slate-200 w-64">
         <SidebarHeader className="border-b border-slate-200 pb-2">

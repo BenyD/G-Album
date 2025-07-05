@@ -11,11 +11,11 @@ import {
   MessageSquare,
   Settings,
   User,
-  Users,
   UserCheck,
   ShoppingCart,
 } from "lucide-react";
 import { useRole } from "@/components/admin/role-context";
+import { useAuth } from "@/components/admin/auth-context";
 
 const sidebarItems = [
   {
@@ -92,7 +92,8 @@ const sidebarItems = [
 
 export default function MobileSidebar() {
   const pathname = usePathname();
-  const { hasPermission, role } = useRole();
+  const { hasPermission } = useRole();
+  const { role } = useAuth();
 
   // Filter items based on permissions and role
   const filteredItems = sidebarItems.filter((item) => {
