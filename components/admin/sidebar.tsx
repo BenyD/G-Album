@@ -264,6 +264,14 @@ export default function AdminSidebar() {
 
   // Filter items based on permissions and role
   const filteredNavItems = navItems.filter((item) => {
+    console.log(`Filtering nav item "${item.title}" with permission "${item.permission}":`, {
+      roleName: role?.name,
+      isVisitor: role?.name === "visitor",
+      showForVisitor: item.showForVisitor,
+      hideForVisitor: item.hideForVisitor,
+      hasPermission: hasPermission(item.permission)
+    });
+    
     if (role?.name === "visitor" && !item.showForVisitor) return false;
     if (item.hideForVisitor && role?.name === "visitor") return false;
     return hasPermission(item.permission);

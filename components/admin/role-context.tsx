@@ -48,13 +48,29 @@ export function RoleProvider({ children }: RoleProviderProps) {
   const hasPermission = useMemo(
     () =>
       (permission: string): boolean => {
-        if (!role || !permissions || isLoading) return false;
+        if (!role || !permissions || isLoading) {
+          console.log(`Permission check failed for "${permission}":`, {
+            hasRole: !!role,
+            hasPermissions: !!permissions,
+            isLoading,
+            roleName: role?.name,
+            permissionsCount: permissions?.length,
+            permissions: permissions?.map(p => p.name)
+          });
+          return false;
+        }
 
         // Super admin has all permissions
-        if (role.name === "super_admin") return true;
+        if (role.name === "super_admin") {
+          console.log(`Super admin granted permission: "${permission}"`);
+          return true;
+        }
 
         // All roles should have access to their own profile
-        if (permission === "view_profile") return true;
+        if (permission === "view_profile") {
+          console.log(`Profile permission granted for role: "${role.name}"`);
+          return true;
+        }
 
         // Check if the user has the specific permission
         const hasSpecificPermission = permissions.some(
@@ -63,11 +79,16 @@ export function RoleProvider({ children }: RoleProviderProps) {
 
         // For visitors, only allow specific permissions
         if (role.name === "visitor") {
-          return (
-            ["view_dashboard", "view_analytics"].includes(permission) ||
-            hasSpecificPermission
-          );
+          const visitorAllowed = ["view_dashboard", "view_analytics"].includes(permission) ||
+            hasSpecificPermission;
+          console.log(`Visitor permission check for "${permission}":`, visitorAllowed);
+          return visitorAllowed;
         }
+
+        console.log(`Permission check for "${permission}" with role "${role.name}":`, {
+          hasSpecificPermission,
+          availablePermissions: permissions.map(p => p.name)
+        });
 
         return hasSpecificPermission;
       },

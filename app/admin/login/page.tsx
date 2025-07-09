@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/components/admin/auth-context";
 import { Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
+import { showToast } from "@/lib/utils/toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -30,6 +30,16 @@ export default function LoginPage() {
     e.preventDefault();
     if (isSubmitting || authLoading) return;
 
+    // Basic validation
+    if (!email.trim()) {
+      showToast.error("Please enter your email address");
+      return;
+    }
+    if (!password.trim()) {
+      showToast.error("Please enter your password");
+      return;
+    }
+
     setIsSubmitting(true);
     console.log("Login attempt started:", { email });
 
@@ -39,7 +49,13 @@ export default function LoginPage() {
       console.log("SignIn completed successfully");
     } catch (error) {
       console.error("Login error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to sign in");
+
+      // Show user-friendly error message
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to sign in. Please try again.";
+      showToast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
       console.log("Login attempt finished");

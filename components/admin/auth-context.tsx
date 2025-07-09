@@ -242,7 +242,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             password,
           });
 
-          if (signInError) throw signInError;
+          if (signInError) {
+            // Handle common authentication errors with user-friendly messages
+            let userFriendlyMessage = "Failed to sign in. Please try again.";
+
+            if (signInError.message) {
+              const errorMessage = signInError.message.toLowerCase();
+
+              if (
+                errorMessage.includes("invalid login credentials") ||
+                errorMessage.includes("invalid email or password")
+              ) {
+                userFriendlyMessage =
+                  "Invalid email or password. Please check your credentials and try again.";
+              } else if (errorMessage.includes("email not confirmed")) {
+                userFriendlyMessage =
+                  "Please check your email and confirm your account before signing in.";
+              } else if (errorMessage.includes("too many requests")) {
+                userFriendlyMessage =
+                  "Too many login attempts. Please wait a moment before trying again.";
+              } else if (
+                errorMessage.includes("network") ||
+                errorMessage.includes("timeout")
+              ) {
+                userFriendlyMessage =
+                  "Network error. Please check your connection and try again.";
+              } else if (errorMessage.includes("user not found")) {
+                userFriendlyMessage =
+                  "No account found with this email address.";
+              } else if (errorMessage.includes("disabled")) {
+                userFriendlyMessage =
+                  "This account has been disabled. Please contact an administrator.";
+              }
+            }
+
+            throw new Error(userFriendlyMessage);
+          }
 
           if (user) {
             console.log("User authenticated, loading profile...");
@@ -251,7 +286,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!profileLoaded) {
               console.log("Profile loading failed during sign in");
               await supabase.auth.signOut();
-              throw new Error("Failed to load user profile");
+              throw new Error(
+                "Account access denied. Please contact an administrator."
+              );
             }
 
             // If not remembering, set up session cleanup on window close
